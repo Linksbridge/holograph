@@ -87,6 +87,38 @@ export const fetchChartData = async (tableName, labelColumn, valueColumn) => {
 };
 
 /**
+ * Simulates an Azure Function call to fetch all table data
+ * @param {string} tableName - Name of the SQL table
+ * @param {string[]} columns - Array of column names to fetch (optional, fetches all if not provided)
+ * @returns {Promise<Array<Object>>} Raw table data with all columns
+ */
+export const fetchTableData = async (tableName, columns = null) => {
+  // Simulate network delay (Azure Function latency)
+  await new Promise((resolve) => setTimeout(resolve, 200 + Math.random() * 300));
+
+  const tableData = MOCK_DATA_TABLES[tableName];
+  
+  if (!tableData) {
+    console.warn(`Table "${tableName}" not found, returning empty data`);
+    return [];
+  }
+
+  // If columns specified, return only those columns
+  if (columns && Array.isArray(columns) && columns.length > 0) {
+    return tableData.map((row) => {
+      const filteredRow = {};
+      columns.forEach((col) => {
+        filteredRow[col] = row[col];
+      });
+      return filteredRow;
+    });
+  }
+
+  // Otherwise return all columns
+  return tableData;
+};
+
+/**
  * Get available data tables
  * @returns {string[]} List of available table names
  */

@@ -5,8 +5,8 @@
  * to add new charts to the dashboard.
  */
 
-import React from 'react';
-import { CHART_LIBRARIES, CHART_TYPES, DEFAULT_CHART_TYPE } from '../types/schema';
+import React, { useRef, useState, useEffect } from 'react';
+import { CHART_LIBRARIES, CHART_TYPES, DEFAULT_CHART_TYPE, COMPONENT_TYPES } from '../types/schema';
 
 const CHART_OPTIONS = [
   // Chart.js charts
@@ -170,9 +170,85 @@ const CHART_OPTIONS = [
     ),
     description: 'Scatter point chart',
   },
+  // Table component
+  {
+    id: 'table',
+    componentType: COMPONENT_TYPES.TABLE,
+    library: null,
+    chartType: null,
+    title: 'Table',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <line x1="3" y1="9" x2="21" y2="9" />
+        <line x1="3" y1="15" x2="21" y2="15" />
+        <line x1="9" y1="3" x2="9" y2="21" />
+        <line x1="15" y1="3" x2="15" y2="21" />
+      </svg>
+    ),
+    description: 'Data table view',
+  },
 ];
 
+const ITEM_HEIGHT = 90; // Height of each chart item in pixels
+const VISIBLE_ITEMS = 4; // Number of visible items
+const SCROLL_AMOUNT = ITEM_HEIGHT;
+
 const ChartPalette = ({ onDragStart }) => {
+  const scrollContainerRef = useRef(null);
+  const [scrollPosition, setScrollPosition] = useState(0);
+  const [maxScroll, setMaxScroll] = useState(0);
+  const [canScrollUp, setCanScrollUp] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(false);
+
+  // Calculate scroll bounds
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      const totalHeight = CHART_OPTIONS.length * ITEM_HEIGHT;
+      const visibleHeight = container.clientHeight;
+      const maxPos = Math.max(0, totalHeight - visibleHeight);
+      setMaxScroll(maxPos);
+      updateScrollButtons(scrollPosition, maxPos);
+    }
+  }, []);
+
+  const updateScrollButtons = (position, max) => {
+    setCanScrollUp(position > 0);
+    setCanScrollDown(position < max);
+  };
+
+  const handleScroll = () => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      const newPosition = container.scrollTop;
+      setScrollPosition(newPosition);
+      updateScrollButtons(newPosition, maxScroll);
+    }
+  };
+
+  const scrollUp = (e) => {
+    e.stopPropagation();
+    const container = scrollContainerRef.current;
+    if (container) {
+      const newPosition = Math.max(0, container.scrollTop - SCROLL_AMOUNT);
+      container.scrollTo({ top: newPosition, behavior: 'smooth' });
+      setScrollPosition(newPosition);
+      updateScrollButtons(newPosition, maxScroll);
+    }
+  };
+
+  const scrollDown = (e) => {
+    e.stopPropagation();
+    const container = scrollContainerRef.current;
+    if (container) {
+      const newPosition = Math.min(maxScroll, container.scrollTop + SCROLL_AMOUNT);
+      container.scrollTo({ top: newPosition, behavior: 'smooth' });
+      setScrollPosition(newPosition);
+      updateScrollButtons(newPosition, maxScroll);
+    }
+  };
+
   const handleDragStart = (e, chartOption) => {
     e.dataTransfer.setData('chartType', JSON.stringify(chartOption));
     e.dataTransfer.effectAllowed = 'copy';
@@ -189,29 +265,80 @@ const ChartPalette = ({ onDragStart }) => {
 
   return (
     <div className="chart-palette">
-      <div className="chart-palette-title">Add Chart</div>
-      
-      {CHART_OPTIONS.map((chartOption) => (
-        <div
-          key={chartOption.id}
-          className="chart-palette-item"
-          draggable
-          onDragStart={(e) => handleDragStart(e, chartOption)}
-          onDragEnd={handleDragEnd}
-          title={`${chartOption.title}: ${chartOption.description}`}
-        >
-          <div className="chart-palette-item-icon">
-            {chartOption.icon}
+      {/* Up scroll button */}
+      <button
+        className={`chart-palette-scroll-btn chart-palette-scroll-up ${canScrollUp ? 'visible' : ''}`}
+        onClick={scrollUp}
+        aria-label="Scroll up"
+        title="Scroll up"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <polyline points="18 15 12 9 6 15" />
+          <line x1="12" y1="5" x2="12" y2="19" />
+        </svg>
+      </button>
+
+      {/* Scrollable chart list */}
+      <div 
+        className="chart-palette-list" 
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+      >
+        <div className="chart-palette-title">Add Chart</div>
+        
+        {CHART_OPTIONS.map((chartOption) => (
+          <div
+            key={chartOption.id}
+            className="chart-palette-item"
+            draggable
+            onDragStart={(e) => handleDragStart(e, chartOption)}
+            onDragEnd={handleDragEnd}
+            title={`${chartOption.title}: ${chartOption.description}`}
+          >
+            <div className="chart-palette-item-content">
+              <div className="chart-palette-item-icon">
+                {chartOption.icon}
+              </div>
+              <span className="chart-palette-item-label">
+                {chartOption.title}
+              </span>
+            </div>
+            <div className="chart-palette-item-drag-indicator">
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
           </div>
-          <span className="chart-palette-item-label">
-            {chartOption.title}
-          </span>
-        </div>
-      ))}
+        ))}
+      </div>
+
+      {/* Down scroll button */}
+      <button
+        className={`chart-palette-scroll-btn chart-palette-scroll-down ${canScrollDown ? 'visible' : ''}`}
+        onClick={scrollDown}
+        aria-label="Scroll down"
+        title="Scroll down"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <polyline points="6 9 12 15 18 9" />
+          <line x1="12" y1="5" x2="12" y2="19" />
+        </svg>
+      </button>
 
       <div className="chart-palette-footer">
-        <div>📊</div>
-        Drag to add
+        <div className="chart-palette-drag-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="9" cy="5" r="1" fill="currentColor" />
+            <circle cx="9" cy="12" r="1" fill="currentColor" />
+            <circle cx="9" cy="19" r="1" fill="currentColor" />
+            <circle cx="15" cy="5" r="1" fill="currentColor" />
+            <circle cx="15" cy="12" r="1" fill="currentColor" />
+            <circle cx="15" cy="19" r="1" fill="currentColor" />
+          </svg>
+        </div>
       </div>
     </div>
   );

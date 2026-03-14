@@ -10,6 +10,12 @@
  * - The actual pixel size is calculated based on container width and rowHeight
  */
 
+// Component types (charts and tables)
+export const COMPONENT_TYPES = {
+  CHART: 'chart',
+  TABLE: 'table',
+};
+
 // Supported chart library types
 export const CHART_LIBRARIES = {
   D3: 'd3',
@@ -118,10 +124,12 @@ export const THEMES = {
  */
 export const createZoneConfig = (id) => ({
   id,
+  componentType: COMPONENT_TYPES.CHART,
   library: CHART_LIBRARIES.CHARTJS,
   chartType: CHART_TYPES.CHARTJS_LINE,
   theme: COLOR_THEMES.DEFAULT,
   title: 'New Chart',
+  showHeader: true,
   dataSource: {
     tableName: 'sales_data',
     labelColumn: 'month',
@@ -143,6 +151,8 @@ export const createInitialDashboard = () => ({
   version: '1.0.0',
   name: 'My Dashboard',
   description: 'A zero-VM dashboard with pluggable chart adapters',
+  showTitle: true,
+  showSubtitle: true,
   zones: [
     {
       ...createZoneConfig('zone-1'),
@@ -210,6 +220,7 @@ export const createInitialDashboard = () => ({
 /**
  * @typedef {Object} ZoneConfig
  * @property {string} id - Unique zone identifier
+ * @property {string} componentType - Type of component (chart or table)
  * @property {string} library - Chart library (d3 or chartjs)
  * @property {string} chartType - Type of chart
  * @property {string} theme - Color theme
@@ -230,6 +241,8 @@ export const createInitialDashboard = () => ({
  * @property {string} version - Schema version
  * @property {string} name - Dashboard name
  * @property {string} description - Dashboard description
+ * @property {boolean} showTitle - Whether to show the dashboard title (optional, default true)
+ * @property {boolean} showSubtitle - Whether to show the dashboard subtitle/description (optional, default true)
  * @property {ZoneConfig[]} zones - Array of zone configurations
  * @property {LayoutConfig} layout - Layout configuration
  */

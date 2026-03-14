@@ -11,6 +11,7 @@ import DashboardList from './components/DashboardList';
 import DashboardEditor from './components/DashboardEditor';
 import NewDashboardModal from './components/NewDashboardModal';
 import SettingsPanel from './components/SettingsPanel';
+import PreviewModal from './components/PreviewModal';
 import { createInitialDashboard } from './types/schema';
 import './styles/dashboard.css';
 
@@ -31,6 +32,7 @@ const App = () => {
   const [showNewModal, setShowNewModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   // Create new dashboard
   const handleCreateDashboard = useCallback((dashboardInfo) => {
@@ -78,6 +80,8 @@ const App = () => {
     );
     setCurrentDashboard(updatedDashboard);
     
+    console.log('=== SAVE DRAFT JSON ===');
+    console.log(JSON.stringify(updatedDashboard, null, 2));
     alert('Draft saved successfully!');
   }, [currentDashboard]);
 
@@ -96,6 +100,8 @@ const App = () => {
     );
     setCurrentDashboard(updatedDashboard);
     
+    console.log('=== PUBLISH JSON ===');
+    console.log(JSON.stringify(updatedDashboard, null, 2));
     alert('Dashboard published successfully!');
   }, [currentDashboard]);
 
@@ -154,6 +160,9 @@ const App = () => {
         </div>
         
         <div className="top-bar-right">
+          <button className="btn btn-secondary btn-icon" onClick={() => setShowPreview(true)}>
+            👁️ Preview
+          </button>
           <button className="btn btn-secondary btn-icon" onClick={handleSaveDraft}>
             💾 Save Draft
           </button>
@@ -206,6 +215,13 @@ const App = () => {
         onClose={() => setShowSettings(false)}
         settings={settings}
         onSave={handleSettingsSave}
+      />
+
+      {/* Preview Modal */}
+      <PreviewModal
+        isOpen={showPreview}
+        onClose={() => setShowPreview(false)}
+        dashboard={currentDashboard?.schema}
       />
     </>
   );

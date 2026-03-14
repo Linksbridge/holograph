@@ -12,9 +12,10 @@ import { v4 as uuidv4 } from 'uuid';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import UniversalChart from './UniversalChart';
+import TableComponent from './TableComponent';
 import PropertyPanel from './PropertyPanel';
 import ChartPalette from './ChartPalette';
-import { CHART_LIBRARIES, createZoneConfig } from '../types/schema';
+import { CHART_LIBRARIES, COMPONENT_TYPES, createZoneConfig } from '../types/schema';
 
 const DashboardEditor = ({ dashboard, onDashboardUpdate }) => {
   const [selectedZone, setSelectedZone] = useState(null);
@@ -68,8 +69,21 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate }) => {
     [dashboard, onDashboardUpdate]
   );
 
-  // Handle zone click to open property panel
-  const handleZoneClick = useCallback((zone) => {
+  // Handle double click on zone card when header is hidden to open property panel
+  const handleZoneDoubleClick = useCallback(
+    (e, zone) => {
+      // Only open panel if header is hidden
+      if (zone.showHeader === false) {
+        e.stopPropagation();
+        setSelectedZone(zone);
+      }
+    },
+    []
+  );
+
+  // Handle gear button click to open property panel
+  const handleGearClick = useCallback((e, zone) => {
+    e.stopPropagation();
     setSelectedZone(zone);
   }, []);
 
@@ -125,6 +139,7 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate }) => {
         const clampedX = Math.min(gridX, dashboard.layout.cols - 4);
 
         const newZone = createZoneConfig(`zone-${uuidv4()}`);
+        newZone.componentType = chartOption.componentType || COMPONENT_TYPES.CHART;
         newZone.library = chartOption.library;
         newZone.chartType = chartOption.chartType;
         newZone.title = chartOption.title;
@@ -165,6 +180,7 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate }) => {
       const dropY = layoutItem?.y ?? 0;
 
       const newZone = createZoneConfig(`zone-${uuidv4()}`);
+      newZone.componentType = chartOption.componentType || COMPONENT_TYPES.CHART;
       newZone.library = chartOption.library;
       newZone.chartType = chartOption.chartType;
       newZone.title = chartOption.title;
@@ -254,10 +270,16 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate }) => {
   }));
 
   const getZoneBadgeClass = (zone) => {
+    if (zone.componentType === COMPONENT_TYPES.TABLE) {
+      return 'zone-badge table';
+    }
     return zone.library === CHART_LIBRARIES.D3 ? 'zone-badge d3' : 'zone-badge chartjs';
   };
 
   const getZoneBadgeText = (zone) => {
+    if (zone.componentType === COMPONENT_TYPES.TABLE) {
+      return 'Table';
+    }
     return zone.library === CHART_LIBRARIES.D3 ? 'D3.js' : 'Chart.js';
   };
 
@@ -268,10 +290,14 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate }) => {
       
       <div className="dashboard-editor-container">
         {/* Header */}
-        <div className="dashboard-editor-header">
-          <h1 className="dashboard-editor-title">{dashboard.name}</h1>
-          <p className="dashboard-editor-subtitle">{dashboard.description}</p>
-        </div>
+        {(dashboard.showTitle !== false) && (
+          <div className="dashboard-editor-header">
+            <h1 className="dashboard-editor-title">{dashboard.name}</h1>
+            {(dashboard.showSubtitle !== false) && (
+              <p className="dashboard-editor-subtitle">{dashboard.description}</p>
+            )}
+          </div>
+        )}
 
         {/* Grid Layout */}
         <div 
@@ -301,7 +327,7 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate }) => {
               margin={dashboard.layout.margin}
               width={gridWidth}
               onLayoutChange={handleLayoutChange}
-              draggableHandle=".zone-header"
+              draggableHandle=".zone-drag-handle"
               compactType="vertical"
               preventCollision={false}
               isDroppable={true}
@@ -314,20 +340,44 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate }) => {
                 <div
                   key={zone.id}
                   className={`zone-card ${selectedZone?.id === zone.id ? 'selected' : ''}`}
-                  onClick={() => handleZoneClick(zone)}
+                  onDoubleClick={(e) => handleZoneDoubleClick(e, zone)}
                 >
-                  <div className="zone-header">
-                    <h3 className="zone-title">{zone.title}</h3>
-                    <span className={getZoneBadgeClass(zone)}>
-                      {getZoneBadgeText(zone)}
-                    </span>
-                  </div>
+                  {(zone.showHeader !== false) && (
+                    <div className="zone-header">
+                      <div className="zone-drag-handle">
+                        <h3 className="zone-title">{zone.title}</h3>
+                      </div>
+                      <div className="zone-header-actions">
+                        <span className={getZoneBadgeClass(zone)}>
+                          {getZoneBadgeText(zone)}
+                        </span>
+                        <span 
+                          className="zone-settings-btn"
+                          draggable={false}
+                          onClick={(e) => handleGearClick(e, zone)}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onMouseUp={(e) => e.stopPropagation()}
+                          title="Settings"
+                        >
+                          ⚙️
+                        </span>
+                      </div>
+                    </div>
+                  )}
                   <div className="zone-chart-container">
-                    <UniversalChart
-                      config={zone}
-                      width={null}
-                      height={null}
-                    />
+                    {zone.componentType === COMPONENT_TYPES.TABLE ? (
+                      <TableComponent
+                        config={zone}
+                        width={null}
+                        height={null}
+                      />
+                    ) : (
+                      <UniversalChart
+                        config={zone}
+                        width={null}
+                        height={null}
+                      />
+                    )}
                   </div>
                 </div>
               ))}

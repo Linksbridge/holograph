@@ -5,11 +5,11 @@
  */
 
 import React from 'react';
-import { CHART_LIBRARIES, CHART_TYPES, CHART_TYPE_LIBRARY, DEFAULT_CHART_TYPE, COLOR_THEMES, THEMES } from '../types/schema';
+import { CHART_LIBRARIES, CHART_TYPES, CHART_TYPE_LIBRARY, DEFAULT_CHART_TYPE, COLOR_THEMES, THEMES, COMPONENT_TYPES } from '../types/schema';
 import { getAvailableTables, getTableColumns } from '../services/dataService';
 
 const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
-  const { id, library, theme, title, dataSource, chartType } = zoneConfig;
+  const { id, componentType, library, theme, title, dataSource, chartType, showHeader } = zoneConfig;
   const availableTables = getAvailableTables();
   const tableColumns = dataSource?.tableName ? getTableColumns(dataSource.tableName) : [];
 
@@ -100,6 +100,17 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
     });
   };
 
+  const handleColumnsChange = (e) => {
+    const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+    onUpdate({
+      ...zoneConfig,
+      dataSource: {
+        ...dataSource,
+        columns: selectedOptions,
+      },
+    });
+  };
+
   const handleThemeClick = (themeKey) => {
     onUpdate({
       ...zoneConfig,
@@ -107,10 +118,30 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
     });
   };
 
+  const handleComponentTypeChange = (e) => {
+    const newComponentType = e.target.value;
+    onUpdate({
+      ...zoneConfig,
+      componentType: newComponentType,
+      // Reset library and chartType when switching to table
+      library: newComponentType === COMPONENT_TYPES.TABLE ? null : CHART_LIBRARIES.CHARTJS,
+      chartType: newComponentType === COMPONENT_TYPES.TABLE ? null : DEFAULT_CHART_TYPE[CHART_LIBRARIES.CHARTJS],
+    });
+  };
+
+  const handleShowHeaderChange = (e) => {
+    onUpdate({
+      ...zoneConfig,
+      showHeader: e.target.checked,
+    });
+  };
+
   return (
     <div className="property-panel">
       <div className="property-panel-header">
-        <h2 className="property-panel-title">Configure Chart</h2>
+        <h2 className="property-panel-title">
+          {componentType === COMPONENT_TYPES.TABLE ? 'Configure Table' : 'Configure Chart'}
+        </h2>
         <button className="property-panel-close" onClick={onClose}>×</button>
       </div>
 
@@ -127,7 +158,38 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
           />
         </div>
 
-        {/* Library Selection */}
+        {/* Show Header Toggle */}
+        <div className="property-field-group" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label className="property-label" style={{ marginBottom: 0 }}>Show Header</label>
+          <label className="property-toggle">
+            <input
+              type="checkbox"
+              checked={showHeader !== false}
+              onChange={handleShowHeaderChange}
+            />
+            <span className="property-toggle-slider"></span>
+          </label>
+        </div>
+
+        {/* Component Type Selection */}
+        <div className="property-field-group">
+          <label className="property-label">Component Type</label>
+          <select
+            className="property-select"
+            value={componentType || COMPONENT_TYPES.CHART}
+            onChange={handleComponentTypeChange}
+          >
+            <option value={COMPONENT_TYPES.CHART}>
+              Chart
+            </option>
+            <option value={COMPONENT_TYPES.TABLE}>
+              Table
+            </option>
+          </select>
+        </div>
+
+        {/* Library Selection - Only show for charts */}
+        {componentType !== COMPONENT_TYPES.TABLE && (
         <div className="property-field-group">
           <label className="property-label">Rendering Library</label>
           <select
@@ -143,8 +205,10 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
             </option>
           </select>
         </div>
+        )}
 
-        {/* Chart Type Selection */}
+        {/* Chart Type Selection - Only show for charts */}
+        {componentType !== COMPONENT_TYPES.TABLE && (
         <div className="property-field-group">
           <label className="property-label">Chart Type</label>
           <select
@@ -164,6 +228,7 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
               : 'Select a chart type from D3.js library'}
           </p>
         </div>
+        )}
 
         {/* Theme Selection */}
         <div className="property-field-group">
@@ -214,7 +279,7 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
         </div>
 
         {/* Label Column */}
-        {dataSource?.tableName && (
+        {dataSource?.tableName && componentType !== COMPONENT_TYPES.TABLE && (
           <div className="property-field-group">
             <label className="property-label">Label Column</label>
             <select
@@ -233,7 +298,7 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
         )}
 
         {/* Value Column */}
-        {dataSource?.tableName && (
+        {dataSource?.tableName && componentType !== COMPONENT_TYPES.TABLE && (
           <div className="property-field-group">
             <label className="property-label">Value Column</label>
             <select
@@ -248,6 +313,29 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
                 </option>
               ))}
             </select>
+          </div>
+        )}
+
+        {/* Table Columns - Multi-select for tables */}
+        {dataSource?.tableName && componentType === COMPONENT_TYPES.TABLE && (
+          <div className="property-field-group">
+            <label className="property-label">Table Columns</label>
+            <select
+              className="property-select"
+              multiple
+              value={dataSource?.columns || []}
+              onChange={handleColumnsChange}
+              style={{ height: '100px' }}
+            >
+              {tableColumns.map((col) => (
+                <option key={col} value={col}>
+                  {col}
+                </option>
+              ))}
+            </select>
+            <p className="property-help-text">
+              Hold Ctrl/Cmd to select multiple columns
+            </p>
           </div>
         )}
 
