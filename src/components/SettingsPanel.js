@@ -20,6 +20,9 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
       draftsContainer: 'drafts',
       publishedContainer: 'published',
       storageAccount: '',
+      saveDraftUrl: '',
+      publishUrl: '',
+      listDocumentsUrl: '',
     },
     general: {
       autoSave: true,
@@ -122,7 +125,45 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
 
         {activeTab === 'save' && (
           <>
-            <div className="settings-section-title">Azure Blob Storage</div>
+            <div className="settings-section-title">Webhook URLs</div>
+
+            <div className="property-field-group">
+              <label className="property-label">List Documents URL</label>
+              <input
+                type="text"
+                className="property-input"
+                value={localSettings.saveLocations.listDocumentsUrl}
+                onChange={(e) => updateSettings('saveLocations', 'listDocumentsUrl', e.target.value)}
+                placeholder="https://api.example.com/dashboards"
+              />
+              <p className="property-help-text">GET endpoint to list all dashboards (returns array with id, name, status, lastModified)</p>
+            </div>
+
+            <div className="property-field-group">
+              <label className="property-label">Save Draft URL</label>
+              <input
+                type="text"
+                className="property-input"
+                value={localSettings.saveLocations.saveDraftUrl}
+                onChange={(e) => updateSettings('saveLocations', 'saveDraftUrl', e.target.value)}
+                placeholder="https://api.example.com/drafts"
+              />
+              <p className="property-help-text">POST endpoint for saving draft dashboards</p>
+            </div>
+
+            <div className="property-field-group">
+              <label className="property-label">Publish URL</label>
+              <input
+                type="text"
+                className="property-input"
+                value={localSettings.saveLocations.publishUrl}
+                onChange={(e) => updateSettings('saveLocations', 'publishUrl', e.target.value)}
+                placeholder="https://api.example.com/publish"
+              />
+              <p className="property-help-text">POST endpoint for publishing dashboards</p>
+            </div>
+
+            <div className="settings-section-title" style={{ marginTop: '24px' }}>Azure Blob Storage</div>
 
             <div className="property-field-group">
               <label className="property-label">Storage Account Name</label>

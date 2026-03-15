@@ -1,0 +1,22 @@
+{
+  "name": "@holograph/dashboard-schema",
+  "version": "1.0.0",
+  "description": "Shared schema types and factory functions for Holograph dashboards",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./types": "./src/types.js",
+    "./constants": "./src/constants.js"
+  },
+  "files": [
+    "src"
+  ],
+  "keywords": [
+    "dashboard",
+    "schema",
+    "charts",
+    "visualization"
+  ],
+  "license": "MIT"
+}

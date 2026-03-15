@@ -14,6 +14,7 @@ import SettingsPanel from './components/SettingsPanel';
 import PreviewModal from './components/PreviewModal';
 import { FilterProvider, initializeGlobalFilterAPI, useFilters } from './hooks/useFilters';
 import { createInitialDashboard } from './types/schema';
+import { invokeSave, invokePublish, configureWebhookUrls, invokeListDocuments } from './services/webhookService';
 import './styles/dashboard.css';
 
 // Inner component that uses filter context
@@ -35,6 +36,17 @@ const AppContent = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
+
+  // Initialize webhook URLs from settings when settings change
+  useEffect(() => {
+    if (settings?.saveLocations) {
+      configureWebhookUrls({
+        saveDraftUrl: settings.saveLocations.saveDraftUrl || '',
+        publishUrl: settings.saveLocations.publishUrl || '',
+        listDocumentsUrl: settings.saveLocations.listDocumentsUrl || '',
+      });
+    }
+  }, [settings]);
 
   // Get filter functions for global API
   const filterFunctions = useFilters();
@@ -75,8 +87,8 @@ const AppContent = () => {
     setCurrentDashboard(null);
   }, []);
 
-  // Save draft
-  const handleSaveDraft = useCallback(() => {
+  // Save draft (uses webhook callback)
+  const handleSaveDraft = useCallback(async () => {
     if (!currentDashboard) return;
 
     const updatedDashboard = {
@@ -85,18 +97,22 @@ const AppContent = () => {
       lastModified: new Date().toISOString(),
     };
 
-    setDashboards((prev) =>
-      prev.map((d) => (d.id === updatedDashboard.id ? updatedDashboard : d))
-    );
-    setCurrentDashboard(updatedDashboard);
+    // Invoke webhook handler
+    const result = await invokeSave(updatedDashboard);
     
-    console.log('=== SAVE DRAFT JSON ===');
-    console.log(JSON.stringify(updatedDashboard, null, 2));
-    alert('Draft saved successfully!');
+    if (result.success) {
+      setDashboards((prev) =>
+        prev.map((d) => (d.id === updatedDashboard.id ? updatedDashboard : d))
+      );
+      setCurrentDashboard(updatedDashboard);
+      alert('Draft saved successfully!');
+    } else {
+      alert('Failed to save draft: ' + (result.error || 'Unknown error'));
+    }
   }, [currentDashboard]);
 
-  // Publish dashboard
-  const handlePublish = useCallback(() => {
+  // Publish dashboard (uses webhook callback)
+  const handlePublish = useCallback(async () => {
     if (!currentDashboard) return;
 
     const updatedDashboard = {
@@ -105,14 +121,18 @@ const AppContent = () => {
       lastModified: new Date().toISOString(),
     };
 
-    setDashboards((prev) =>
-      prev.map((d) => (d.id === updatedDashboard.id ? updatedDashboard : d))
-    );
-    setCurrentDashboard(updatedDashboard);
+    // Invoke webhook handler
+    const result = await invokePublish(updatedDashboard);
     
-    console.log('=== PUBLISH JSON ===');
-    console.log(JSON.stringify(updatedDashboard, null, 2));
-    alert('Dashboard published successfully!');
+    if (result.success) {
+      setDashboards((prev) =>
+        prev.map((d) => (d.id === updatedDashboard.id ? updatedDashboard : d))
+      );
+      setCurrentDashboard(updatedDashboard);
+      alert('Dashboard published successfully!');
+    } else {
+      alert('Failed to publish: ' + (result.error || 'Unknown error'));
+    }
   }, [currentDashboard]);
 
   // Delete dashboard
@@ -125,6 +145,20 @@ const AppContent = () => {
       setCurrentDashboard(null);
     }
   }, [currentDashboard]);
+
+  // Refresh dashboards from webhook
+  const handleRefreshDashboards = useCallback(async () => {
+    const result = await invokeListDocuments();
+    
+    if (result.success && Array.isArray(result.result)) {
+      setDashboards(result.result);
+    } else if (result.success && result.result) {
+      // Single dashboard returned, wrap it in array
+      setDashboards([result.result]);
+    } else {
+      console.error('Failed to fetch dashboards:', result.error);
+    }
+  }, []);
 
   // Update dashboard schema
   const handleDashboardUpdate = useCallback((updatedSchema) => {
@@ -145,6 +179,16 @@ const AppContent = () => {
   // Handle settings save
   const handleSettingsSave = useCallback((newSettings) => {
     setSettings(newSettings);
+    
+    // Configure webhook URLs from settings
+    if (newSettings?.saveLocations) {
+      configureWebhookUrls({
+        saveDraftUrl: newSettings.saveLocations.saveDraftUrl || '',
+        publishUrl: newSettings.saveLocations.publishUrl || '',
+        listDocumentsUrl: newSettings.saveLocations.listDocumentsUrl || '',
+      });
+    }
+    
     console.log('Settings saved:', newSettings);
   }, []);
 
@@ -209,6 +253,7 @@ const AppContent = () => {
           onCreateNew={() => setShowNewModal(true)}
           onSettings={() => setShowSettings(true)}
           onDelete={handleDeleteDashboard}
+          onRefresh={handleRefreshDashboards}
         />
       )}
 

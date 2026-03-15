@@ -7,7 +7,7 @@
 
 import React from 'react';
 
-const DashboardList = ({ dashboards, onSelect, onCreateNew, onSettings, onDelete }) => {
+const DashboardList = ({ dashboards, onSelect, onCreateNew, onSettings, onDelete, onRefresh }) => {
   return (
     <div className="dashboard-list-container">
       <div className="dashboard-list-header">
@@ -19,6 +19,11 @@ const DashboardList = ({ dashboards, onSelect, onCreateNew, onSettings, onDelete
             <span>+</span>
             Create New Dashboard
           </button>
+          {onRefresh && (
+            <button className="btn btn-secondary" onClick={onRefresh} title="Refresh dashboards">
+              🔄 Refresh
+            </button>
+          )}
           <button className="btn btn-secondary" onClick={onSettings}>
             ⚙️ Settings
           </button>

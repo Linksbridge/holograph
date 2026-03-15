@@ -1039,6 +1039,174 @@ body {
   opacity: 1;
 }
 
+/* Multiple Filter Support */
+.filter-bar-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-bar-section {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.filter-bar-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.filter-bar-pending-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.filter-bar-pending-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-bar-pending-tab:hover {
+  background: #e5e7eb;
+}
+
+.filter-bar-pending-tab.active {
+  background: #3b82f6;
+  color: #ffffff;
+  border-color: #3b82f6;
+}
+
+.filter-bar-pending-tab-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+.filter-bar-pending-tab-remove:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.filter-bar-pending-tab.active .filter-bar-pending-tab-remove {
+  color: #ffffff;
+}
+
+.filter-bar-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 18px;
+  font-weight: 500;
+  background: #f3f4f6;
+  border: 1px dashed #9ca3af;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #6b7280;
+}
+
+.filter-bar-add-btn:hover {
+  background: #e5e7eb;
+  border-style: solid;
+  color: #3b82f6;
+}
+
+.filter-bar-pending-config {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.filter-bar-add-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  background: #ffffff;
+  border: 1px dashed #3b82f6;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #3b82f6;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.filter-bar-add-filter-btn:hover {
+  background: #eff6ff;
+  border-style: solid;
+}
+
+.filter-bar-btn-primary {
+  background: #10b981;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.filter-bar-btn-primary:hover {
+  background: #059669;
+}
+
+.filter-bar-empty-state {
+  text-align: center;
+  padding: 20px;
+  color: #6b7280;
+}
+
+.filter-bar-empty-state p {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+}
+
+.filter-bar-tag-content {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filter-bar-tag-content strong {
+  font-weight: 600;
+}
+
 /* ============================================
    Buttons
    ============================================ */

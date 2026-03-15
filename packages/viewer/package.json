@@ -1,0 +1,25 @@
+{
+  "name": "@holograph/dashboard-viewer",
+  "version": "1.0.0",
+  "description": "Embeddable React dashboard viewer component for displaying dashboards with filters",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "dependencies": {
+    "chart.js": "^4.4.1",
+    "d3": "^7.8.5",
+    "react-chartjs-2": "^5.2.0",
+    "react-grid-layout": "^1.4.4"
+  },
+  "keywords": [
+    "dashboard",
+    "viewer",
+    "embed",
+    "charts",
+    "react-component"
+  ],
+  "license": "MIT"
+}
