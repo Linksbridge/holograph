@@ -13,9 +13,14 @@ import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import UniversalChart from './UniversalChart';
 import TableComponent from './TableComponent';
+import ImageComponent from './ImageComponent';
+import RichTextComponent from './RichTextComponent';
 import PropertyPanel from './PropertyPanel';
 import ChartPalette from './ChartPalette';
+import FilterBar from './FilterBar';
 import { CHART_LIBRARIES, COMPONENT_TYPES, createZoneConfig } from '../types/schema';
+import { useFilters } from '../hooks/useFilters';
+import { getTableColumns } from '../services/dataService';
 
 const DashboardEditor = ({ dashboard, onDashboardUpdate }) => {
   const [selectedZone, setSelectedZone] = useState(null);
@@ -24,6 +29,23 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate }) => {
   const [currentBreakpoint, setCurrentBreakpoint] = useState({ breakpoint: 'lg', cols: 12, rowHeight: 30 });
   const gridRef = useRef(null);
   const draggedChartRef = useRef(null);
+  
+  // Get filter context
+  const { filters, configureFilters } = useFilters();
+  
+  // Configure which columns can be filtered for each zone based on dataSource
+  useEffect(() => {
+    const filterConfig = {};
+    dashboard.zones.forEach((zone) => {
+      if (zone.dataSource?.tableName) {
+        // Get available columns from the table
+        const availableColumns = getTableColumns(zone.dataSource.tableName);
+        // Allow filtering on all columns that exist in the data
+        filterConfig[zone.id] = availableColumns;
+      }
+    });
+    configureFilters(filterConfig);
+  }, [dashboard.zones, configureFilters]);
 
   // Handle layout change from react-grid-layout
   const handleLayoutChange = useCallback(
@@ -273,12 +295,24 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate }) => {
     if (zone.componentType === COMPONENT_TYPES.TABLE) {
       return 'zone-badge table';
     }
+    if (zone.componentType === COMPONENT_TYPES.IMAGE) {
+      return 'zone-badge image';
+    }
+    if (zone.componentType === COMPONENT_TYPES.RICHTEXT) {
+      return 'zone-badge richtext';
+    }
     return zone.library === CHART_LIBRARIES.D3 ? 'zone-badge d3' : 'zone-badge chartjs';
   };
 
   const getZoneBadgeText = (zone) => {
     if (zone.componentType === COMPONENT_TYPES.TABLE) {
       return 'Table';
+    }
+    if (zone.componentType === COMPONENT_TYPES.IMAGE) {
+      return 'Image';
+    }
+    if (zone.componentType === COMPONENT_TYPES.RICHTEXT) {
+      return 'Text';
     }
     return zone.library === CHART_LIBRARIES.D3 ? 'D3.js' : 'Chart.js';
   };
@@ -298,6 +332,9 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate }) => {
             )}
           </div>
         )}
+
+        {/* Filter Bar */}
+        <FilterBar />
 
         {/* Grid Layout */}
         <div 
@@ -365,17 +402,31 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate }) => {
                     </div>
                   )}
                   <div className="zone-chart-container">
-                    {zone.componentType === COMPONENT_TYPES.TABLE ? (
+                    {zone.componentType === COMPONENT_TYPES.IMAGE ? (
+                      <ImageComponent
+                        config={zone}
+                        width={null}
+                        height={null}
+                      />
+                    ) : zone.componentType === COMPONENT_TYPES.RICHTEXT ? (
+                      <RichTextComponent
+                        config={zone}
+                        width={null}
+                        height={null}
+                      />
+                    ) : zone.componentType === COMPONENT_TYPES.TABLE ? (
                       <TableComponent
                         config={zone}
                         width={null}
                         height={null}
+                        filters={filters}
                       />
                     ) : (
                       <UniversalChart
                         config={zone}
                         width={null}
                         height={null}
+                        filters={filters}
                       />
                     )}
                   </div>

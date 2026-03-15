@@ -10,7 +10,7 @@ import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from
 import { fetchChartData, fetchTableData } from '../services/dataService';
 import { THEMES } from '../types/schema';
 
-const TableComponent = ({ config, width, height }) => {
+const TableComponent = ({ config, width, height, filters = null }) => {
   const [tableData, setTableData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -81,7 +81,8 @@ const TableComponent = ({ config, width, height }) => {
           // Use fetchTableData for multiple columns
           const data = await fetchTableData(
             dataSource.tableName,
-            dataSource.columns
+            dataSource.columns,
+            filters
           );
 
           if (isMounted) {
@@ -92,7 +93,8 @@ const TableComponent = ({ config, width, height }) => {
           const data = await fetchChartData(
             dataSource.tableName,
             dataSource.labelColumn,
-            dataSource.valueColumn
+            dataSource.valueColumn,
+            filters
           );
 
           if (isMounted) {
@@ -117,7 +119,7 @@ const TableComponent = ({ config, width, height }) => {
     return () => {
       isMounted = false;
     };
-  }, [dataSource?.tableName, dataSource?.labelColumn, dataSource?.valueColumn, dataSource?.columns]);
+  }, [dataSource?.tableName, dataSource?.labelColumn, dataSource?.valueColumn, dataSource?.columns, JSON.stringify(filters)]);
 
   // Common container styles
   const containerBaseStyle = {

@@ -5,8 +5,7 @@
  * In production, this would be replaced with actual API calls to Azure Functions.
  */
 
-// Simulated SQL data tables
-const MOCK_DATA_TABLES = {
+export const MOCK_DATA_TABLES = {
   sales_data: [
     { month: 'Jan', revenue: 12500, region: 'North' },
     { month: 'Feb', revenue: 15200, region: 'North' },
@@ -66,9 +65,10 @@ const MOCK_DATA_TABLES = {
  * @param {string} tableName - Name of the SQL table
  * @param {string} labelColumn - Column to use for labels
  * @param {string} valueColumn - Column to use for values
+ * @param {Object} filters - Optional filter object { columnName: [values] }
  * @returns {Promise<Array<{label: string, value: number}>>} Formatted chart data
  */
-export const fetchChartData = async (tableName, labelColumn, valueColumn) => {
+export const fetchChartData = async (tableName, labelColumn, valueColumn, filters = null) => {
   // Simulate network delay (Azure Function latency)
   await new Promise((resolve) => setTimeout(resolve, 200 + Math.random() * 300));
 
@@ -79,8 +79,31 @@ export const fetchChartData = async (tableName, labelColumn, valueColumn) => {
     return [];
   }
 
+  // Apply filters if provided
+  let filteredData = tableData;
+  if (filters && Object.keys(filters).length > 0) {
+    filteredData = tableData.filter((row) => {
+      // Check each filter column
+      for (const [columnName, filterValues] of Object.entries(filters)) {
+        // Skip empty filters
+        if (!filterValues || !Array.isArray(filterValues) || filterValues.length === 0) {
+          continue;
+        }
+        
+        // Get the row value for this column
+        const rowValue = row[columnName];
+        
+        // If the row's column value is not in the filter values, exclude it
+        if (rowValue !== undefined && !filterValues.includes(rowValue)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }
+
   // Transform SQL result to chart-friendly format
-  return tableData.map((row) => ({
+  return filteredData.map((row) => ({
     label: row[labelColumn] || row[Object.keys(row)[0]],
     value: row[valueColumn] || row[Object.keys(row)[1]],
   }));
@@ -90,9 +113,10 @@ export const fetchChartData = async (tableName, labelColumn, valueColumn) => {
  * Simulates an Azure Function call to fetch all table data
  * @param {string} tableName - Name of the SQL table
  * @param {string[]} columns - Array of column names to fetch (optional, fetches all if not provided)
+ * @param {Object} filters - Optional filter object { columnName: [values] }
  * @returns {Promise<Array<Object>>} Raw table data with all columns
  */
-export const fetchTableData = async (tableName, columns = null) => {
+export const fetchTableData = async (tableName, columns = null, filters = null) => {
   // Simulate network delay (Azure Function latency)
   await new Promise((resolve) => setTimeout(resolve, 200 + Math.random() * 300));
 
@@ -103,9 +127,32 @@ export const fetchTableData = async (tableName, columns = null) => {
     return [];
   }
 
+  // Apply filters if provided
+  let filteredData = tableData;
+  if (filters && Object.keys(filters).length > 0) {
+    filteredData = tableData.filter((row) => {
+      // Check each filter column
+      for (const [columnName, filterValues] of Object.entries(filters)) {
+        // Skip empty filters
+        if (!filterValues || !Array.isArray(filterValues) || filterValues.length === 0) {
+          continue;
+        }
+        
+        // Get the row value for this column
+        const rowValue = row[columnName];
+        
+        // If the row's column value is not in the filter values, exclude it
+        if (rowValue !== undefined && !filterValues.includes(rowValue)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }
+
   // If columns specified, return only those columns
   if (columns && Array.isArray(columns) && columns.length > 0) {
-    return tableData.map((row) => {
+    return filteredData.map((row) => {
       const filteredRow = {};
       columns.forEach((col) => {
         filteredRow[col] = row[col];
@@ -115,7 +162,7 @@ export const fetchTableData = async (tableName, columns = null) => {
   }
 
   // Otherwise return all columns
-  return tableData;
+  return filteredData;
 };
 
 /**

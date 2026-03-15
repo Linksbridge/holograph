@@ -14,6 +14,8 @@
 export const COMPONENT_TYPES = {
   CHART: 'chart',
   TABLE: 'table',
+  IMAGE: 'image',
+  RICHTEXT: 'richtext',
 };
 
 // Supported chart library types

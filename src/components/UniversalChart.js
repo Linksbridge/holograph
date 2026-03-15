@@ -4,6 +4,7 @@
  * A dispatcher component that dynamically loads the appropriate
  * Renderer Adapter based on the library string in the configuration.
  * Uses ResizeObserver to detect container size for responsive rendering.
+ * Supports external filters passed from consuming systems.
  */
 
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
@@ -12,7 +13,7 @@ import ChartJsAdapter from '../adapters/ChartJsAdapter';
 import { fetchChartData } from '../services/dataService';
 import { CHART_LIBRARIES, CHART_TYPES, DEFAULT_CHART_TYPE } from '../types/schema';
 
-const UniversalChart = ({ config, width, height }) => {
+const UniversalChart = ({ config, width, height, filters = null }) => {
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -65,7 +66,7 @@ const UniversalChart = ({ config, width, height }) => {
     };
   }, []);
 
-  // Fetch data when dataSource changes
+  // Fetch data when dataSource or filters change
   useEffect(() => {
     let isMounted = true;
 
@@ -77,7 +78,8 @@ const UniversalChart = ({ config, width, height }) => {
         const data = await fetchChartData(
           dataSource.tableName,
           dataSource.labelColumn,
-          dataSource.valueColumn
+          dataSource.valueColumn,
+          filters
         );
 
         if (isMounted) {
@@ -101,7 +103,7 @@ const UniversalChart = ({ config, width, height }) => {
     return () => {
       isMounted = false;
     };
-  }, [dataSource?.tableName, dataSource?.labelColumn, dataSource?.valueColumn]);
+  }, [dataSource?.tableName, dataSource?.labelColumn, dataSource?.valueColumn, JSON.stringify(filters)]);
 
   // Memoize the adapter selection based on library type
   const ChartAdapter = useCallback(() => {

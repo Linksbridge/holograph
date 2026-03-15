@@ -188,6 +188,38 @@ const CHART_OPTIONS = [
     ),
     description: 'Data table view',
   },
+  // Image component
+  {
+    id: 'image',
+    componentType: COMPONENT_TYPES.IMAGE,
+    library: null,
+    chartType: null,
+    title: 'Image',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <circle cx="8.5" cy="8.5" r="1.5" />
+        <polyline points="21 15 16 10 5 21" />
+      </svg>
+    ),
+    description: 'Display an image',
+  },
+  // Rich Text component
+  {
+    id: 'richtext',
+    componentType: COMPONENT_TYPES.RICHTEXT,
+    library: null,
+    chartType: null,
+    title: 'Text',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <polyline points="4 7 4 4 20 4 20 7" />
+        <line x1="9" y1="20" x2="15" y2="20" />
+        <line x1="12" y1="4" x2="12" y2="20" />
+      </svg>
+    ),
+    description: 'Rich text content',
+  },
 ];
 
 const ITEM_HEIGHT = 90; // Height of each chart item in pixels

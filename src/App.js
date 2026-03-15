@@ -5,17 +5,19 @@
  * displays the dashboard list, and handles dashboard creation/editing.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import DashboardList from './components/DashboardList';
 import DashboardEditor from './components/DashboardEditor';
 import NewDashboardModal from './components/NewDashboardModal';
 import SettingsPanel from './components/SettingsPanel';
 import PreviewModal from './components/PreviewModal';
+import { FilterProvider, initializeGlobalFilterAPI, useFilters } from './hooks/useFilters';
 import { createInitialDashboard } from './types/schema';
 import './styles/dashboard.css';
 
-const App = () => {
+// Inner component that uses filter context
+const AppContent = () => {
   // Dashboard management state
   const [dashboards, setDashboards] = useState([
     {
@@ -33,6 +35,14 @@ const App = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
+
+  // Get filter functions for global API
+  const filterFunctions = useFilters();
+
+  // Initialize global filter API for consuming systems
+  useEffect(() => {
+    initializeGlobalFilterAPI(filterFunctions);
+  }, [filterFunctions]);
 
   // Create new dashboard
   const handleCreateDashboard = useCallback((dashboardInfo) => {
@@ -224,6 +234,16 @@ const App = () => {
         dashboard={currentDashboard?.schema}
       />
     </>
+  );
+};
+
+// Main App component that wraps content with FilterProvider
+// Accepts optional externalFilters prop from parent React component
+const App = ({ externalFilters }) => {
+  return (
+    <FilterProvider externalFilters={externalFilters}>
+      <AppContent />
+    </FilterProvider>
   );
 };
 
