@@ -5,17 +5,40 @@
  * appear when published, showing all charts and their configurations.
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import GridLayout from 'react-grid-layout';
 import UniversalChart from './UniversalChart';
 import TableComponent from './TableComponent';
 import { COMPONENT_TYPES } from '../types/schema';
 
 const PreviewModal = ({ isOpen, onClose, dashboard }) => {
-  if (!isOpen || !dashboard) return null;
+  const [gridWidth, setGridWidth] = useState(1100);
+  const contentRef = useRef(null);
+
+  // Calculate grid dimensions for preview - use responsive width
+  useEffect(() => {
+    const updateWidth = () => {
+      if (contentRef.current) {
+        const containerWidth = contentRef.current.offsetWidth;
+        // Account for padding (20px) and margin
+        const newWidth = Math.max(400, containerWidth - 40);
+        setGridWidth(newWidth);
+      }
+    };
+
+    updateWidth();
+
+    const resizeObserver = new ResizeObserver(updateWidth);
+    if (contentRef.current) {
+      resizeObserver.observe(contentRef.current);
+    }
+
+    return () => resizeObserver.disconnect();
+  }, [isOpen]);
 
   // Generate layout for react-grid-layout
   const layout = useMemo(() => {
+    if (!dashboard || !dashboard.zones) return [];
     return dashboard.zones.map((zone) => ({
       i: zone.id,
       x: zone.gridPosition.x,
@@ -23,13 +46,12 @@ const PreviewModal = ({ isOpen, onClose, dashboard }) => {
       w: zone.gridPosition.w,
       h: zone.gridPosition.h,
     }));
-  }, [dashboard.zones]);
+  }, [dashboard]);
 
   // Calculate grid dimensions for preview
-  const gridWidth = 1100;
-  const cols = dashboard.layout.cols || 12;
-  const rowHeight = dashboard.layout.rowHeight || 30;
-  const margin = dashboard.layout.margin || [10, 10];
+  const cols = dashboard?.layout?.cols || 12;
+  const rowHeight = dashboard?.layout?.rowHeight || 30;
+  const margin = dashboard?.layout?.margin || [10, 10];
 
   const handleClose = (e) => {
     if (e) e.stopPropagation();
@@ -41,6 +63,8 @@ const PreviewModal = ({ isOpen, onClose, dashboard }) => {
       onClose();
     }
   };
+
+  if (!isOpen || !dashboard) return null;
 
   return (
     <div className="preview-modal-backdrop" onClick={handleBackdropClick}>
@@ -62,8 +86,8 @@ const PreviewModal = ({ isOpen, onClose, dashboard }) => {
           </div>
         )}
         
-        <div className="preview-modal-content">
-          {dashboard.zones.length === 0 ? (
+        <div className="preview-modal-content" ref={contentRef}>
+          {!dashboard.zones || dashboard.zones.length === 0 ? (
             <div className="preview-empty-state">
               <p>No charts to preview</p>
             </div>

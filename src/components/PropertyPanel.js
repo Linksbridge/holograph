@@ -5,11 +5,11 @@
  */
 
 import React from 'react';
-import { CHART_LIBRARIES, CHART_TYPES, CHART_TYPE_LIBRARY, DEFAULT_CHART_TYPE, COLOR_THEMES, THEMES, COMPONENT_TYPES } from '../types/schema';
+import { CHART_LIBRARIES, CHART_TYPES, CHART_TYPE_LIBRARY, DEFAULT_CHART_TYPE, COLOR_THEMES, THEMES, COMPONENT_TYPES, LEGEND_POSITIONS } from '../types/schema';
 import { getAvailableTables, getTableColumns } from '../services/dataService';
 
 const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
-  const { id, componentType, library, theme, title, dataSource, chartType, showHeader } = zoneConfig;
+  const { id, componentType, library, theme, title, dataSource, chartType, showHeader, legend } = zoneConfig;
   const availableTables = getAvailableTables();
   const tableColumns = dataSource?.tableName ? getTableColumns(dataSource.tableName) : [];
 
@@ -194,6 +194,27 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
     });
   };
 
+  // Legend handlers
+  const handleLegendEnabledChange = (e) => {
+    onUpdate({
+      ...zoneConfig,
+      legend: {
+        ...legend,
+        enabled: e.target.checked,
+      },
+    });
+  };
+
+  const handleLegendPositionChange = (e) => {
+    onUpdate({
+      ...zoneConfig,
+      legend: {
+        ...legend,
+        position: e.target.value,
+      },
+    });
+  };
+
   // Content mode handler for RichText
   const handleContentModeChange = (e) => {
     onUpdate({
@@ -335,6 +356,40 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Legend Settings - Only show for charts */}
+        {componentType === COMPONENT_TYPES.CHART && (
+          <div className="property-field-group">
+            <label className="property-label">Legend</label>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <span className="property-help-text" style={{ margin: 0 }}>Show Legend</span>
+              <label className="property-toggle">
+                <input
+                  type="checkbox"
+                  checked={legend?.enabled !== false}
+                  onChange={handleLegendEnabledChange}
+                />
+                <span className="property-toggle-slider"></span>
+              </label>
+            </div>
+            {legend?.enabled !== false && (
+              <div className="property-field-group" style={{ marginTop: '8px' }}>
+                <label className="property-label" style={{ fontSize: '12px', color: '#6b7280' }}>Position</label>
+                <select
+                  className="property-select"
+                  value={legend?.position || LEGEND_POSITIONS.BOTTOM}
+                  onChange={handleLegendPositionChange}
+                >
+                  <option value={LEGEND_POSITIONS.TOP}>Top</option>
+                  <option value={LEGEND_POSITIONS.BOTTOM}>Bottom</option>
+                  <option value={LEGEND_POSITIONS.LEFT}>Left</option>
+                  <option value={LEGEND_POSITIONS.RIGHT}>Right</option>
+                  <option value={LEGEND_POSITIONS.NONE}>None</option>
+                </select>
+              </div>
+            )}
           </div>
         )}
 

@@ -17,6 +17,7 @@ import {
   DEFAULT_CHART_TYPE,
   SIZING_MODES,
   COLOR_THEMES,
+  LEGEND_POSITIONS,
 } from './constants.js';
 
 /**
@@ -32,6 +33,10 @@ export const createZoneConfig = (id) => ({
   theme: COLOR_THEMES.DEFAULT,
   title: 'New Chart',
   showHeader: true,
+  legend: {
+    enabled: true,
+    position: LEGEND_POSITIONS.BOTTOM,
+  },
   dataSource: {
     tableName: 'sales_data',
     labelColumn: 'month',

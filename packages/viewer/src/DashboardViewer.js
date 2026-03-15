@@ -47,7 +47,7 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData }) => {
   const [dimensions, setDimensions] = useState({ width: 300, height: 200 });
   const containerRef = useRef(null);
 
-  const { library, theme, title, dataSource, chartType } = zone;
+  const { library, theme, title, dataSource, chartType, legend } = zone;
   const effectiveChartType = chartType || DEFAULT_CHART_TYPE[library] || CHART_TYPES.CHARTJS_LINE;
 
   // Get theme colors
@@ -159,11 +159,9 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData }) => {
   // Loading state
   if (loading) {
     return (
-      <div ref={containerRef} style={{ ...containerBaseStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: themeColors.background, borderRadius: '8px', color: themeColors.text }}>
-        <div style={{ textAlign: 'center' }}>
-          <div className="viewer-spinner" />
-          <span style={{ fontSize: '12px' }}>Loading...</span>
-        </div>
+      <div ref={containerRef} style={containerBaseStyle} className="viewer-zone-loading">
+        <div className="viewer-spinner" />
+        <span className="viewer-zone-loading-text">Loading...</span>
       </div>
     );
   }
@@ -171,10 +169,10 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData }) => {
   // Error state
   if (error) {
     return (
-      <div ref={containerRef} style={{ ...containerBaseStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fef2f2', borderRadius: '8px', color: '#dc2626' }}>
-        <div style={{ textAlign: 'center', padding: '10px' }}>
-          <div style={{ fontSize: '18px', marginBottom: '4px' }}>⚠️</div>
-          <div style={{ fontSize: '12px' }}>{error}</div>
+      <div ref={containerRef} style={containerBaseStyle} className="viewer-zone-error">
+        <div style={{ textAlign: 'center' }}>
+          <div className="viewer-zone-error-icon">⚠️</div>
+          <div className="viewer-zone-error-text">{error}</div>
         </div>
       </div>
     );
@@ -187,10 +185,10 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData }) => {
 
   if (isEmpty) {
     return (
-      <div ref={containerRef} style={{ ...containerBaseStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: themeColors.background, borderRadius: '8px', color: themeColors.text }}>
+      <div ref={containerRef} style={containerBaseStyle} className="viewer-zone-empty">
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '18px', marginBottom: '4px' }}>📊</div>
-          <div style={{ fontSize: '12px' }}>No data</div>
+          <div className="viewer-zone-empty-icon">📊</div>
+          <div className="viewer-zone-empty-text">No data</div>
         </div>
       </div>
     );
@@ -234,6 +232,7 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData }) => {
           height={dimensions.height}
           title={title}
           chartType={effectiveChartType}
+          legend={legend}
         />
       )}
     </div>
@@ -323,6 +322,13 @@ const DashboardViewer = ({
   const rowHeight = dashboard?.layout?.rowHeight || 30;
   const margin = dashboard?.layout?.margin || [10, 10];
 
+  // Helper to get library attribute value
+  const getLibraryAttr = (lib) => {
+    if (lib === CHART_LIBRARIES.D3) return 'd3';
+    if (lib === CHART_LIBRARIES.CHARTJS) return 'chartjs';
+    return 'chartjs';
+  };
+
   if (!dashboard) {
     return (
       <div className={`dashboard-viewer ${className}`}>
@@ -377,7 +383,13 @@ const DashboardViewer = ({
             containerPadding={[10, 10]}
           >
             {dashboard.zones?.map((zone) => (
-              <div key={zone.id} className="viewer-zone-card">
+              <div
+                key={zone.id}
+                className="viewer-zone-card"
+                data-component-type={zone.componentType === COMPONENT_TYPES.TABLE ? 'table' : 'chart'}
+                data-library={getLibraryAttr(zone.library)}
+                data-theme={zone.theme || 'default'}
+              >
                 {(zone.showHeader !== false) && (
                   <div className="viewer-zone-header">
                     <h3 className="viewer-zone-title">{zone.title}</h3>

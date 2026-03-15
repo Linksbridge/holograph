@@ -119,6 +119,15 @@ export const THEMES = {
   },
 };
 
+// Legend position options
+export const LEGEND_POSITIONS = {
+  TOP: 'top',
+  BOTTOM: 'bottom',
+  LEFT: 'left',
+  RIGHT: 'right',
+  NONE: 'none',
+};
+
 /**
  * Creates a new zone configuration
  * @param {string} id - Unique zone identifier
@@ -132,6 +141,10 @@ export const createZoneConfig = (id) => ({
   theme: COLOR_THEMES.DEFAULT,
   title: 'New Chart',
   showHeader: true,
+  legend: {
+    enabled: true,
+    position: LEGEND_POSITIONS.BOTTOM,
+  },
   dataSource: {
     tableName: 'sales_data',
     labelColumn: 'month',

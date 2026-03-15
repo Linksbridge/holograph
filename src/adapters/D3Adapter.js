@@ -11,12 +11,13 @@ import React, { useRef, useEffect } from 'react';
 import * as d3 from 'd3';
 import { THEMES, CHART_TYPES } from '../types/schema';
 
-const D3Adapter = ({ data, theme = 'default', width = 400, height = 300, title, chartType = CHART_TYPES.D3_BAR }) => {
+const D3Adapter = ({ data, theme = 'default', width = 400, height = 300, title, chartType = CHART_TYPES.D3_BAR, legend }) => {
   const svgRef = useRef(null);
   const colors = THEMES[theme] || THEMES.default;
 
-  // Determine if we should show legend - lowered threshold
-  const showLegend = width > 180 && height > 140;
+  // Determine if we should show legend - from props or default based on size
+  const legendEnabled = legend?.enabled !== false;
+  const showLegend = legendEnabled && width > 180 && height > 140;
   const legendHeight = showLegend ? 25 : 0;
 
   // Color palette for pie/donut/scatter charts

@@ -20,7 +20,7 @@ const UniversalChart = ({ config, width, height, filters = null }) => {
   const [dimensions, setDimensions] = useState({ width: 300, height: 200 });
   const containerRef = useRef(null);
 
-  const { library, theme, title, dataSource, chartType } = config;
+  const { library, theme, title, dataSource, chartType, legend } = config;
 
   // Get the effective chart type - use config or default based on library
   const effectiveChartType = chartType || DEFAULT_CHART_TYPE[library] || CHART_TYPES.CHARTJS_LINE;
@@ -185,6 +185,7 @@ const UniversalChart = ({ config, width, height, filters = null }) => {
         height={dimensions.height}
         title={title}
         chartType={effectiveChartType}
+        legend={legend}
       />
     </div>
   );

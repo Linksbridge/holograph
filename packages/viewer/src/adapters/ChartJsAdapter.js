@@ -49,12 +49,14 @@ const CHART_COMPONENTS = {
   [CHART_TYPES.CHARTJS_POLAR]: PolarArea,
 };
 
-const ChartJsAdapter = ({ data, theme = 'default', width = 400, height = 300, title, chartType = CHART_TYPES.CHARTJS_LINE }) => {
+const ChartJsAdapter = ({ data, theme = 'default', width = 400, height = 300, title, chartType = CHART_TYPES.CHARTJS_LINE, legend }) => {
   const chartRef = useRef(null);
   const colors = THEMES[theme] || THEMES.default;
 
-  // Determine if we should show legend - lowered threshold
-  const showLegend = width > 180 && height > 140;
+  // Determine if we should show legend - from props or default based on size
+  const legendEnabled = legend?.enabled !== false;
+  const legendPosition = legend?.position || 'bottom';
+  const showLegend = legendEnabled && width > 180 && height > 140;
   
   // Determine if we need scales (pie/doughnut/polar/radar don't use scales)
   const needsScales = ![CHART_TYPES.CHARTJS_PIE, CHART_TYPES.CHARTJS_DOUGHNUT, CHART_TYPES.CHARTJS_POLAR, CHART_TYPES.CHARTJS_RADAR].includes(chartType);
@@ -122,7 +124,7 @@ const ChartJsAdapter = ({ data, theme = 'default', width = 400, height = 300, ti
       plugins: {
         legend: {
           display: showLegend,
-          position: 'bottom',
+          position: legendPosition,
           labels: {
             color: colors.text,
             font: {
@@ -237,7 +239,7 @@ const ChartJsAdapter = ({ data, theme = 'default', width = 400, height = 300, ti
     }
 
     return baseOptions;
-  }, [showLegend, colors, title, width, height, needsScales, chartType]);
+  }, [showLegend, legendPosition, colors, title, width, height, needsScales, chartType]);
 
   // Cleanup chart instance on unmount
   useEffect(() => {

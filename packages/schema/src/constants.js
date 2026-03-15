@@ -75,6 +75,15 @@ export const COLOR_THEMES = {
   MONOCHROME: 'monochrome',
 };
 
+// Legend position options
+export const LEGEND_POSITIONS = {
+  TOP: 'top',
+  BOTTOM: 'bottom',
+  LEFT: 'left',
+  RIGHT: 'right',
+  NONE: 'none',
+};
+
 // Theme color palettes
 export const THEMES = {
   [COLOR_THEMES.DEFAULT]: {
@@ -123,4 +132,5 @@ export default {
   SIZING_MODES,
   COLOR_THEMES,
   THEMES,
+  LEGEND_POSITIONS,
 };
