@@ -189,6 +189,7 @@ const UniversalChart = ({ config, width, height, filters = null }) => {
         title={title}
         chartType={effectiveChartType}
         legend={legend}
+        zoneConfig={config}
       />
     </div>
   );

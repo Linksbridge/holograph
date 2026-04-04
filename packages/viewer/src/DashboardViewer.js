@@ -12,15 +12,15 @@
  * @package @holograph/dashboard-viewer
  */
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
 import GridLayout from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 
-// Import chart adapters
-import D3Adapter from './adapters/D3Adapter';
-import ChartJsAdapter from './adapters/ChartJsAdapter';
-import NivoAdapter from './adapters/NivoAdapter';
+// Lazy-load chart adapters so only the libraries used in the dashboard are downloaded
+const D3Adapter = React.lazy(() => import('./adapters/D3Adapter'));
+const ChartJsAdapter = React.lazy(() => import('./adapters/ChartJsAdapter'));
+const NivoAdapter = React.lazy(() => import('./adapters/NivoAdapter'));
 
 // Import data service
 import { fetchChartData, fetchTableData, initializeDataService } from './services/dataService';
@@ -228,15 +228,22 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData }) => {
   return (
     <div ref={containerRef} style={containerBaseStyle}>
       {Adapter && (
-        <Adapter
-          data={chartData}
-          theme={theme}
-          width={dimensions.width}
-          height={dimensions.height}
-          title={title}
-          chartType={effectiveChartType}
-          legend={legend}
-        />
+        <Suspense fallback={
+          <div style={containerBaseStyle} className="viewer-zone-loading">
+            <div className="viewer-spinner" />
+            <span className="viewer-zone-loading-text">Loading...</span>
+          </div>
+        }>
+          <Adapter
+            data={chartData}
+            theme={theme}
+            width={dimensions.width}
+            height={dimensions.height}
+            title={title}
+            chartType={effectiveChartType}
+            legend={legend}
+          />
+        </Suspense>
       )}
     </div>
   );

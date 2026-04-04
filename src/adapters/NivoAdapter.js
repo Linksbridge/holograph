@@ -7,12 +7,37 @@
  * Nivo is known for beautiful, animated charts with good defaults.
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { ResponsiveLine } from '@nivo/line';
 import { ResponsiveBar } from '@nivo/bar';
 import { ResponsivePie } from '@nivo/pie';
 import { ResponsiveChoropleth } from '@nivo/geo';
 import { CHART_TYPES, CHART_LIBRARIES, THEMES } from '@holograph/dashboard-schema';
+
+// GeoJSON sources for choropleth maps (Natural Earth via CartoDB CDN)
+const GEO_FEATURE_URLS = {
+  'world-50m': 'https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_50m_admin_0_countries.geojson',
+  'world-110m': 'https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_110m_admin_0_countries.geojson',
+  'usa': 'https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_110m_admin_1_states_provinces.geojson',
+  'europe': 'https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_50m_admin_0_countries.geojson',
+};
+
+// Module-level cache so features are only fetched once per session
+const featureCache = {};
+
+const loadGeoFeatures = async (mapFeatures, geoJsonUrl) => {
+  const url = mapFeatures === 'custom' ? geoJsonUrl : GEO_FEATURE_URLS[mapFeatures];
+  if (!url) return [];
+  if (featureCache[url]) return featureCache[url];
+  const res = await fetch(url);
+  const json = await res.json();
+  const features = (json.features || []).map(f => ({
+    ...f,
+    id: f.properties?.iso_a3 || f.properties?.ISO_A3 || f.properties?.adm0_a3 || f.id,
+  }));
+  featureCache[url] = features;
+  return features;
+};
 
 // Default color palette for nivo
 const DEFAULT_PALETTE = [
@@ -58,18 +83,38 @@ const getNivoChartType = (chartType) => {
   }
 };
 
-const NivoAdapter = ({ 
-  data, 
-  theme = 'default', 
-  width = 400, 
-  height = 300, 
-  title, 
-  chartType = CHART_TYPES.NIVO_LINE, 
-  legend 
+const NivoAdapter = ({
+  data,
+  theme = 'default',
+  width = 400,
+  height = 300,
+  title,
+  chartType = CHART_TYPES.NIVO_LINE,
+  legend,
+  zoneConfig = {},
 }) => {
   const colors = THEMES[theme] || THEMES.default;
   const legendEnabled = legend?.enabled !== false;
   const showLegend = legendEnabled && width > 180 && height > 140;
+
+  const [geoFeatures, setGeoFeatures] = useState([]);
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoError, setGeoError] = useState(null);
+
+  const isChoropleth = getNivoChartType(chartType) === NIVO_CHART_TYPES.CHOROPLETH;
+
+  useEffect(() => {
+    if (!isChoropleth) return;
+    const mapFeatures = zoneConfig.mapFeatures || 'world-110m';
+    const geoJsonUrl = zoneConfig.geoJsonUrl || '';
+    if (mapFeatures === 'custom' && !geoJsonUrl) return;
+    setGeoLoading(true);
+    setGeoError(null);
+    loadGeoFeatures(mapFeatures, geoJsonUrl)
+      .then(setGeoFeatures)
+      .catch(err => setGeoError(err.message))
+      .finally(() => setGeoLoading(false));
+  }, [isChoropleth, zoneConfig.mapFeatures, zoneConfig.geoJsonUrl]);
   
   const fontSize = Math.max(9, Math.min(12, width / 30));
   
@@ -384,18 +429,19 @@ const pieConfig = useMemo(() => ({
 // Choropleth chart specific config
 const choroplethConfig = useMemo(() => ({
   margin: { top: 20, right: 20, bottom: 20, left: 20 },
-  borderColor: { from: 'color', modifiers: [['darker', 0.2]] },
-  colors: DEFAULT_PALETTE,
-  enableLabel: true,
-  label: ({ datum }) => datum?.label || '',
-  labelTextColor: { from: 'color', modifiers: [['darker', 0.5]] },
-  projectionType: 'naturalEarth1',
-  projectionScale: 100,
+  features: geoFeatures,
+  projectionType: zoneConfig.projectionType || 'naturalEarth1',
+  projectionScale: zoneConfig.projectionScale || 100,
   projectionTranslation: [0.5, 0.5],
+  match: zoneConfig.matchBy === 'properties.name'
+    ? (feature, datum) => (feature.properties?.name || feature.properties?.NAME) === datum.id
+    : zoneConfig.matchBy === 'properties.iso_a3'
+    ? (feature, datum) => (feature.properties?.iso_a3 || feature.properties?.ISO_A3) === datum.id
+    : undefined,
+  colors: DEFAULT_PALETTE,
+  borderColor: { from: 'color', modifiers: [['darker', 0.2]] },
   defs: [],
   fill: [],
-  // Note: features prop (geographical data) should be provided via chart configuration
-  // features: geoJsonFeatures, // e.g., from @nivo/geo-atlas/world-50m
   legends: showLegend ? [{
     anchor: 'bottom',
     direction: 'row',
@@ -435,7 +481,7 @@ const choroplethConfig = useMemo(() => ({
       </div>
     );
   },
-}), [showLegend, colors, fontSize, data]);
+}), [showLegend, colors, fontSize, data, geoFeatures, zoneConfig.projectionType, zoneConfig.projectionScale, zoneConfig.matchBy]);
   
 // Get the appropriate chart component and config
 const nivoChartType = getNivoChartType(chartType);
@@ -485,11 +531,21 @@ switch (nivoChartType) {
         </div>
       )}
       <div style={{ width: '100%', flex: 1, minHeight: '80px' }}>
-        <ChartComponent
-          data={nivoData}
-          {...chartConfig}
-          theme={nivoTheme}
-        />
+        {isChoropleth && geoLoading ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: colors.text, fontSize: fontSize }}>
+            Loading map data...
+          </div>
+        ) : isChoropleth && geoError ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#ef4444', fontSize: fontSize, padding: '8px', textAlign: 'center' }}>
+            Failed to load map: {geoError}
+          </div>
+        ) : (
+          <ChartComponent
+            data={nivoData}
+            {...chartConfig}
+            theme={nivoTheme}
+          />
+        )}
       </div>
     </div>
   );

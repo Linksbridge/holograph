@@ -511,8 +511,19 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
             </div>
 
             <div className="property-info" style={{ marginTop: '16px' }}>
-              <strong>Note:</strong> Choropleth maps require geographical features data.
-              For production use, consider using @nivo/geo-atlas package.
+              <strong>Data format:</strong>{' '}
+              {(!zoneConfig.matchBy || zoneConfig.matchBy === 'id') && (
+                <>Each data row needs an <code>id</code> field with the ISO&nbsp;A3 country code (e.g. <code>USA</code>, <code>GBR</code>, <code>DEU</code>).</>
+              )}
+              {zoneConfig.matchBy === 'properties.name' && (
+                <>Each data row needs an <code>id</code> field with the full country name (e.g. <code>United States of America</code>).</>
+              )}
+              {zoneConfig.matchBy === 'properties.iso_a3' && (
+                <>Each data row needs an <code>id</code> field with the ISO&nbsp;A3 code (e.g. <code>USA</code>, <code>GBR</code>, <code>DEU</code>).</>
+              )}
+              {zoneConfig.matchBy === 'custom' && (
+                <>Custom matching requires a data field that aligns with the chosen GeoJSON feature properties.</>
+              )}
             </div>
           </div>
         )}
