@@ -287,7 +287,11 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate, enabledLibraries }) => 
   }, []);
 
   // Generate layout items for react-grid-layout
-  const layout = dashboard.zones.map((zone) => ({
+  // IMPORTANT: must be memoized — react-grid-layout v2 calls onLayoutChange in a
+  // useEffect([layout]) hook, so a new array reference on every render triggers
+  // handleLayoutChange → onDashboardUpdate → cascade that prevents filter fetches
+  // from completing.
+  const layout = useMemo(() => dashboard.zones.map((zone) => ({
     i: zone.id,
     x: zone.gridPosition.x,
     y: zone.gridPosition.y,
@@ -295,7 +299,7 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate, enabledLibraries }) => 
     h: zone.gridPosition.h,
     minW: 2,
     minH: 2,
-  }));
+  })), [dashboard.zones]);
 
   const getZoneBadgeClass = (zone) => {
     if (zone.componentType === COMPONENT_TYPES.TABLE) {
