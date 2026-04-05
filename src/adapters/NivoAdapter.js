@@ -91,6 +91,7 @@ const NivoAdapter = ({
   title,
   chartType = CHART_TYPES.NIVO_LINE,
   legend,
+  tooltip,
   zoneConfig = {},
 }) => {
   const colors = THEMES[theme] || THEMES.default;
@@ -117,8 +118,28 @@ const NivoAdapter = ({
   }, [isChoropleth, zoneConfig.mapFeatures, zoneConfig.geoJsonUrl]);
   
   const fontSize = Math.max(9, Math.min(12, width / 30));
-  
-// Convert data to nivo format
+
+  // Helper function to format tooltip values
+  const formatTooltipValue = (value) => {
+    if (!tooltip?.enabled) return null;
+
+    let formattedValue = value?.toLocaleString();
+
+    if (tooltip?.format === 'currency') {
+      formattedValue = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD'
+      }).format(value);
+    } else if (tooltip?.format === 'percentage') {
+      formattedValue = `${(value * 100).toFixed(1)}%`;
+    } else if (tooltip?.format === 'number') {
+      formattedValue = value?.toLocaleString();
+    }
+
+    return formattedValue;
+  };
+
+  // Convert data to nivo format
 const nivoData = useMemo(() => {
   if (!data || data.length === 0) return [];
   
@@ -198,11 +219,12 @@ const nivoData = useMemo(() => {
     },
     tooltip: {
       container: {
-        background: colors.background,
-        color: colors.text,
+        background: tooltip?.backgroundColor === 'auto' ? colors.background : (tooltip?.backgroundColor || colors.background),
+        color: tooltip?.textColor === 'auto' ? colors.text : (tooltip?.textColor || colors.text),
         fontSize: fontSize,
         borderRadius: '6px',
         boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+        border: tooltip?.borderColor === 'auto' ? `1px solid ${colors.primary}` : (tooltip?.borderColor ? `1px solid ${tooltip.borderColor}` : 'none'),
       },
     },
     legend: {
@@ -352,20 +374,24 @@ const barConfig = useMemo(() => ({
       },
     ],
   }] : [],
-  tooltip: (tooltip) => {
+  tooltip: tooltip?.enabled !== false ? ((tooltipData) => {
+    const formattedValue = formatTooltipValue(tooltipData.value);
+    const titleText = tooltip?.title ? tooltip.title.replace('{id}', tooltipData.id).replace('{label}', tooltipData.id) : tooltipData.id;
+    const labelText = tooltip?.label ? tooltip.label.replace('{value}', formattedValue) : formattedValue;
     return (
-      <div style={{ 
-        background: colors.background, 
-        padding: '8px 12px', 
+      <div style={{
+        background: tooltip?.backgroundColor === 'auto' ? colors.background : (tooltip?.backgroundColor || colors.background),
+        padding: '8px 12px',
         borderRadius: '4px',
         boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-        color: colors.text,
+        color: tooltip?.textColor === 'auto' ? colors.text : (tooltip?.textColor || colors.text),
         fontSize: fontSize,
+        border: tooltip?.borderColor === 'auto' ? `1px solid ${colors.primary}` : (tooltip?.borderColor ? `1px solid ${tooltip.borderColor}` : 'none'),
       }}>
-        <strong>{tooltip.id}</strong>: {tooltip.value?.toLocaleString()}
+        <strong>{titleText}</strong>: {labelText}
       </div>
     );
-  },
+  }) : false,
 }), [width, showLegend, colors, fontSize]);
 
 // Pie chart specific config
@@ -408,22 +434,29 @@ const pieConfig = useMemo(() => ({
       },
     ],
   }] : [],
-  tooltip: (tooltip) => {
+  tooltip: tooltip?.enabled !== false ? ((tooltipData) => {
+    const formattedValue = formatTooltipValue(tooltipData.datum.value);
+    const total = data?.reduce((a, b) => a + b.value, 0) || 1;
+    const percentage = ((tooltipData.datum.value / total) * 100).toFixed(1);
+    const titleText = tooltip?.title ? tooltip.title.replace('{id}', tooltipData.datum.id || tooltipData.datum.label).replace('{label}', tooltipData.datum.label) : tooltipData.datum.label;
+    const labelText = tooltip?.label ? tooltip.label.replace('{value}', formattedValue) : formattedValue;
+
     return (
-      <div style={{ 
-        background: colors.background, 
-        padding: '8px 12px', 
+      <div style={{
+        background: tooltip?.backgroundColor === 'auto' ? colors.background : (tooltip?.backgroundColor || colors.background),
+        padding: '8px 12px',
         borderRadius: '4px',
         boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-        color: colors.text,
+        color: tooltip?.textColor === 'auto' ? colors.text : (tooltip?.textColor || colors.text),
         fontSize: fontSize,
+        border: tooltip?.borderColor === 'auto' ? `1px solid ${colors.primary}` : (tooltip?.borderColor ? `1px solid ${tooltip.borderColor}` : 'none'),
       }}>
-        <strong>{tooltip.datum.label}</strong>: {tooltip.datum.value?.toLocaleString()}
+        <strong>{titleText}</strong>: {labelText}
         <br />
-        ({((tooltip.datum.value / data?.reduce((a, b) => a + b.value, 0)) * 100).toFixed(1)}%)
+        ({percentage}%)
       </div>
     );
-  },
+  }) : false,
 }), [showLegend, colors, fontSize, data]);
 
 // Choropleth chart specific config
@@ -465,22 +498,28 @@ const choroplethConfig = useMemo(() => ({
       },
     ],
   }] : [],
-  tooltip: (tooltip) => {
+  tooltip: tooltip?.enabled !== false ? ((tooltipData) => {
+    const formattedValue = formatTooltipValue(tooltipData.datum?.value);
+    const titleText = tooltip?.title ? tooltip.title.replace('{id}', tooltipData.datum?.id || 'Region').replace('{label}', tooltipData.datum?.label || '') : (tooltipData.datum?.id || 'Region');
+    const labelText = tooltip?.label ? tooltip.label.replace('{value}', formattedValue ?? 'N/A') : (formattedValue ?? 'N/A');
+    const extraInfo = tooltipData.datum?.label && tooltipData.datum?.label !== tooltipData.datum?.id ? tooltipData.datum.label : '';
+
     return (
       <div style={{
-        background: colors.background,
+        background: tooltip?.backgroundColor === 'auto' ? colors.background : (tooltip?.backgroundColor || colors.background),
         padding: '8px 12px',
         borderRadius: '4px',
         boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-        color: colors.text,
+        color: tooltip?.textColor === 'auto' ? colors.text : (tooltip?.textColor || colors.text),
         fontSize: fontSize,
+        border: tooltip?.borderColor === 'auto' ? `1px solid ${colors.primary}` : (tooltip?.borderColor ? `1px solid ${tooltip.borderColor}` : 'none'),
       }}>
-        <strong>{tooltip.datum?.id || 'Region'}</strong>: {tooltip.datum?.value?.toLocaleString() ?? 'N/A'}
-        <br />
-        {tooltip.datum?.label ?? ''}
+        <strong>{titleText}</strong>: {labelText}
+        {extraInfo && <br />}
+        {extraInfo}
       </div>
     );
-  },
+  }) : false,
 }), [showLegend, colors, fontSize, data, geoFeatures, zoneConfig.projectionType, zoneConfig.projectionScale, zoneConfig.matchBy]);
   
 // Get the appropriate chart component and config

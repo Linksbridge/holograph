@@ -49,7 +49,7 @@ const CHART_COMPONENTS = {
   [CHART_TYPES.CHARTJS_POLAR]: PolarArea,
 };
 
-const ChartJsAdapter = ({ data, theme = 'default', width = 400, height = 300, title, chartType = CHART_TYPES.CHARTJS_LINE, legend }) => {
+const ChartJsAdapter = ({ data, theme = 'default', width = 400, height = 300, title, chartType = CHART_TYPES.CHARTJS_LINE, legend, tooltip }) => {
   const chartRef = useRef(null);
   const colors = THEMES[theme] || THEMES.default;
 
@@ -150,16 +150,44 @@ const ChartJsAdapter = ({ data, theme = 'default', width = 400, height = 300, ti
           },
         },
         tooltip: {
-          backgroundColor: colors.text,
-          titleColor: '#ffffff',
-          bodyColor: '#ffffff',
-          borderColor: colors.primary,
+          enabled: tooltip?.enabled !== false,
+          backgroundColor: tooltip?.backgroundColor === 'auto' ? colors.text : (tooltip?.backgroundColor || colors.text),
+          titleColor: tooltip?.textColor === 'auto' ? '#ffffff' : (tooltip?.textColor || '#ffffff'),
+          bodyColor: tooltip?.textColor === 'auto' ? '#ffffff' : (tooltip?.textColor || '#ffffff'),
+          borderColor: tooltip?.borderColor === 'auto' ? colors.primary : (tooltip?.borderColor || colors.primary),
           borderWidth: 1,
           cornerRadius: 6,
           padding: 10,
-          displayColors: true,
+          displayColors: tooltip?.showColors !== false,
+          position: tooltip?.position === 'auto' ? 'average' : (tooltip?.position || 'average'),
           callbacks: {
-            label: (context) => `Value: ${context.parsed.y?.toLocaleString() ?? context.parsed.toLocaleString()}`,
+            title: (context) => {
+              if (!tooltip?.title || tooltip.title === '{id}') {
+                return context[0]?.label || '';
+              }
+              return tooltip.title.replace('{id}', context[0]?.label || '').replace('{label}', context[0]?.label || '');
+            },
+            label: (context) => {
+              const value = context.parsed.y?.toLocaleString() ?? context.parsed.toLocaleString();
+              let formattedValue = value;
+
+              // Apply formatting based on tooltip.format
+              if (tooltip?.format === 'currency') {
+                formattedValue = new Intl.NumberFormat('en-US', {
+                  style: 'currency',
+                  currency: 'USD'
+                }).format(context.parsed.y ?? context.parsed);
+              } else if (tooltip?.format === 'percentage') {
+                formattedValue = `${((context.parsed.y ?? context.parsed) * 100).toFixed(1)}%`;
+              } else if (tooltip?.format === 'number') {
+                formattedValue = (context.parsed.y ?? context.parsed).toLocaleString();
+              }
+
+              if (!tooltip?.label || tooltip.label === '{value}') {
+                return formattedValue;
+              }
+              return tooltip.label.replace('{value}', formattedValue);
+            },
           },
         },
       },
@@ -239,7 +267,7 @@ const ChartJsAdapter = ({ data, theme = 'default', width = 400, height = 300, ti
     }
 
     return baseOptions;
-  }, [showLegend, legendPosition, colors, title, width, height, needsScales, chartType]);
+  }, [showLegend, legendPosition, colors, title, width, height, needsScales, chartType, tooltip]);
 
   // Cleanup chart instance on unmount
   useEffect(() => {

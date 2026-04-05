@@ -7,11 +7,11 @@
 import React from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { CHART_LIBRARIES, CHART_TYPES, CHART_TYPE_LIBRARY, DEFAULT_CHART_TYPE, COLOR_THEMES, THEMES, COMPONENT_TYPES, LEGEND_POSITIONS } from '../types/schema';
+import { CHART_LIBRARIES, CHART_TYPES, CHART_TYPE_LIBRARY, DEFAULT_CHART_TYPE, COMPONENT_TYPES, LEGEND_POSITIONS } from '../types/schema';
 import { getAvailableTables, getTableColumns } from '../services/dataService';
 
 const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
-  const { id, componentType, library, theme, title, dataSource, chartType, showHeader, legend } = zoneConfig;
+  const { id, componentType, library, title, dataSource, chartType, showHeader, legend, tooltip } = zoneConfig;
   const availableTables = getAvailableTables();
   const tableColumns = dataSource?.tableName ? getTableColumns(dataSource.tableName) : [];
 
@@ -57,13 +57,6 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
     onUpdate({
       ...zoneConfig,
       chartType: e.target.value,
-    });
-  };
-
-  const handleThemeChange = (e) => {
-    onUpdate({
-      ...zoneConfig,
-      theme: e.target.value,
     });
   };
 
@@ -114,13 +107,6 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
         ...dataSource,
         columns: selectedOptions,
       },
-    });
-  };
-
-  const handleThemeClick = (themeKey) => {
-    onUpdate({
-      ...zoneConfig,
-      theme: themeKey,
     });
   };
 
@@ -217,6 +203,97 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
       legend: {
         ...legend,
         position: e.target.value,
+      },
+    });
+  };
+
+  // Tooltip handlers
+  const handleTooltipEnabledChange = (e) => {
+    onUpdate({
+      ...zoneConfig,
+      tooltip: {
+        ...tooltip,
+        enabled: e.target.checked,
+      },
+    });
+  };
+
+  const handleTooltipShowColorsChange = (e) => {
+    onUpdate({
+      ...zoneConfig,
+      tooltip: {
+        ...tooltip,
+        showColors: e.target.checked,
+      },
+    });
+  };
+
+  const handleTooltipBackgroundColorChange = (e) => {
+    onUpdate({
+      ...zoneConfig,
+      tooltip: {
+        ...tooltip,
+        backgroundColor: e.target.value,
+      },
+    });
+  };
+
+  const handleTooltipTextColorChange = (e) => {
+    onUpdate({
+      ...zoneConfig,
+      tooltip: {
+        ...tooltip,
+        textColor: e.target.value,
+      },
+    });
+  };
+
+  const handleTooltipBorderColorChange = (e) => {
+    onUpdate({
+      ...zoneConfig,
+      tooltip: {
+        ...tooltip,
+        borderColor: e.target.value,
+      },
+    });
+  };
+
+  const handleTooltipFormatChange = (e) => {
+    onUpdate({
+      ...zoneConfig,
+      tooltip: {
+        ...tooltip,
+        format: e.target.value,
+      },
+    });
+  };
+
+  const handleTooltipPositionChange = (e) => {
+    onUpdate({
+      ...zoneConfig,
+      tooltip: {
+        ...tooltip,
+        position: e.target.value,
+      },
+    });
+  };
+
+  const handleTooltipTitleChange = (e) => {
+    onUpdate({
+      ...zoneConfig,
+      tooltip: {
+        ...tooltip,
+        title: e.target.value,
+      },
+    });
+  };
+
+  const handleTooltipLabelChange = (e) => {
+    onUpdate({
+      ...zoneConfig,
+      tooltip: {
+        ...tooltip,
+        label: e.target.value,
       },
     });
   };
@@ -337,38 +414,7 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
         </div>
         )}
 
-        {/* Theme Selection - Only show for charts and tables */}
-        {(componentType === COMPONENT_TYPES.CHART || componentType === COMPONENT_TYPES.TABLE) && (
-          <div className="property-field-group">
-            <label className="property-label">Color Theme</label>
-            <select
-              className="property-select"
-              value={theme}
-              onChange={handleThemeChange}
-            >
-              {Object.values(COLOR_THEMES).map((themeKey) => (
-                <option key={themeKey} value={themeKey}>
-                  {themeKey.charAt(0).toUpperCase() + themeKey.slice(1)}
-                </option>
-              ))}
-            </select>
-            <div style={{ marginTop: '12px' }}>
-              {Object.values(COLOR_THEMES).map((themeKey) => (
-                <div
-                  key={themeKey}
-                  className="property-theme-preview"
-                  onClick={() => handleThemeClick(themeKey)}
-                >
-                  <span 
-                    className={`property-theme-color ${theme === themeKey ? 'selected' : ''}`}
-                    style={{ backgroundColor: THEMES[themeKey]?.primary || '#3b82f6' }}
-                  />
-                  <span className="property-theme-label">{themeKey}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+
 
         {/* Legend Settings - Only show for charts */}
         {componentType === COMPONENT_TYPES.CHART && (
@@ -400,6 +446,208 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
                   <option value={LEGEND_POSITIONS.NONE}>None</option>
                 </select>
               </div>
+            )}
+          </div>
+        )}
+
+        {/* Tooltip Settings - Only show for charts */}
+        {componentType === COMPONENT_TYPES.CHART && (
+          <div className="property-field-group">
+            <label className="property-label">Tooltip</label>
+
+            {/* Enable/Disable Tooltip */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <span className="property-help-text" style={{ margin: 0 }}>Show Tooltips</span>
+              <label className="property-toggle">
+                <input
+                  type="checkbox"
+                  checked={tooltip?.enabled !== false}
+                  onChange={handleTooltipEnabledChange}
+                />
+                <span className="property-toggle-slider"></span>
+              </label>
+            </div>
+
+            {tooltip?.enabled !== false && (
+              <>
+                {/* Show Colors in Tooltip */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <span className="property-help-text" style={{ margin: 0 }}>Show Color Indicators</span>
+                  <label className="property-toggle">
+                    <input
+                      type="checkbox"
+                      checked={tooltip?.showColors !== false}
+                      onChange={handleTooltipShowColorsChange}
+                    />
+                    <span className="property-toggle-slider"></span>
+                  </label>
+                </div>
+
+                {/* Value Format */}
+                <div className="property-field-group" style={{ marginTop: '12px' }}>
+                  <label className="property-label" style={{ fontSize: '12px', color: '#6b7280' }}>Value Format</label>
+                  <select
+                    className="property-select"
+                    value={tooltip?.format || 'auto'}
+                    onChange={handleTooltipFormatChange}
+                  >
+                    <option value="auto">Auto (Default)</option>
+                    <option value="number">Number</option>
+                    <option value="currency">Currency</option>
+                    <option value="percentage">Percentage</option>
+                  </select>
+                </div>
+
+                {/* Tooltip Position */}
+                <div className="property-field-group" style={{ marginTop: '12px' }}>
+                  <label className="property-label" style={{ fontSize: '12px', color: '#6b7280' }}>Position</label>
+                  <select
+                    className="property-select"
+                    value={tooltip?.position || 'auto'}
+                    onChange={handleTooltipPositionChange}
+                  >
+                    <option value="auto">Auto (Recommended)</option>
+                    <option value="top">Top</option>
+                    <option value="bottom">Bottom</option>
+                    <option value="left">Left</option>
+                    <option value="right">Right</option>
+                    <option value="center">Center</option>
+                  </select>
+                </div>
+
+                {/* Tooltip Text Customization */}
+                <div className="property-field-group" style={{ marginTop: '16px' }}>
+                  <label className="property-label" style={{ fontSize: '12px', color: '#6b7280' }}>Tooltip Text</label>
+
+                  {/* Title Template */}
+                  <div style={{ marginTop: '8px' }}>
+                    <label className="property-label" style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '4px', display: 'block' }}>
+                      Title Text
+                    </label>
+                    <input
+                      type="text"
+                      className="property-input"
+                      value={tooltip?.title || '{id}'}
+                      onChange={handleTooltipTitleChange}
+                      placeholder="e.g., {id}, Category: {id}"
+                      style={{ width: '100%' }}
+                    />
+                    <p className="property-help-text" style={{ fontSize: '10px', marginTop: '2px' }}>
+                      Use {'{id}'} for data identifier, {'{label}'} for label, or custom text
+                    </p>
+                  </div>
+
+                  {/* Label Template */}
+                  <div style={{ marginTop: '8px' }}>
+                    <label className="property-label" style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '4px', display: 'block' }}>
+                      Value Text
+                    </label>
+                    <input
+                      type="text"
+                      className="property-input"
+                      value={tooltip?.label || '{value}'}
+                      onChange={handleTooltipLabelChange}
+                      placeholder="e.g., {value}, Amount: {value}"
+                      style={{ width: '100%' }}
+                    />
+                    <p className="property-help-text" style={{ fontSize: '10px', marginTop: '2px' }}>
+                      Use {'{value}'} for data value, or custom text
+                    </p>
+                  </div>
+                </div>
+
+                {/* Color Customization */}
+                <div className="property-field-group" style={{ marginTop: '16px' }}>
+                  <label className="property-label" style={{ fontSize: '12px', color: '#6b7280' }}>Appearance</label>
+
+                  {/* Background Color */}
+                  <div style={{ marginTop: '8px' }}>
+                    <label className="property-label" style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '4px', display: 'block' }}>
+                      Background Color
+                    </label>
+                    <input
+                      type="color"
+                      className="property-input"
+                      value={tooltip?.backgroundColor === 'auto' ? '#000000' : (tooltip?.backgroundColor || '#000000')}
+                      onChange={handleTooltipBackgroundColorChange}
+                      style={{ width: '60px', height: '32px', padding: '2px', border: '1px solid #d1d5db' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleTooltipBackgroundColorChange({ target: { value: 'auto' } })}
+                      style={{
+                        marginLeft: '8px',
+                        padding: '4px 8px',
+                        fontSize: '11px',
+                        backgroundColor: '#f3f4f6',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Auto
+                    </button>
+                  </div>
+
+                  {/* Text Color */}
+                  <div style={{ marginTop: '8px' }}>
+                    <label className="property-label" style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '4px', display: 'block' }}>
+                      Text Color
+                    </label>
+                    <input
+                      type="color"
+                      className="property-input"
+                      value={tooltip?.textColor === 'auto' ? '#ffffff' : (tooltip?.textColor || '#ffffff')}
+                      onChange={handleTooltipTextColorChange}
+                      style={{ width: '60px', height: '32px', padding: '2px', border: '1px solid #d1d5db' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleTooltipTextColorChange({ target: { value: 'auto' } })}
+                      style={{
+                        marginLeft: '8px',
+                        padding: '4px 8px',
+                        fontSize: '11px',
+                        backgroundColor: '#f3f4f6',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Auto
+                    </button>
+                  </div>
+
+                  {/* Border Color */}
+                  <div style={{ marginTop: '8px' }}>
+                    <label className="property-label" style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '4px', display: 'block' }}>
+                      Border Color
+                    </label>
+                    <input
+                      type="color"
+                      className="property-input"
+                      value={tooltip?.borderColor === 'auto' ? '#3b82f6' : (tooltip?.borderColor || '#3b82f6')}
+                      onChange={handleTooltipBorderColorChange}
+                      style={{ width: '60px', height: '32px', padding: '2px', border: '1px solid #d1d5db' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleTooltipBorderColorChange({ target: { value: 'auto' } })}
+                      style={{
+                        marginLeft: '8px',
+                        padding: '4px 8px',
+                        fontSize: '11px',
+                        backgroundColor: '#f3f4f6',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Auto
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         )}

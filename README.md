@@ -636,6 +636,260 @@ configureWebhooks({
 
 ---
 
+## Tooltip Customization
+
+Holograph provides customizable tooltips for all chart types. You can control both the appearance and content of tooltips through the Property Panel.
+
+### Tooltip Text Templates
+
+When configuring tooltips in the Property Panel, you can customize the text displayed using template placeholders:
+
+#### Title Text
+Controls the bold part of the tooltip (typically the category or data identifier).
+
+**Available placeholders:**
+- `{id}` - The data identifier (e.g., "Jan", "US-CA", "Q1")
+- `{label}` - Alternative label field if available
+
+**Examples:**
+- `{id}` - Shows just the identifier (e.g., "Jan")
+- `Month: {id}` - Shows "Month: Jan"
+- `Category: {label}` - Shows "Category: Sales"
+
+#### Value Text
+Controls the value part of the tooltip (typically the data value).
+
+**Available placeholders:**
+- `{value}` - The formatted data value (e.g., "$1,234", "45.6%", "123")
+
+**Examples:**
+- `{value}` - Shows just the formatted value (e.g., "$1,234")
+- `Amount: {value}` - Shows "Amount: $1,234"
+- `Total: {value}` - Shows "Total: 45.6%"
+
+### Tooltip Appearance
+
+In addition to text customization, you can control the visual appearance:
+
+- **Background Color** - Set custom background color or use "Auto" for theme-based coloring
+- **Text Color** - Set custom text color or use "Auto" for theme-based coloring
+- **Border Color** - Set custom border color or use "Auto" for theme-based coloring
+- **Value Format** - Choose from Auto, Number, Currency, or Percentage
+- **Position** - Auto (recommended), Top, Bottom, Left, Right, or Center
+- **Show Color Indicators** - Display color dots next to values (Chart.js only)
+
+### Examples
+
+#### Bar Chart with Custom Tooltips
+```javascript
+{
+  "id": "revenue-chart",
+  "componentType": "chart",
+  "library": "chartjs",
+  "chartType": "bar",
+  "title": "Monthly Revenue",
+  "tooltip": {
+    "enabled": true,
+    "title": "Month: {id}",
+    "label": "Revenue: {value}",
+    "format": "currency",
+    "backgroundColor": "#ffffff",
+    "textColor": "#000000",
+    "borderColor": "#3b82f6",
+    "position": "auto",
+    "showColors": true
+  }
+}
+```
+
+#### Pie Chart with Percentage
+```javascript
+{
+  "id": "sales-pie",
+  "componentType": "chart",
+  "library": "d3",
+  "chartType": "pie",
+  "title": "Sales by Category",
+  "tooltip": {
+    "enabled": true,
+    "title": "{label}",
+    "label": "{value} ({percentage}%)",
+    "format": "currency"
+  }
+}
+```
+
+### Chart Library Support
+
+All chart libraries support tooltip customization:
+
+- **Chart.js** - Full support including color indicators and advanced positioning
+- **D3.js** - Full support with hover animations
+- **Nivo** - Full support including choropleth maps
+
+---
+
+## CSS Customization
+
+Holograph dashboards can be fully customized through CSS. The viewer uses CSS custom properties (CSS variables) for all styling, allowing complete visual customization without JavaScript changes.
+
+### CSS Classes for Targeting
+
+| Class | Description |
+|-------|-------------|
+| `.holograph-viewer` | Main dashboard container |
+| `.viewer-dashboard-header` | Dashboard title/subtitle area |
+| `.viewer-dashboard-title` | Main dashboard title |
+| `.viewer-dashboard-subtitle` | Dashboard subtitle |
+| `.viewer-dashboard-grid` | Grid layout container |
+| `.viewer-zone-card` | Individual chart/table zone |
+| `.viewer-zone-header` | Zone title bar |
+| `.viewer-zone-title` | Zone title text |
+| `.viewer-zone-chart-container` | Chart content area |
+| `.viewer-table` | Table component |
+| `.viewer-empty-state` | Empty state display |
+
+### CSS Custom Properties
+
+Override these variables to customize appearance:
+
+```css
+.holograph-viewer {
+  /* Layout */
+  --hv-viewer-bg: #f9fafb;
+  --hv-viewer-padding: 20px;
+  --hv-viewer-radius: 8px;
+
+  /* Zone Cards */
+  --hv-zone-bg: #ffffff;
+  --hv-zone-radius: 8px;
+  --hv-header-bg: #f9fafb;
+  --hv-header-padding: 12px 16px;
+
+  /* Typography */
+  --hv-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --hv-title-size: 24px;
+  --hv-title-weight: 600;
+  --hv-subtitle-size: 14px;
+  --hv-zone-title-size: 14px;
+  --hv-zone-title-weight: 600;
+  --hv-body-font-size: 14px;
+
+  /* Colors */
+  --hv-text-primary: #111827;
+  --hv-text-secondary: #6b7280;
+  --hv-text-tertiary: #4b5563;
+  --hv-text-inverse: #ffffff;
+  --hv-border-color: #e5e7eb;
+  --hv-border-strong: #d1d5db;
+  --hv-primary: #3b82f6;
+  --hv-primary-hover: #2563eb;
+  --hv-success: #10b981;
+  --hv-warning: #f59e0b;
+  --hv-error: #dc2626;
+
+  /* Shadows */
+  --hv-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --hv-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --hv-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+
+  /* Transitions */
+  --hv-transition-fast: 150ms ease;
+  --hv-transition-normal: 200ms ease;
+  --hv-transition-slow: 300ms ease;
+
+  /* Grid */
+  --hv-grid-gap: 10px;
+  --hv-min-zone-height: 150px;
+}
+```
+
+### Example Customizations
+
+#### Dark Theme
+```css
+.holograph-viewer {
+  --hv-viewer-bg: #1f2937;
+  --hv-zone-bg: #374151;
+  --hv-header-bg: #374151;
+  --hv-text-primary: #f9fafb;
+  --hv-text-secondary: #d1d5db;
+  --hv-border-color: #4b5563;
+  --hv-primary: #60a5fa;
+}
+```
+
+#### Compact Layout
+```css
+.holograph-viewer {
+  --hv-viewer-padding: 12px;
+  --hv-header-padding: 8px 12px;
+  --hv-grid-gap: 8px;
+  --hv-zone-radius: 4px;
+}
+```
+
+#### High Contrast
+```css
+.holograph-viewer {
+  --hv-border-color: #000000;
+  --hv-border-strong: #000000;
+  --hv-text-primary: #000000;
+  --hv-zone-bg: #ffffff;
+  --hv-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+```
+
+### Component-Specific Overrides
+
+Target specific dashboard instances:
+
+```css
+/* Specific dashboard */
+#dashboard-sales {
+  --hv-primary: #dc2626;
+  --hv-viewer-bg: #fef2f2;
+}
+
+/* Department-specific styling */
+.holograph-viewer[data-department="finance"] {
+  --hv-primary: #059669;
+  --hv-zone-bg: #f0fdf4;
+}
+
+/* Environment-specific */
+.holograph-viewer[data-env="staging"] {
+  --hv-viewer-bg: #fefce8;
+  --hv-border-color: #f59e0b;
+}
+```
+
+### Responsive Customization
+
+```css
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .holograph-viewer {
+    --hv-viewer-padding: 12px;
+    --hv-title-size: 20px;
+    --hv-zone-title-size: 13px;
+  }
+}
+
+/* Print styles */
+@media print {
+  .holograph-viewer {
+    --hv-viewer-bg: #ffffff;
+    --hv-zone-bg: #ffffff;
+    --hv-shadow-sm: none;
+    --hv-shadow-md: none;
+    --hv-shadow-lg: none;
+  }
+}
+```
+
+---
+
 ## Dashboard Schema
 
 The dashboard is stored as a JSON object with the following structure:

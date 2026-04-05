@@ -11,14 +11,36 @@ import React, { useRef, useEffect } from 'react';
 import * as d3 from 'd3';
 import { THEMES, CHART_TYPES } from '../types/schema';
 
-const D3Adapter = ({ data, theme = 'default', width = 400, height = 300, title, chartType = CHART_TYPES.D3_BAR, legend }) => {
+const D3Adapter = ({ data, theme = 'default', width = 400, height = 300, title, chartType = CHART_TYPES.D3_BAR, legend, tooltip }) => {
   const svgRef = useRef(null);
+  const tooltipRef = useRef(null);
   const colors = THEMES[theme] || THEMES.default;
 
   // Determine if we should show legend - from props or default based on size
   const legendEnabled = legend?.enabled !== false;
   const showLegend = legendEnabled && width > 180 && height > 140;
   const legendHeight = showLegend ? 25 : 0;
+
+  // Tooltip enabled check
+  const tooltipEnabled = tooltip?.enabled !== false;
+
+  // Helper function to format tooltip values
+  const formatTooltipValue = (value) => {
+    let formattedValue = value?.toLocaleString();
+
+    if (tooltip?.format === 'currency') {
+      formattedValue = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD'
+      }).format(value);
+    } else if (tooltip?.format === 'percentage') {
+      formattedValue = `${(value * 100).toFixed(1)}%`;
+    } else if (tooltip?.format === 'number') {
+      formattedValue = value?.toLocaleString();
+    }
+
+    return formattedValue;
+  };
 
   // Color palette for pie/donut/scatter charts
   const colorPalette = [
@@ -71,7 +93,7 @@ const D3Adapter = ({ data, theme = 'default', width = 400, height = 300, title, 
     return () => {
       svg.selectAll('*').remove();
     };
-  }, [data, theme, width, height, title, chartType, colors, showLegend, legendHeight, colorPalette]);
+  }, [data, theme, width, height, title, chartType, colors, showLegend, legendHeight, colorPalette, tooltip]);
 
   // Bar Chart Renderer
   const renderBarChart = (svg, chartData) => {
@@ -126,8 +148,28 @@ const D3Adapter = ({ data, theme = 'default', width = 400, height = 300, title, 
       .attr('y', innerHeight)
       .attr('width', xScale.bandwidth())
       .attr('height', 0)
+
       .attr('fill', colors.primary)
       .attr('rx', 2)
+      .on('mouseenter', tooltipEnabled ? function(event, d) {
+        const formattedValue = formatTooltipValue(d.value);
+        const titleText = tooltip?.title ? tooltip.title.replace('{id}', d.label).replace('{label}', d.label) : d.label;
+        const labelText = tooltip?.label ? tooltip.label.replace('{value}', formattedValue) : formattedValue;
+
+        const tooltipEl = tooltipRef.current;
+        if (tooltipEl) {
+          tooltipEl.innerHTML = `<strong>${titleText}</strong>: ${labelText}`;
+          tooltipEl.style.opacity = '1';
+          tooltipEl.style.left = `${event.pageX + 10}px`;
+          tooltipEl.style.top = `${event.pageY - 10}px`;
+        }
+      } : null)
+      .on('mouseleave', tooltipEnabled ? function() {
+        const tooltipEl = tooltipRef.current;
+        if (tooltipEl) {
+          tooltipEl.style.opacity = '0';
+        }
+      } : null)
       .transition().duration(500).delay((d, i) => i * 20)
       .attr('y', (d) => yScale(d.value))
       .attr('height', (d) => innerHeight - yScale(d.value));
@@ -218,6 +260,25 @@ const D3Adapter = ({ data, theme = 'default', width = 400, height = 300, title, 
       .attr('fill', colors.primary)
       .attr('stroke', '#fff')
       .attr('stroke-width', 2)
+      .on('mouseenter', tooltipEnabled ? function(event, d) {
+        const formattedValue = formatTooltipValue(d.value);
+        const titleText = tooltip?.title ? tooltip.title.replace('{id}', d.label).replace('{label}', d.label) : d.label;
+        const labelText = tooltip?.label ? tooltip.label.replace('{value}', formattedValue) : formattedValue;
+
+        const tooltipEl = tooltipRef.current;
+        if (tooltipEl) {
+          tooltipEl.innerHTML = `<strong>${titleText}</strong>: ${labelText}`;
+          tooltipEl.style.opacity = '1';
+          tooltipEl.style.left = `${event.pageX + 10}px`;
+          tooltipEl.style.top = `${event.pageY - 10}px`;
+        }
+      } : null)
+      .on('mouseleave', tooltipEnabled ? function() {
+        const tooltipEl = tooltipRef.current;
+        if (tooltipEl) {
+          tooltipEl.style.opacity = '0';
+        }
+      } : null)
       .transition().delay(800).duration(200)
       .attr('r', 4);
 
@@ -354,12 +415,35 @@ const D3Adapter = ({ data, theme = 'default', width = 400, height = 300, title, 
           .transition()
           .duration(100)
           .attr('d', arcHover);
+
+        if (tooltipEnabled) {
+          const formattedValue = formatTooltipValue(d.data.value);
+          const total = d3.sum(chartData, (item) => item.value) || 1;
+          const percentage = ((d.data.value / total) * 100).toFixed(1);
+          const titleText = tooltip?.title ? tooltip.title.replace('{id}', d.data.label).replace('{label}', d.data.label) : d.data.label;
+          const labelText = tooltip?.label ? tooltip.label.replace('{value}', formattedValue) : formattedValue;
+
+          const tooltipEl = tooltipRef.current;
+          if (tooltipEl) {
+            tooltipEl.innerHTML = `<strong>${titleText}</strong>: ${labelText}<br />(${percentage}%)`;
+            tooltipEl.style.opacity = '1';
+            tooltipEl.style.left = `${event.pageX + 10}px`;
+            tooltipEl.style.top = `${event.pageY - 10}px`;
+          }
+        }
       })
       .on('mouseleave', function(event, d) {
         d3.select(this)
           .transition()
           .duration(100)
           .attr('d', arc);
+
+        if (tooltipEnabled) {
+          const tooltipEl = tooltipRef.current;
+          if (tooltipEl) {
+            tooltipEl.style.opacity = '0';
+          }
+        }
       });
 
     // Labels for pie
@@ -445,6 +529,25 @@ const D3Adapter = ({ data, theme = 'default', width = 400, height = 300, title, 
       .attr('r', 0)
       .attr('fill', (d, i) => colorPalette[i % colorPalette.length])
       .attr('opacity', 0.8)
+      .on('mouseenter', tooltipEnabled ? function(event, d) {
+        const formattedValue = formatTooltipValue(d.value);
+        const titleText = tooltip?.title ? tooltip.title.replace('{id}', d.label).replace('{label}', d.label) : d.label;
+        const labelText = tooltip?.label ? tooltip.label.replace('{value}', formattedValue) : formattedValue;
+
+        const tooltipEl = tooltipRef.current;
+        if (tooltipEl) {
+          tooltipEl.innerHTML = `<strong>${titleText}</strong>: ${labelText}`;
+          tooltipEl.style.opacity = '1';
+          tooltipEl.style.left = `${event.pageX + 10}px`;
+          tooltipEl.style.top = `${event.pageY - 10}px`;
+        }
+      } : null)
+      .on('mouseleave', tooltipEnabled ? function() {
+        const tooltipEl = tooltipRef.current;
+        if (tooltipEl) {
+          tooltipEl.style.opacity = '0';
+        }
+      } : null)
       .transition()
       .delay((d, i) => i * 50)
       .duration(300)
@@ -507,19 +610,40 @@ const D3Adapter = ({ data, theme = 'default', width = 400, height = 300, title, 
   };
 
   return (
-    <svg
-      ref={svgRef}
-      width="100%"
-      height="100%"
-      viewBox={`0 0 ${width} ${height}`}
-      preserveAspectRatio="xMidYMid meet"
-      style={{ 
-        backgroundColor: colors.background, 
-        borderRadius: '6px',
-        display: 'block',
-        overflow: 'hidden'
-      }}
-    />
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <div
+        ref={tooltipRef}
+        style={{
+          position: 'absolute',
+          backgroundColor: tooltip?.backgroundColor === 'auto' ? colors.background : (tooltip?.backgroundColor || colors.background),
+          color: tooltip?.textColor === 'auto' ? colors.text : (tooltip?.textColor || colors.text),
+          padding: '8px 12px',
+          borderRadius: '4px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          border: tooltip?.borderColor === 'auto' ? `1px solid ${colors.primary}` : (tooltip?.borderColor ? `1px solid ${tooltip.borderColor}` : 'none'),
+          fontSize: '12px',
+          fontFamily: 'inherit',
+          pointerEvents: 'none',
+          opacity: 0,
+          transition: 'opacity 0.2s ease',
+          zIndex: 1000,
+          whiteSpace: 'nowrap',
+        }}
+      />
+      <svg
+        ref={svgRef}
+        width="100%"
+        height="100%"
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="xMidYMid meet"
+        style={{
+          backgroundColor: colors.background,
+          borderRadius: '6px',
+          display: 'block',
+          overflow: 'hidden'
+        }}
+      />
+    </div>
   );
 };
 

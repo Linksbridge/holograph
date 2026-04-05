@@ -156,6 +156,15 @@ export const createZoneConfig = (id) => ({
     enabled: true,
     position: LEGEND_POSITIONS.BOTTOM,
   },
+  tooltip: {
+    enabled: true,
+    showColors: true,
+    backgroundColor: 'auto',
+    textColor: 'auto',
+    borderColor: 'auto',
+    format: 'auto', // auto, currency, percentage, number
+    position: 'auto',
+  },
   dataSource: {
     tableName: 'sales_data',
     labelColumn: 'month',
