@@ -7,12 +7,40 @@
  * Nivo is known for beautiful, animated charts with good defaults.
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { ResponsiveLine } from '@nivo/line';
 import { ResponsiveBar } from '@nivo/bar';
 import { ResponsivePie } from '@nivo/pie';
 import { ResponsiveChoropleth } from '@nivo/geo';
 import { CHART_TYPES, CHART_LIBRARIES, THEMES } from '@holograph/dashboard-schema';
+
+// GeoJSON sources for choropleth maps
+const GEO_FEATURE_URLS = {
+  'world-50m': 'https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_50m_admin_0_countries.geojson',
+  'world-110m': 'https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_110m_admin_0_countries.geojson',
+  'usa': 'https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_110m_admin_1_states_provinces.geojson',
+  'europe': 'https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_50m_admin_0_countries.geojson',
+};
+
+const featureCache = {};
+
+const loadGeoFeatures = async (mapFeatures, geoJsonUrl) => {
+  const url = mapFeatures === 'custom' ? geoJsonUrl : GEO_FEATURE_URLS[mapFeatures];
+  if (!url) return [];
+  if (featureCache[url]) return featureCache[url];
+  const res = await fetch(url);
+  const json = await res.json();
+  const features = (json.features || []).map(f => ({
+    ...f,
+    id: f.properties?.iso_3166_2
+      || (f.properties?.iso_a3 !== '-99' ? f.properties?.iso_a3 : null)
+      || (f.properties?.ISO_A3  !== '-99' ? f.properties?.ISO_A3  : null)
+      || f.properties?.adm0_a3
+      || f.id,
+  }));
+  featureCache[url] = features;
+  return features;
+};
 
 // Default color palette for nivo
 const DEFAULT_PALETTE = [
@@ -106,12 +134,37 @@ const NivoAdapter = ({
   title,
   chartType = CHART_TYPES.NIVO_LINE,
   legend,
-  tooltip
+  tooltip,
+  zoneConfig = {},
 }) => {
   const colors = THEMES[theme] || THEMES.default;
   const legendEnabled = legend?.enabled !== false;
   const showLegend = legendEnabled && width > 180 && height > 140;
-  
+
+  const [geoFeatures, setGeoFeatures] = useState([]);
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoError, setGeoError] = useState(null);
+  const [choroplethZoom, setChoroplethZoom] = useState(1);
+
+  const isChoropleth = getNivoChartType(chartType) === NIVO_CHART_TYPES.CHOROPLETH;
+
+  useEffect(() => {
+    setChoroplethZoom(1);
+  }, [zoneConfig.mapFeatures]);
+
+  useEffect(() => {
+    if (!isChoropleth) return;
+    const mapFeatures = zoneConfig.mapFeatures || 'usa';
+    const geoJsonUrl = zoneConfig.geoJsonUrl || '';
+    if (mapFeatures === 'custom' && !geoJsonUrl) return;
+    setGeoLoading(true);
+    setGeoError(null);
+    loadGeoFeatures(mapFeatures, geoJsonUrl)
+      .then(setGeoFeatures)
+      .catch(err => setGeoError(err.message))
+      .finally(() => setGeoLoading(false));
+  }, [isChoropleth, zoneConfig.mapFeatures, zoneConfig.geoJsonUrl]);
+
   const fontSize = Math.max(9, Math.min(12, width / 30));
 
   // Helper function to format tooltip values
@@ -460,66 +513,92 @@ const pieConfig = useMemo(() => ({
 }), [showLegend, colors, fontSize, data]);
 
 // Choropleth chart specific config
-const choroplethConfig = useMemo(() => ({
-  margin: { top: 20, right: 20, bottom: 20, left: 20 },
-  borderColor: { from: 'color', modifiers: [['darker', 0.2]] },
-  colors: DEFAULT_PALETTE,
-  enableLabel: true,
-  label: ({ datum }) => datum?.label || '',
-  labelTextColor: { from: 'color', modifiers: [['darker', 0.5]] },
-  projectionType: 'naturalEarth1',
-  projectionScale: 100,
-  projectionTranslation: [0.5, 0.5],
-  defs: [],
-  fill: [],
-  // Note: features prop (geographical data) should be provided via chart configuration
-  // features: geoJsonFeatures, // e.g., from @nivo/geo-atlas/world-50m
-  legends: showLegend ? [{
-    anchor: 'bottom',
-    direction: 'row',
-    justify: false,
-    translateX: 0,
-    translateY: 50,
-    itemsSpacing: 0,
-    itemWidth: 60,
-    itemHeight: 20,
-    itemOpacity: 0.75,
-    symbolSize: 12,
-    symbolShape: 'square',
-    symbolBorderColor: { from: 'color' },
-    effects: [
-      {
-        on: 'hover',
-        style: {
-          itemBackground: 'rgba(0, 0, 0, .03)',
-          itemOpacity: 1,
-        },
-      },
-    ],
-  }] : [],
-  tooltip: tooltip?.enabled !== false ? ((tooltipData) => {
-    const formattedValue = formatTooltipValue(tooltipData.datum?.value);
-    const titleText = tooltip?.title ? tooltip.title.replace('{id}', tooltipData.datum?.id || 'Region').replace('{label}', tooltipData.datum?.label || '') : (tooltipData.datum?.id || 'Region');
-    const labelText = tooltip?.label ? tooltip.label.replace('{value}', formattedValue ?? 'N/A') : (formattedValue ?? 'N/A');
-    const extraInfo = tooltipData.datum?.label && tooltipData.datum?.label !== tooltipData.datum?.id ? tooltipData.datum.label : '';
+const choroplethConfig = useMemo(() => {
+  const renderData = (getNivoChartType(chartType) === NIVO_CHART_TYPES.CHOROPLETH && (!data || data.length === 0))
+    ? DEMO_CHOROPLETH_DATA
+    : (data || []);
+  const values = renderData.map(d => d.value).filter(v => typeof v === 'number' && !isNaN(v));
+  const domainMin = values.length ? Math.min(...values) : 0;
+  const domainMax = values.length ? Math.max(...values) : 100;
 
-    return (
-      <div style={{
-        background: tooltip?.backgroundColor === 'auto' ? colors.background : (tooltip?.backgroundColor || colors.background),
-        padding: '8px 12px',
-        borderRadius: '4px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-        color: tooltip?.textColor === 'auto' ? colors.text : (tooltip?.textColor || colors.text),
-        fontSize: fontSize,
-        border: tooltip?.borderColor === 'auto' ? `1px solid ${colors.primary}` : (tooltip?.borderColor ? `1px solid ${tooltip.borderColor}` : 'none'),
-      }}>
-        <strong>{titleText}</strong>: {labelText}
-        {extraInfo && <br />}
-        {extraInfo}
-      </div>
-    );
-  }) : false,
-}), [showLegend, colors, fontSize, data]);
+  const mapSrc = zoneConfig.mapFeatures || 'usa';
+  const isUsa = mapSrc === 'usa';
+  // NOTE: 'albersUsa' is NOT supported by Nivo — sanitize any stored value to 'mercator'.
+  const rawProjection = zoneConfig.projectionType || (isUsa ? 'mercator' : 'naturalEarth1');
+  const effectiveProjection = rawProjection === 'albersUsa' ? 'mercator' : rawProjection;
+
+  const margin = 40;
+  const availW = Math.max(100, width - margin);
+  const availH = Math.max(60, height - margin);
+  const zf = (zoneConfig.projectionScale || 100) / 100 * choroplethZoom;
+
+  let autoScale, projTrans;
+  if (isUsa && effectiveProjection === 'mercator') {
+    const s = 0.9;
+    autoScale = availW * s;
+    projTrans = [
+      0.5 + s * 1.676 * zf,
+      0.5 + s * 0.745 * (availW / availH) * zf,
+    ];
+  } else {
+    autoScale = availW * 0.145;
+    projTrans = [0.5, 0.5];
+  }
+  const effectiveScale = autoScale * zf;
+
+  return ({
+    margin: { top: 20, right: 20, bottom: 20, left: 20 },
+    features: geoFeatures,
+    projectionType: effectiveProjection,
+    projectionScale: effectiveScale,
+    projectionTranslation: projTrans,
+    match: zoneConfig.matchBy === 'properties.name'
+      ? (feature, datum) => (feature.properties?.name || feature.properties?.NAME) === datum.id
+      : zoneConfig.matchBy === 'properties.iso_a3'
+      ? (feature, datum) => (feature.properties?.iso_a3 || feature.properties?.ISO_A3) === datum.id
+      : undefined,
+    colors: 'blues',
+    domain: [domainMin, domainMax],
+    unknownColor: '#e0e0e0',
+    borderColor: { from: 'color', modifiers: [['darker', 0.2]] },
+    defs: [],
+    fill: [],
+    legends: showLegend ? [{
+      anchor: 'bottom',
+      direction: 'row',
+      justify: false,
+      translateX: 0,
+      translateY: 50,
+      itemsSpacing: 0,
+      itemWidth: 60,
+      itemHeight: 20,
+      itemOpacity: 0.75,
+      symbolSize: 12,
+      symbolShape: 'square',
+      symbolBorderColor: { from: 'color' },
+      effects: [{ on: 'hover', style: { itemBackground: 'rgba(0, 0, 0, .03)', itemOpacity: 1 } }],
+    }] : [],
+    tooltip: tooltip?.enabled !== false ? ((tooltipData) => {
+      const formattedValue = formatTooltipValue(tooltipData.datum?.value);
+      const titleText = tooltip?.title ? tooltip.title.replace('{id}', tooltipData.datum?.id || 'Region').replace('{label}', tooltipData.datum?.label || '') : (tooltipData.datum?.id || 'Region');
+      const labelText = tooltip?.label ? tooltip.label.replace('{value}', formattedValue ?? 'N/A') : (formattedValue ?? 'N/A');
+      const extraInfo = tooltipData.datum?.label && tooltipData.datum?.label !== tooltipData.datum?.id ? tooltipData.datum.label : '';
+      return (
+        <div style={{
+          background: tooltip?.backgroundColor === 'auto' ? colors.background : (tooltip?.backgroundColor || colors.background),
+          padding: '8px 12px', borderRadius: '4px', boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          color: tooltip?.textColor === 'auto' ? colors.text : (tooltip?.textColor || colors.text),
+          fontSize: fontSize,
+          border: tooltip?.borderColor === 'auto' ? `1px solid ${colors.primary}` : (tooltip?.borderColor ? `1px solid ${tooltip.borderColor}` : 'none'),
+        }}>
+          <strong>{titleText}</strong>: {labelText}
+          {extraInfo && <br />}
+          {extraInfo}
+        </div>
+      );
+    }) : false,
+  });
+}, [showLegend, colors, fontSize, data, chartType, geoFeatures, width, height, zoneConfig.mapFeatures, zoneConfig.projectionType, zoneConfig.projectionScale, zoneConfig.matchBy, choroplethZoom]);
   
 // Get the appropriate chart component and config
 const nivoChartType = getNivoChartType(chartType);
@@ -568,12 +647,55 @@ switch (nivoChartType) {
           {title}
         </div>
       )}
-      <div style={{ width: '100%', flex: 1, minHeight: '80px' }}>
-        <ChartComponent
-          data={nivoData}
-          {...chartConfig}
-          theme={nivoTheme}
-        />
+      <div style={{ width: '100%', flex: 1, minHeight: '80px', position: 'relative' }}>
+        {isChoropleth && geoLoading ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: colors.text, fontSize: fontSize }}>
+            Loading map data...
+          </div>
+        ) : isChoropleth && geoError ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#ef4444', fontSize: fontSize, padding: '8px', textAlign: 'center' }}>
+            Failed to load map: {geoError}
+          </div>
+        ) : isChoropleth ? (
+          <>
+            <ChartComponent
+              data={nivoData}
+              {...chartConfig}
+              theme={nivoTheme}
+            />
+            <div style={{ position: 'absolute', bottom: '8px', right: '8px', display: 'flex', flexDirection: 'column', gap: '3px', zIndex: 10 }}>
+              {[
+                { label: '+', fn: z => Math.min(z * 1.25, 8) },
+                { label: '−', fn: z => Math.max(z * 0.8, 0.125) },
+              ].map(({ label, fn }) => (
+                <button
+                  key={label}
+                  onMouseDown={e => e.stopPropagation()}
+                  onClick={() => setChoroplethZoom(fn)}
+                  style={{
+                    width: '22px', height: '22px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: colors.background,
+                    border: `1px solid ${colors.grid}`,
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    color: colors.text,
+                    fontSize: '14px',
+                    lineHeight: 1,
+                    padding: 0,
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  }}
+                >{label}</button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <ChartComponent
+            data={nivoData}
+            {...chartConfig}
+            theme={nivoTheme}
+          />
+        )}
       </div>
     </div>
   );

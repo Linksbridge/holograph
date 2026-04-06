@@ -22,7 +22,7 @@ import {
   Filler,
 } from 'chart.js';
 import { Line, Bar, Pie, Doughnut, Radar, PolarArea, Chart as ReactChart } from 'react-chartjs-2';
-import { BubbleMapController, ProjectionScale, GeoFeature } from 'chartjs-chart-geo';
+import { BubbleMapController, ProjectionScale, GeoFeature, SizeScale } from 'chartjs-chart-geo';
 import { THEMES, CHART_TYPES } from '../types/schema';
 
 // Register Chart.js components
@@ -41,6 +41,7 @@ ChartJS.register(
   BubbleMapController,
   ProjectionScale,
   GeoFeature,
+  SizeScale,
 );
 
 // GeoJSON cache for bubble map background
@@ -89,9 +90,6 @@ const BubbleMapChart = ({ data, zoneConfig, colors, title, tooltip }) => {
 
   const chartData = useMemo(() => {
     if (!geoData) return null;
-    const values = rowData.map((r) => Number(r[valueCol] ?? r.value ?? 0));
-    const maxVal = Math.max(...values, 1);
-    const normalize = (v) => Math.max(3, Math.round((v / maxVal) * 25));
     return {
       labels: rowData.map((r) => r[labelCol] ?? r.city ?? ''),
       datasets: [{
@@ -101,7 +99,7 @@ const BubbleMapChart = ({ data, zoneConfig, colors, title, tooltip }) => {
         data: rowData.map((r) => ({
           longitude: Number(r[lngCol] ?? r.lng ?? 0),
           latitude:  Number(r[latCol] ?? r.lat ?? 0),
-          r: normalize(Number(r[valueCol] ?? r.value ?? 0)),
+          value: Number(r[valueCol] ?? r.value ?? 0),
         })),
         backgroundColor: `${colors.primary}66`,
         borderColor: colors.primary,
@@ -118,6 +116,10 @@ const BubbleMapChart = ({ data, zoneConfig, colors, title, tooltip }) => {
       projection: {
         axis: 'x',
         projection: 'albersUsa',
+      },
+      size: {
+        axis: 'x',
+        size: [3, 25],
       },
     },
     plugins: {

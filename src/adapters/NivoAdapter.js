@@ -147,8 +147,14 @@ const NivoAdapter = ({
   const [geoFeatures, setGeoFeatures] = useState([]);
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoError, setGeoError] = useState(null);
+  const [choroplethZoom, setChoroplethZoom] = useState(1);
 
   const isChoropleth = getNivoChartType(chartType) === NIVO_CHART_TYPES.CHOROPLETH;
+
+  // Reset zoom when the map source changes
+  useEffect(() => {
+    setChoroplethZoom(1);
+  }, [zoneConfig.mapFeatures]);
 
   useEffect(() => {
     if (!isChoropleth) return;
@@ -511,18 +517,60 @@ const pieConfig = useMemo(() => ({
 }), [showLegend, colors, fontSize, data]);
 
 // Choropleth chart specific config
-const choroplethConfig = useMemo(() => ({
+const choroplethConfig = useMemo(() => {
+  // Compute domain from the data that will actually be rendered (including demo data)
+  const renderData = (getNivoChartType(chartType) === NIVO_CHART_TYPES.CHOROPLETH && (!data || data.length === 0))
+    ? DEMO_CHOROPLETH_DATA
+    : (data || []);
+  const values = renderData.map(d => d.value).filter(v => typeof v === 'number' && !isNaN(v));
+  const domainMin = values.length ? Math.min(...values) : 0;
+  const domainMax = values.length ? Math.max(...values) : 100;
+
+  // Determine projection — Nivo supports: mercator, naturalEarth1, equirectangular, etc.
+  // NOTE: 'albersUsa' is NOT supported by Nivo — sanitize any stored value to 'mercator'.
+  const mapSrc = zoneConfig.mapFeatures || 'usa';
+  const isUsa = mapSrc === 'usa';
+  const rawProjection = zoneConfig.projectionType || (isUsa ? 'mercator' : 'naturalEarth1');
+  const effectiveProjection = rawProjection === 'albersUsa' ? 'mercator' : rawProjection;
+
+  const margin = 40;
+  const availW = Math.max(100, width - margin);
+  const availH = Math.max(60, height - margin);
+  // Combined zoom factor (slider % × button zoom)
+  const zf = (zoneConfig.projectionScale || 100) / 100 * choroplethZoom;
+
+  let autoScale, projTrans;
+  if (isUsa && effectiveProjection === 'mercator') {
+    // Scale so the contiguous US fills ~90% of the container width.
+    // Center on lon=-96°, lat=39° using mercator projection math:
+    //   tx_nivo = 0.5 + s * lon_rad * zf       where lon_rad(96°) = 1.676
+    //   ty_nivo = 0.5 + s * lat_merc * (W/H) * zf  where lat_merc(39°) ≈ 0.745
+    const s = 0.9;
+    autoScale = availW * s;
+    projTrans = [
+      0.5 + s * 1.676 * zf,
+      0.5 + s * 0.745 * (availW / availH) * zf,
+    ];
+  } else {
+    autoScale = availW * 0.145;
+    projTrans = [0.5, 0.5];
+  }
+  const effectiveScale = autoScale * zf;
+
+  return ({
   margin: { top: 20, right: 20, bottom: 20, left: 20 },
   features: geoFeatures,
-  projectionType: zoneConfig.projectionType || 'naturalEarth1',
-  projectionScale: zoneConfig.projectionScale || 100,
-  projectionTranslation: [0.5, 0.5],
+  projectionType: effectiveProjection,
+  projectionScale: effectiveScale,
+  projectionTranslation: projTrans,
   match: zoneConfig.matchBy === 'properties.name'
     ? (feature, datum) => (feature.properties?.name || feature.properties?.NAME) === datum.id
     : zoneConfig.matchBy === 'properties.iso_a3'
     ? (feature, datum) => (feature.properties?.iso_a3 || feature.properties?.ISO_A3) === datum.id
     : undefined,
-  colors: DEFAULT_PALETTE,
+  colors: 'blues',
+  domain: [domainMin, domainMax],
+  unknownColor: '#e0e0e0',
   borderColor: { from: 'color', modifiers: [['darker', 0.2]] },
   defs: [],
   fill: [],
@@ -571,7 +619,8 @@ const choroplethConfig = useMemo(() => ({
       </div>
     );
   }) : false,
-}), [showLegend, colors, fontSize, data, geoFeatures, zoneConfig.projectionType, zoneConfig.projectionScale, zoneConfig.matchBy]);
+});
+}, [showLegend, colors, fontSize, data, chartType, geoFeatures, width, height, zoneConfig.mapFeatures, zoneConfig.projectionType, zoneConfig.projectionScale, zoneConfig.matchBy, choroplethZoom]);
   
 // Get the appropriate chart component and config
 const nivoChartType = getNivoChartType(chartType);
@@ -620,7 +669,7 @@ switch (nivoChartType) {
           {title}
         </div>
       )}
-      <div style={{ width: '100%', flex: 1, minHeight: '80px' }}>
+      <div style={{ width: '100%', flex: 1, minHeight: '80px', position: 'relative' }}>
         {isChoropleth && geoLoading ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: colors.text, fontSize: fontSize }}>
             Loading map data...
@@ -629,6 +678,39 @@ switch (nivoChartType) {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#ef4444', fontSize: fontSize, padding: '8px', textAlign: 'center' }}>
             Failed to load map: {geoError}
           </div>
+        ) : isChoropleth ? (
+          <>
+            <ChartComponent
+              data={nivoData}
+              {...chartConfig}
+              theme={nivoTheme}
+            />
+            <div style={{ position: 'absolute', bottom: '8px', right: '8px', display: 'flex', flexDirection: 'column', gap: '3px', zIndex: 10 }}>
+              {[
+                { label: '+', fn: z => Math.min(z * 1.25, 8) },
+                { label: '−', fn: z => Math.max(z * 0.8, 0.125) },
+              ].map(({ label, fn }) => (
+                <button
+                  key={label}
+                  onMouseDown={e => e.stopPropagation()}
+                  onClick={() => setChoroplethZoom(fn)}
+                  style={{
+                    width: '22px', height: '22px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: colors.background,
+                    border: `1px solid ${colors.grid}`,
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    color: colors.text,
+                    fontSize: '14px',
+                    lineHeight: 1,
+                    padding: 0,
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  }}
+                >{label}</button>
+              ))}
+            </div>
+          </>
         ) : (
           <ChartComponent
             data={nivoData}

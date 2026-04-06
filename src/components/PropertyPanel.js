@@ -701,28 +701,27 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
               <label className="property-label" style={{ fontSize: '12px', color: '#6b7280' }}>Projection</label>
               <select
                 className="property-select"
-                value={zoneConfig.projectionType || 'naturalEarth1'}
+                value={zoneConfig.projectionType || (zoneConfig.mapFeatures === 'usa' || !zoneConfig.mapFeatures ? 'mercator' : 'naturalEarth1')}
                 onChange={(e) => onUpdate({
                   ...zoneConfig,
                   projectionType: e.target.value,
                 })}
               >
-                <option value="naturalEarth1">Natural Earth 1</option>
                 <option value="mercator">Mercator</option>
+                <option value="naturalEarth1">Natural Earth 1</option>
                 <option value="orthographic">Orthographic</option>
                 <option value="equirectangular">Equirectangular</option>
-                <option value="albersUsa">Albers USA</option>
               </select>
             </div>
 
-            {/* Projection Scale */}
+            {/* Projection Scale (zoom) */}
             <div className="property-field-group" style={{ marginTop: '12px' }}>
-              <label className="property-label" style={{ fontSize: '12px', color: '#6b7280' }}>Scale</label>
+              <label className="property-label" style={{ fontSize: '12px', color: '#6b7280' }}>Zoom ({zoneConfig.projectionScale || 100}%)</label>
               <input
                 type="range"
                 min="50"
                 max="200"
-                step="10"
+                step="5"
                 className="property-input"
                 value={zoneConfig.projectionScale || 100}
                 onChange={(e) => onUpdate({
@@ -731,7 +730,7 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
                 })}
                 style={{ margin: '8px 0' }}
               />
-              <span className="property-help-text">{zoneConfig.projectionScale || 100}</span>
+              <span className="property-help-text">100% = auto-fit to container</span>
             </div>
 
             {/* Custom GeoJSON URL */}
