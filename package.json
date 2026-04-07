@@ -8,9 +8,9 @@
     "packages/*"
   ],
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
+    "start": "craco start",
+    "build": "craco build",
+    "test": "craco test",
     "eject": "react-scripts eject",
     "deploy": "npm run build && gh-pages -d build"
   },
@@ -37,6 +37,7 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "@craco/craco": "^7.1.0",
     "gh-pages": "^6.3.0",
     "react-scripts": "^5.0.1"
   },
