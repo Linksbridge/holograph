@@ -21,8 +21,9 @@ import FilterBar from './FilterBar';
 import { CHART_LIBRARIES, CHART_TYPES, COMPONENT_TYPES, createZoneConfig } from '../types/schema';
 import { useFilters } from '../hooks/useFilters';
 import { getTableColumns, initializeDataService } from '../services/dataService';
+import { getMatchingRules } from '../utils/securityUtils';
 
-const DashboardEditor = ({ dashboard, onDashboardUpdate, enabledLibraries }) => {
+const DashboardEditor = ({ dashboard, onDashboardUpdate, enabledLibraries, securityRules = [], settings = null }) => {
   const [selectedZone, setSelectedZone] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [gridWidth, setGridWidth] = useState(1200);
@@ -439,7 +440,26 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate, enabledLibraries }) => 
                         <span className={getZoneBadgeClass(zone)}>
                           {getZoneBadgeText(zone)}
                         </span>
-                        <span 
+                        {(() => {
+                          const matchingRules = getMatchingRules(zone, securityRules, settings);
+                          if (matchingRules.length === 0) return null;
+                          const tooltip = matchingRules.map(r => {
+                            const path = [r.datasource, r.tableName, r.columnName].filter(Boolean).join('.');
+                            return `${path} → [${r.roles.join(', ')}]`;
+                          }).join('\n');
+                          return (
+                            <span
+                              title={`Security rules apply:\n${tooltip}`}
+                              draggable={false}
+                              onMouseDown={(e) => e.stopPropagation()}
+                              style={{
+                                fontSize: '13px', cursor: 'help', opacity: 0.7,
+                                userSelect: 'none', lineHeight: 1,
+                              }}
+                            >🔒</span>
+                          );
+                        })()}
+                        <span
                           className="zone-settings-btn"
                           draggable={false}
                           onClick={(e) => handleGearClick(e, zone)}

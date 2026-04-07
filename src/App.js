@@ -15,7 +15,8 @@ import SettingsPanel from './components/SettingsPanel';
 import PreviewModal from './components/PreviewModal';
 import { FilterProvider, initializeGlobalFilterAPI, useFilters } from './hooks/useFilters';
 import { createInitialDashboard } from './types/schema';
-import { invokeSave, invokePublish, configureWebhookUrls, invokeListDocuments } from './services/webhookService';
+import { invokeSave, invokePublish, configureWebhookUrls, invokeListDocuments, invokeSaveSecurityRules, invokeListSecurityRules, configureSecurityWebhookUrls } from './services/webhookService';
+import SecurityPanel from './components/SecurityPanel';
 import './styles/dashboard.css';
 
 // Inner component that uses filter context
@@ -39,6 +40,9 @@ const AppContent = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [showSecurity, setShowSecurity] = useState(false);
+  const [securityRules, setSecurityRules] = useState([]);
+  const [securityWebhookUrls, setSecurityWebhookUrls] = useState({ securitySaveUrl: '', listSecurityUrl: '' });
 
   // Initialize webhook URLs from settings when settings change
   useEffect(() => {
@@ -195,6 +199,18 @@ const AppContent = () => {
     console.log('Settings saved:', newSettings);
   }, []);
 
+  // Save security rules via webhook
+  const handleSaveSecurityRules = useCallback(async (rules, urls) => {
+    if (urls) configureSecurityWebhookUrls(urls);
+    return await invokeSaveSecurityRules(rules);
+  }, []);
+
+  // Refresh security rules from webhook
+  const handleRefreshSecurityRules = useCallback(async (urls) => {
+    if (urls) configureSecurityWebhookUrls(urls);
+    return await invokeListSecurityRules();
+  }, []);
+
   // Open the current dashboard in the standalone viewer
   const handleOpenInViewer = useCallback(() => {
     navigate('/viewer', { state: { dashboard: currentDashboard?.schema } });
@@ -228,6 +244,9 @@ const AppContent = () => {
           <button className="btn btn-secondary btn-icon" onClick={handleOpenInViewer}>
             ↗ Open in Viewer
           </button>
+          <button className="btn btn-secondary btn-icon" onClick={() => setShowSecurity(true)}>
+            🔒 Security
+          </button>
           <button className="btn btn-secondary btn-icon" onClick={handleSaveDraft}>
             💾 Save Draft
           </button>
@@ -255,6 +274,8 @@ const AppContent = () => {
               dashboard={currentDashboard.schema}
               onDashboardUpdate={handleDashboardUpdate}
               enabledLibraries={settings?.enabledLibraries}
+              securityRules={securityRules}
+              settings={settings}
             />
           </div>
         </>
@@ -266,6 +287,7 @@ const AppContent = () => {
           onSettings={() => setShowSettings(true)}
           onDelete={handleDeleteDashboard}
           onRefresh={handleRefreshDashboards}
+          onSecurity={() => setShowSecurity(true)}
         />
       )}
 
@@ -289,6 +311,20 @@ const AppContent = () => {
         isOpen={showPreview}
         onClose={() => setShowPreview(false)}
         dashboard={currentDashboard?.schema}
+        securityRules={securityRules}
+        settings={settings}
+      />
+
+      {/* Security Panel */}
+      <SecurityPanel
+        isOpen={showSecurity}
+        onClose={() => setShowSecurity(false)}
+        rules={securityRules}
+        onRulesChange={setSecurityRules}
+        webhookUrls={securityWebhookUrls}
+        onWebhookUrlsChange={setSecurityWebhookUrls}
+        onSave={handleSaveSecurityRules}
+        onRefresh={handleRefreshSecurityRules}
       />
     </>
   );

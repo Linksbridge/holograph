@@ -1100,6 +1100,114 @@ const customChoroplethZone = {
 
 ---
 
+## Security Settings
+
+Holograph includes a role-based security rule system. Rules are authored in the designer and consumed by your backend for enforcement — **the designer does not enforce rules itself**.
+
+### Accessing Security Settings
+
+- **Dashboard list** → 🔒 Security button
+- **Dashboard editor top bar** → 🔒 Security button
+
+### Rule format
+
+```json
+{
+  "version": "1.0",
+  "rules": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "datasource": "sales_db",
+      "tableName": null,
+      "columnName": null,
+      "roles": ["admin", "analyst"],
+      "description": "Entire sales_db datasource — admin and analyst only",
+      "createdAt": "2026-04-06T12:00:00.000Z",
+      "updatedAt": "2026-04-06T12:00:00.000Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "datasource": "sales_db",
+      "tableName": "customers",
+      "columnName": null,
+      "roles": ["sales_team", "admin"],
+      "description": "Customers table — sales team and admin"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440002",
+      "datasource": "sales_db",
+      "tableName": "customers",
+      "columnName": "ssn",
+      "roles": ["hr_admin"],
+      "description": "SSN column — HR admin only"
+    }
+  ]
+}
+```
+
+### Granularity
+
+| Fields set | Scope |
+|---|---|
+| `datasource` only | All tables and columns in that datasource |
+| `datasource` + `tableName` | All columns in that table |
+| `datasource` + `tableName` + `columnName` | That specific column only |
+
+### Webhook endpoints
+
+Configure in the Security panel:
+
+| Setting | Method | Payload |
+|---|---|---|
+| List Security Rules URL | `GET` | Response: `{ version, rules }` |
+| Save Security Rules URL | `POST` | Body: `{ version, rules }` — full replace |
+
+Expected POST response: `{ "success": true }`
+
+### Backend enforcement guide
+
+```
+For each query against datasource D, table T, column C:
+  1. Find all rules where rule.datasource === D
+  2. Find the most specific applicable rule:
+       column:     rule.tableName === T && rule.columnName === C
+       table:      rule.tableName === T && rule.columnName === null
+       datasource: rule.tableName === null
+  3. Check if the requesting user's role is in rule.roles
+  4. If no rule matches, apply your default policy (allow-all or deny-all)
+```
+
+More specific rules take precedence. Roles are additive — a user needs to match at least one role in the applicable rule. Enforcement strategy is left to the backend.
+
+### Configuring security webhooks programmatically
+
+```javascript
+import { configureSecurityWebhookUrls } from './services/webhookService';
+
+configureSecurityWebhookUrls({
+  listSecurityUrl: 'https://api.example.com/security-rules',
+  securitySaveUrl: 'https://api.example.com/security-rules/save',
+});
+```
+
+### Designer lock badges
+
+When security rules are configured, zone cards in the editor show a 🔒 badge in the zone header whenever the zone's datasource/table/columns match a rule. Hovering the badge shows a tooltip listing which rules apply. The chart still renders normally — the badge is purely informational for dashboard authors.
+
+The datasource name is taken from **⚙️ Settings → Data Source → Database Name**.
+
+### Preview role simulation
+
+In the Preview modal, a **Security Preview** toolbar lets authors simulate what a specific role would see:
+
+1. Toggle **Security Preview ON**
+2. Select a role from the dropdown (populated from all roles defined in your rules)
+3. Zones the selected role cannot access are replaced with a grayed-out restricted placeholder showing a lock icon and "Not visible to role: X"
+
+This lets authors verify the layout impact of security rules before publishing.
+
+---
+
 ## API Reference
 
 ### Filter Context (`useFilters`)
@@ -1130,9 +1238,12 @@ import {
   getWebhookUrls,          // Get current URLs
   getWebhooks,             // Get current handlers
   resetWebhooks,           // Reset to defaults
-  invokeSave,              // Trigger save webhook
-  invokePublish,           // Trigger publish webhook
-  invokeListDocuments      // Trigger list webhook
+  invokeSave,                    // Trigger save webhook
+  invokePublish,                 // Trigger publish webhook
+  invokeListDocuments,           // Trigger list webhook
+  configureSecurityWebhookUrls,  // Configure security rule URLs
+  invokeSaveSecurityRules,       // POST security rules to backend
+  invokeListSecurityRules,       // GET security rules from backend
 } from './services/webhookService';
 ```
 

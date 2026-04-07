@@ -8,7 +8,7 @@
 import React from 'react';
 import BigLogo from '../big logo.png';
 
-const DashboardList = ({ dashboards, onSelect, onCreateNew, onSettings, onDelete, onRefresh }) => {
+const DashboardList = ({ dashboards, onSelect, onCreateNew, onSettings, onDelete, onRefresh, onSecurity }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [deleteDashboardId, setDeleteDashboardId] = React.useState(null);
 
@@ -54,6 +54,9 @@ const DashboardList = ({ dashboards, onSelect, onCreateNew, onSettings, onDelete
           )}
           <button className="btn btn-secondary" onClick={onSettings}>
             ⚙️ Settings
+          </button>
+          <button className="btn btn-secondary" onClick={onSecurity}>
+            🔒 Security
           </button>
         </div>
       </div>

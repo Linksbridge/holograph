@@ -28,6 +28,8 @@ let webhookUrls = {
   saveDraftUrl: '',
   publishUrl: '',
   listDocumentsUrl: '',
+  securitySaveUrl: '',
+  listSecurityUrl: '',
 };
 
 /**
@@ -221,13 +223,58 @@ export const invokeListDocuments = async (dashboardId) => {
   }
 };
 
+/**
+ * Configure security webhook URLs
+ * @param {Object} urls
+ * @param {string} urls.securitySaveUrl - URL to POST security rules
+ * @param {string} urls.listSecurityUrl - URL to GET security rules
+ */
+export const configureSecurityWebhookUrls = (urls) => {
+  webhookUrls = {
+    ...webhookUrls,
+    ...urls,
+  };
+};
+
+/**
+ * Invoke the save security rules webhook
+ * @param {Array} rules - Array of security rule objects
+ * @returns {Promise<Object>} Result
+ */
+export const invokeSaveSecurityRules = async (rules) => {
+  const payload = { version: '1.0', rules };
+  if (webhookUrls.securitySaveUrl) {
+    const result = await postToWebhookUrl(webhookUrls.securitySaveUrl, payload);
+    if (result.success) return result;
+  }
+  console.log('=== WEBHOOK: invokeSaveSecurityRules ===');
+  console.log(JSON.stringify(payload, null, 2));
+  return { success: true };
+};
+
+/**
+ * Invoke the list security rules webhook
+ * @returns {Promise<Object>} Result with { version, rules }
+ */
+export const invokeListSecurityRules = async () => {
+  if (webhookUrls.listSecurityUrl) {
+    const result = await getFromWebhookUrl(webhookUrls.listSecurityUrl);
+    if (result.success) return result;
+  }
+  console.log('=== WEBHOOK: invokeListSecurityRules (no URL configured) ===');
+  return { success: false, error: 'No listSecurityUrl configured' };
+};
+
 export default {
   configureWebhooks,
   configureWebhookUrls,
+  configureSecurityWebhookUrls,
   getWebhookUrls,
   getWebhooks,
   resetWebhooks,
   invokeSave,
   invokePublish,
   invokeListDocuments,
+  invokeSaveSecurityRules,
+  invokeListSecurityRules,
 };
