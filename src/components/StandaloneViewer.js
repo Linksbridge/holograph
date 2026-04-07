@@ -268,11 +268,36 @@ const StandaloneViewer = () => {
               : 'Demo dashboard — open any dashboard from the designer using "Open in Viewer" to preview it here.'}
           </div>
 
-          <DashboardViewer
-            dashboard={dashboard}
-            filters={filters}
-            onFilterChange={setFilters}
-          />
+          {/* Component boundary wrapper — shows the viewer as a contained element */}
+          <div style={{
+            position: 'relative',
+            border: '2px dashed #94a3b8',
+            borderRadius: '8px',
+            background: '#fff',
+          }}>
+            {/* Corner label */}
+            <div style={{
+              position: 'absolute',
+              top: '-11px',
+              left: '12px',
+              background: '#475569',
+              color: '#f8fafc',
+              fontSize: '11px',
+              fontFamily: '"Fira Code", monospace',
+              padding: '1px 8px',
+              borderRadius: '4px',
+              userSelect: 'none',
+              zIndex: 1,
+            }}>
+              &lt;DashboardViewer /&gt;
+            </div>
+
+            <DashboardViewer
+              dashboard={dashboard}
+              filters={filters}
+              onFilterChange={setFilters}
+            />
+          </div>
         </div>
       )}
     </div>

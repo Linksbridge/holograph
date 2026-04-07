@@ -307,7 +307,7 @@ const DashboardViewer = ({
 
     const updateWidth = () => {
       if (containerRef.current) {
-        setGridWidth(Math.max(400, containerRef.current.offsetWidth - 20));
+        setGridWidth(Math.max(400, containerRef.current.offsetWidth - 40));
       }
     };
 

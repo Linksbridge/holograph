@@ -233,6 +233,9 @@
 
 /* Zone Card */
 .viewer-zone-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   background-color: var(--hv-zone-bg);
   border-radius: var(--hv-zone-radius);
   box-shadow: var(--hv-shadow-sm);
@@ -264,8 +267,10 @@
 
 /* Zone Chart Container */
 .viewer-zone-chart-container {
-  padding: var(--hv-content-padding);
-  min-height: var(--hv-min-zone-height);
+  flex: 1;
+  min-height: 0;
+  padding: 8px;
+  overflow: hidden;
 }
 
 /* Loading State */
