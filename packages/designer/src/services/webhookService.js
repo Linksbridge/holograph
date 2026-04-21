@@ -25,7 +25,7 @@ const defaultHandlers = {
     return { 
       success: true, 
       result: [],
-      message: 'No documents found - configure List Documents URL to load from external source'
+      message: 'No documents found - configure List Documents URL to load complete dashboard objects with schemas from external source'
     };
   },
 };
@@ -202,8 +202,40 @@ export const invokePublish = async (dashboard) => {
 
 /**
  * Invoke the list documents webhook
+ * Expects complete dashboard objects with full schemas and layout information
+ * 
+ * Expected API Response Format:
+ * {
+ *   "success": true,
+ *   "result": [
+ *     {
+ *       "id": "dashboard-1",
+ *       "name": "Sales Dashboard", 
+ *       "description": "Monthly sales analytics",
+ *       "status": "published",
+ *       "lastModified": "2026-04-21T10:30:00Z",
+ *       "schema": {
+ *         "version": "1.0.0",
+ *         "name": "Sales Dashboard",
+ *         "description": "Monthly sales analytics",
+ *         "showTitle": true,
+ *         "zones": [
+ *           {
+ *             "id": "zone-1",
+ *             "title": "Revenue Chart",
+ *             "library": "chartjs",
+ *             "chartType": "bar",
+ *             "dataSource": { "tableName": "sales", "labelColumn": "month", "valueColumn": "revenue" },
+ *             "gridPosition": { "x": 0, "y": 0, "w": 6, "h": 4 }
+ *           }
+ *         ]
+ *       }
+ *     }
+ *   ]
+ * }
+ * 
  * @param {string} [dashboardId] - Optional ID to fetch a specific dashboard
- * @returns {Promise<Object>} Result with dashboards array or single dashboard
+ * @returns {Promise<Object>} Result with complete dashboard objects including schemas
  */
 export const invokeListDocuments = async (dashboardId) => {
   // Build URL with optional ID query param

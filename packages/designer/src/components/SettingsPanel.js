@@ -60,7 +60,7 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
       
       // Show document loading status if URL is provided
       if (localSettings.saveLocations.listDocumentsUrl?.trim()) {
-        setDocumentsLoadStatus('Documents will be loaded after settings are saved...');
+        setDocumentsLoadStatus('Complete dashboard objects will be loaded after settings are saved...');
         setTimeout(() => setDocumentsLoadStatus(''), 3000);
       }
       
@@ -197,7 +197,7 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
                 onChange={(e) => updateSettings('saveLocations', 'listDocumentsUrl', e.target.value)}
                 placeholder="https://api.example.com/dashboards"
               />
-              <p className="property-help-text">GET endpoint to list all dashboards (returns array with id, name, status, lastModified)</p>
+              <p className="property-help-text">GET endpoint to list all dashboards with complete layout information (returns array of full dashboard objects including id, name, status, lastModified, schema, zones, etc.)</p>
             </div>
 
             <div className="property-field-group">
@@ -239,10 +239,10 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
                     color: '#374151',
                     marginBottom: '4px'
                   }}>
-                    📄 Document URL Configured
+                    📄 Complete Dashboard Loading URL Configured
                   </div>
                   <div style={{ color: '#6b7280' }}>
-                    When settings are saved, the system will automatically fetch and display your published and draft documents from: {localSettings.saveLocations.listDocumentsUrl}
+                    When settings are saved, the system will automatically fetch and display your complete dashboard objects (including layouts, charts, and configurations) from: {localSettings.saveLocations.listDocumentsUrl}
                   </div>
                 </div>
               </div>
