@@ -34,6 +34,14 @@ jobs:
           cd packages/designer
           npm ci
           npm run build
+          
+      - name: Prepare build output for deployment
+        run: |
+          echo "Checking build output..."
+          ls -la packages/designer/build/
+          echo "Copying build output to deployment location..."
+          cp -r packages/designer/build/* packages/designer/
+          ls -la packages/designer/
         
       - name: Build And Deploy
         id: builddeploy
@@ -46,7 +54,7 @@ jobs:
           # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
           app_location: "/packages/designer" # App source code path - designer/editor only
           api_location: "" # Api source code path - optional
-          output_location: "build" # Built app content directory - optional
+          output_location: "" # Files are already in the app_location root
           skip_app_build: true # Skip Azure's auto-build since we build explicitly above
           ###### End of Repository/Build Configurations ######
 
