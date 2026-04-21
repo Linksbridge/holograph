@@ -34,6 +34,8 @@ jobs:
           cd packages/designer
           npm ci
           npm run build
+        env:
+          REACT_APP_DATABASE_CONNECTION_STRING: ${{ secrets.DATABASE_CONNECTION_STRING }}
           
       - name: Prepare build output for deployment
         run: |
@@ -57,6 +59,8 @@ jobs:
           output_location: "" # Files are already in the app_location root
           skip_app_build: true # Skip Azure's auto-build since we build explicitly above
           ###### End of Repository/Build Configurations ######
+        env:
+          DATABASE_CONNECTION_STRING: ${{ secrets.DATABASE_CONNECTION_STRING }}
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'

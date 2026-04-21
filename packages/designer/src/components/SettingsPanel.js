@@ -13,7 +13,7 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
   const [localSettings, setLocalSettings] = useState(settings || {
     dataSource: {
       type: 'azure-sql',
-      connectionString: '',
+      connectionString: process.env.REACT_APP_DATABASE_CONNECTION_STRING || '',
       databaseName: '',
     },
     saveLocations: {
