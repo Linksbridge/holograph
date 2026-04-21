@@ -6,7 +6,7 @@
  * to chart data at the data service level.
  */
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
 
 const FilterContext = createContext(null);
 
@@ -111,7 +111,7 @@ export const FilterProvider = ({ children, externalFilters }) => {
     return { ...filters };
   }, [filters]);
 
-  const value = {
+  const value = useMemo(() => ({
     filters,
     filterConfig,
     setFilterValues,
@@ -122,7 +122,7 @@ export const FilterProvider = ({ children, externalFilters }) => {
     getFiltersForZone,
     hasActiveFilters,
     getActiveFilters,
-  };
+  }), [filters, filterConfig, setFilterValues, setFilter, clearFilter, clearAllFilters, configureFilters, getFiltersForZone, hasActiveFilters, getActiveFilters]);
 
   return (
     <FilterContext.Provider value={value}>

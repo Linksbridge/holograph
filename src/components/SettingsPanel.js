@@ -5,9 +5,18 @@
  * - Data source configuration
  * - Save locations for drafts and publishes
  * - General dashboard settings
+ * - Chart library settings
  */
 
 import React, { useState } from 'react';
+import { CHART_LIBRARIES } from '../types/schema';
+
+// Available chart libraries with display names
+const AVAILABLE_LIBRARIES = [
+  { value: CHART_LIBRARIES.CHARTJS, label: 'Chart.js', description: 'Simple, responsive charts' },
+  { value: CHART_LIBRARIES.D3, label: 'D3.js', description: ' Powerful data visualizations' },
+  { value: CHART_LIBRARIES.NIVO, label: 'Nivo', description: 'Beautiful, animated charts' },
+];
 
 const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
   const [localSettings, setLocalSettings] = useState(settings || {
@@ -28,6 +37,11 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
       autoSave: true,
       autoSaveInterval: 30,
     },
+    enabledLibraries: [
+      CHART_LIBRARIES.CHARTJS,
+      CHART_LIBRARIES.D3,
+      CHART_LIBRARIES.NIVO,
+    ],
   });
 
   const [activeTab, setActiveTab] = useState('datasource');
@@ -75,6 +89,12 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
           onClick={() => setActiveTab('general')}
         >
           General
+        </button>
+        <button
+          className={`settings-tab ${activeTab === 'libraries' ? 'active' : ''}`}
+          onClick={() => setActiveTab('libraries')}
+        >
+          Libraries
         </button>
       </div>
 
@@ -235,6 +255,57 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
                   value={localSettings.general.autoSaveInterval}
                   onChange={(e) => updateSettings('general', 'autoSaveInterval', parseInt(e.target.value))}
                 />
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === 'libraries' && (
+          <>
+            <div className="settings-section-title">Chart Libraries</div>
+            <p className="property-help-text" style={{ marginBottom: '16px' }}>
+              Select which chart libraries to enable in the palette. Users will only see charts from enabled libraries.
+            </p>
+
+            {AVAILABLE_LIBRARIES.map((library) => (
+              <div className="property-field-group" key={library.value}>
+                <div className="settings-toggle">
+                  <input
+                    type="checkbox"
+                    id={`library-${library.value}`}
+                    className="settings-toggle-input"
+                    checked={localSettings.enabledLibraries?.includes(library.value)}
+                    onChange={(e) => {
+                      const currentLibraries = localSettings.enabledLibraries || [];
+                      let newLibraries;
+                      if (e.target.checked) {
+                        // Add library if checked
+                        newLibraries = [...currentLibraries, library.value];
+                      } else {
+                        // Remove library if unchecked
+                        newLibraries = currentLibraries.filter(lib => lib !== library.value);
+                      }
+                      setLocalSettings(prev => ({
+                        ...prev,
+                        enabledLibraries: newLibraries,
+                      }));
+                    }}
+                  />
+                  <label htmlFor={`library-${library.value}`} className="settings-toggle-label">
+                    {library.label}
+                  </label>
+                </div>
+                <p className="property-help-text" style={{ marginLeft: '28px' }}>
+                  {library.description}
+                </p>
+              </div>
+            ))}
+
+            {localSettings.enabledLibraries?.length === 0 && (
+              <div className="property-field-group">
+                <p style={{ color: '#ef4444', fontSize: '12px', fontStyle: 'italic' }}>
+                  Warning: No libraries selected. Users will not be able to add charts.
+                </p>
               </div>
             )}
           </>

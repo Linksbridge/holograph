@@ -1,2 +1,7 @@
 node_modules
+build
 ._*
+.env
+.env.local
+.env.*.local
+.claude/settings.local.json

@@ -6,7 +6,7 @@
  * Includes legend and responsive sizing.
  */
 
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo, useState } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -21,7 +21,8 @@ import {
   Legend,
   Filler,
 } from 'chart.js';
-import { Line, Bar, Pie, Doughnut, Radar, PolarArea } from 'react-chartjs-2';
+import { Line, Bar, Pie, Doughnut, Radar, PolarArea, Chart as ReactChart } from 'react-chartjs-2';
+import { BubbleMapController, ProjectionScale, GeoFeature, SizeScale } from 'chartjs-chart-geo';
 import { THEMES, CHART_TYPES } from '../types/schema';
 
 // Register Chart.js components
@@ -36,8 +37,131 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  Filler
+  Filler,
+  BubbleMapController,
+  ProjectionScale,
+  GeoFeature,
+  SizeScale,
 );
+
+// GeoJSON cache for bubble map background
+const bubbleGeoCache = {};
+const USA_STATES_GEO_URL = 'https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_110m_admin_1_states_provinces.geojson';
+
+// Demo data shown when no data source is connected
+const DEMO_BUBBLE_DATA = [
+  { city: 'New York',      lat: 40.7128, lng: -74.0060,  value: 8336817 },
+  { city: 'Los Angeles',   lat: 34.0522, lng: -118.2437, value: 3979576 },
+  { city: 'Chicago',       lat: 41.8781, lng: -87.6298,  value: 2693976 },
+  { city: 'Houston',       lat: 29.7604, lng: -95.3698,  value: 2320268 },
+  { city: 'Phoenix',       lat: 33.4484, lng: -112.0740, value: 1608139 },
+  { city: 'Philadelphia',  lat: 39.9526, lng: -75.1652,  value: 1603797 },
+  { city: 'San Antonio',   lat: 29.4241, lng: -98.4936,  value: 1434625 },
+  { city: 'San Diego',     lat: 32.7157, lng: -117.1611, value: 1386932 },
+  { city: 'Dallas',        lat: 32.7767, lng: -96.7970,  value: 1304379 },
+  { city: 'Seattle',       lat: 47.6062, lng: -122.3321, value:  744955 },
+];
+
+// BubbleMapChart — separate component to use hooks cleanly
+const BubbleMapChart = ({ data, zoneConfig, colors, title, tooltip }) => {
+  const [geoData, setGeoData] = useState(null);
+  const chartRef = useRef(null);
+
+  const latCol   = zoneConfig?.dataSource?.latColumn   || 'lat';
+  const lngCol   = zoneConfig?.dataSource?.lngColumn   || 'lng';
+  const valueCol = zoneConfig?.dataSource?.valueColumn || 'value';
+  const labelCol = zoneConfig?.dataSource?.labelColumn || 'city';
+
+  useEffect(() => {
+    if (bubbleGeoCache[USA_STATES_GEO_URL]) {
+      setGeoData(bubbleGeoCache[USA_STATES_GEO_URL]);
+      return;
+    }
+    fetch(USA_STATES_GEO_URL)
+      .then((r) => r.json())
+      .then((json) => {
+        bubbleGeoCache[USA_STATES_GEO_URL] = json;
+        setGeoData(json);
+      })
+      .catch(() => {});
+  }, []);
+
+  const rowData = data?.length ? data : DEMO_BUBBLE_DATA;
+
+  const chartData = useMemo(() => {
+    if (!geoData) return null;
+    return {
+      labels: rowData.map((r) => r[labelCol] ?? r.city ?? ''),
+      datasets: [{
+        label: title || 'Points',
+        outline: geoData,
+        showOutline: true,
+        data: rowData.map((r) => ({
+          longitude: Number(r[lngCol] ?? r.lng ?? 0),
+          latitude:  Number(r[latCol] ?? r.lat ?? 0),
+          value: Number(r[valueCol] ?? r.value ?? 0),
+        })),
+        backgroundColor: `${colors.primary}66`,
+        borderColor: colors.primary,
+        borderWidth: 1,
+      }],
+    };
+  }, [rowData, geoData, latCol, lngCol, valueCol, labelCol, colors, title]);
+
+  const options = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 300 },
+    scales: {
+      projection: {
+        axis: 'x',
+        projection: 'albersUsa',
+      },
+      size: {
+        axis: 'x',
+        size: [3, 25],
+      },
+    },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        enabled: tooltip?.enabled !== false,
+        callbacks: {
+          label: (ctx) => {
+            const row = rowData[ctx.dataIndex];
+            const val = row?.[valueCol] ?? row?.value ?? 0;
+            return `${ctx.label}: ${Number(val).toLocaleString()}`;
+          },
+        },
+      },
+    },
+  }), [tooltip, rowData, valueCol]);
+
+  const containerStyle = {
+    width: '100%',
+    height: '100%',
+    backgroundColor: colors.background,
+    borderRadius: '6px',
+    padding: '6px',
+    boxSizing: 'border-box',
+  };
+
+  if (!geoData) {
+    return (
+      <div style={{ ...containerStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.text, fontSize: '12px' }}>
+        Loading map...
+      </div>
+    );
+  }
+
+  return (
+    <div style={containerStyle}>
+      <div style={{ width: '100%', height: '100%', minHeight: '80px' }}>
+        <ReactChart ref={chartRef} type="bubbleMap" data={chartData} options={options} />
+      </div>
+    </div>
+  );
+};
 
 // Chart type mapping
 const CHART_COMPONENTS = {
@@ -49,9 +173,22 @@ const CHART_COMPONENTS = {
   [CHART_TYPES.CHARTJS_POLAR]: PolarArea,
 };
 
-const ChartJsAdapter = ({ data, theme = 'default', width = 400, height = 300, title, chartType = CHART_TYPES.CHARTJS_LINE, legend }) => {
+const ChartJsAdapter = ({ data, theme = 'default', width = 400, height = 300, title, chartType = CHART_TYPES.CHARTJS_LINE, legend, tooltip, zoneConfig }) => {
   const chartRef = useRef(null);
   const colors = THEMES[theme] || THEMES.default;
+
+  // Bubble map is handled by its own sub-component
+  if (chartType === CHART_TYPES.CHARTJS_BUBBLEMAP) {
+    return (
+      <BubbleMapChart
+        data={data}
+        zoneConfig={zoneConfig}
+        colors={colors}
+        title={title}
+        tooltip={tooltip}
+      />
+    );
+  }
 
   // Determine if we should show legend - from props or default based on size
   const legendEnabled = legend?.enabled !== false;
@@ -150,16 +287,44 @@ const ChartJsAdapter = ({ data, theme = 'default', width = 400, height = 300, ti
           },
         },
         tooltip: {
-          backgroundColor: colors.text,
-          titleColor: '#ffffff',
-          bodyColor: '#ffffff',
-          borderColor: colors.primary,
+          enabled: tooltip?.enabled !== false,
+          backgroundColor: tooltip?.backgroundColor === 'auto' ? colors.text : (tooltip?.backgroundColor || colors.text),
+          titleColor: tooltip?.textColor === 'auto' ? '#ffffff' : (tooltip?.textColor || '#ffffff'),
+          bodyColor: tooltip?.textColor === 'auto' ? '#ffffff' : (tooltip?.textColor || '#ffffff'),
+          borderColor: tooltip?.borderColor === 'auto' ? colors.primary : (tooltip?.borderColor || colors.primary),
           borderWidth: 1,
           cornerRadius: 6,
           padding: 10,
-          displayColors: true,
+          displayColors: tooltip?.showColors !== false,
+          position: tooltip?.position === 'auto' ? 'average' : (tooltip?.position || 'average'),
           callbacks: {
-            label: (context) => `Value: ${context.parsed.y?.toLocaleString() ?? context.parsed.toLocaleString()}`,
+            title: (context) => {
+              if (!tooltip?.title || tooltip.title === '{id}') {
+                return context[0]?.label || '';
+              }
+              return tooltip.title.replace('{id}', context[0]?.label || '').replace('{label}', context[0]?.label || '');
+            },
+            label: (context) => {
+              const value = context.parsed.y?.toLocaleString() ?? context.parsed.toLocaleString();
+              let formattedValue = value;
+
+              // Apply formatting based on tooltip.format
+              if (tooltip?.format === 'currency') {
+                formattedValue = new Intl.NumberFormat('en-US', {
+                  style: 'currency',
+                  currency: 'USD'
+                }).format(context.parsed.y ?? context.parsed);
+              } else if (tooltip?.format === 'percentage') {
+                formattedValue = `${((context.parsed.y ?? context.parsed) * 100).toFixed(1)}%`;
+              } else if (tooltip?.format === 'number') {
+                formattedValue = (context.parsed.y ?? context.parsed).toLocaleString();
+              }
+
+              if (!tooltip?.label || tooltip.label === '{value}') {
+                return formattedValue;
+              }
+              return tooltip.label.replace('{value}', formattedValue);
+            },
           },
         },
       },
@@ -239,7 +404,7 @@ const ChartJsAdapter = ({ data, theme = 'default', width = 400, height = 300, ti
     }
 
     return baseOptions;
-  }, [showLegend, legendPosition, colors, title, width, height, needsScales, chartType]);
+  }, [showLegend, legendPosition, colors, title, width, height, needsScales, chartType, tooltip]);
 
   // Cleanup chart instance on unmount
   useEffect(() => {

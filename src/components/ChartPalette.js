@@ -170,6 +170,80 @@ const CHART_OPTIONS = [
     ),
     description: 'Scatter point chart',
   },
+// Nivo charts
+{
+  id: 'nivo-line',
+  library: CHART_LIBRARIES.NIVO,
+  chartType: CHART_TYPES.NIVO_LINE,
+  title: 'Nivo Line',
+  icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+      <circle cx="15" cy="21" r="2" fill="currentColor" />
+      <circle cx="9" cy="3" r="2" fill="currentColor" />
+    </svg>
+  ),
+  description: 'Beautiful animated line',
+},
+{
+  id: 'nivo-bar',
+  library: CHART_LIBRARIES.NIVO,
+  chartType: CHART_TYPES.NIVO_BAR,
+  title: 'Nivo Bar',
+  icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="12" width="4" height="9" rx="1" />
+      <rect x="10" y="6" width="4" height="15" rx="1" />
+      <rect x="17" y="3" width="4" height="18" rx="1" />
+      <rect x="3" y="12" width="4" height="2" rx="0.5" fill="currentColor" />
+      <rect x="10" y="6" width="4" height="2" rx="0.5" fill="currentColor" />
+      <rect x="17" y="3" width="4" height="2" rx="0.5" fill="currentColor" />
+    </svg>
+  ),
+  description: 'Animated bar chart',
+},
+{
+  id: 'nivo-pie',
+  library: CHART_LIBRARIES.NIVO,
+  chartType: CHART_TYPES.NIVO_PIE,
+  title: 'Nivo Pie',
+  icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 2 L12 12 L20 8" />
+      <path d="M12 12 L6 18" strokeDasharray="2 2" />
+    </svg>
+  ),
+  description: 'Beautiful pie chart',
+},
+{
+  id: 'nivo-choropleth',
+  library: CHART_LIBRARIES.NIVO,
+  chartType: CHART_TYPES.NIVO_CHOROPLETH,
+  title: 'Nivo Choropleth',
+  icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M2 10 L5 6 L10 4 L15 6 L22 10 L19 13 L14 15 L10 11 L6 15 L3 13 Z" />
+      <path d="M10 4 L10 16 M15 6 L15 14" />
+    </svg>
+  ),
+  description: 'Geographic heat map',
+},
+{
+  id: 'chartjs-bubblemap',
+  library: CHART_LIBRARIES.CHARTJS,
+  chartType: CHART_TYPES.CHARTJS_BUBBLEMAP,
+  title: 'Point Map',
+  icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M2 10 L5 6 L10 4 L15 6 L22 10 L19 13 L14 15 L10 11 L6 15 L3 13 Z" />
+      <circle cx="8" cy="11" r="2" fill="currentColor" />
+      <circle cx="15" cy="9" r="1.5" fill="currentColor" />
+      <circle cx="12" cy="13" r="1" fill="currentColor" />
+    </svg>
+  ),
+  description: 'Geo point bubble map',
+},
   // Table component
   {
     id: 'table',
@@ -226,24 +300,46 @@ const ITEM_HEIGHT = 90; // Height of each chart item in pixels
 const VISIBLE_ITEMS = 4; // Number of visible items
 const SCROLL_AMOUNT = ITEM_HEIGHT;
 
-const ChartPalette = ({ onDragStart }) => {
+// Available library filter options
+const LIBRARY_FILTERS = [
+  { value: 'all', label: 'All Libraries' },
+  { value: CHART_LIBRARIES.CHARTJS, label: 'Chart.js' },
+  { value: CHART_LIBRARIES.D3, label: 'D3.js' },
+  { value: CHART_LIBRARIES.NIVO, label: 'Nivo' },
+];
+
+const ChartPalette = ({ onDragStart, enabledLibraries = null }) => {
   const scrollContainerRef = useRef(null);
   const [scrollPosition, setScrollPosition] = useState(0);
   const [maxScroll, setMaxScroll] = useState(0);
   const [canScrollUp, setCanScrollUp] = useState(false);
   const [canScrollDown, setCanScrollDown] = useState(false);
+  const [libraryFilter, setLibraryFilter] = useState('all');
+
+  // Filter chart options based on enabled libraries or selected filter
+  const filteredChartOptions = CHART_OPTIONS.filter((option) => {
+    // If enabledLibraries is specified (from settings), filter by it
+    if (enabledLibraries && Array.isArray(enabledLibraries)) {
+      // Non-chart components (table, image, richtext) are always shown
+      if (!option.library) return true;
+      return enabledLibraries.includes(option.library);
+    }
+    // Otherwise use the library filter dropdown
+    if (libraryFilter === 'all') return true;
+    return option.library === libraryFilter;
+  });
 
   // Calculate scroll bounds
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (container) {
-      const totalHeight = CHART_OPTIONS.length * ITEM_HEIGHT;
+      const totalHeight = filteredChartOptions.length * ITEM_HEIGHT;
       const visibleHeight = container.clientHeight;
       const maxPos = Math.max(0, totalHeight - visibleHeight);
       setMaxScroll(maxPos);
       updateScrollButtons(scrollPosition, maxPos);
     }
-  }, []);
+  }, [filteredChartOptions.length]);
 
   const updateScrollButtons = (position, max) => {
     setCanScrollUp(position > 0);
@@ -297,6 +393,23 @@ const ChartPalette = ({ onDragStart }) => {
 
   return (
     <div className="chart-palette">
+      {/* Library filter dropdown - only show if enabledLibraries is not specified */}
+      {!enabledLibraries && (
+        <div className="chart-palette-filter">
+          <select
+            className="chart-palette-filter-select"
+            value={libraryFilter}
+            onChange={(e) => setLibraryFilter(e.target.value)}
+          >
+            {LIBRARY_FILTERS.map((filter) => (
+              <option key={filter.value} value={filter.value}>
+                {filter.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* Up scroll button */}
       <button
         className={`chart-palette-scroll-btn chart-palette-scroll-up ${canScrollUp ? 'visible' : ''}`}
@@ -318,7 +431,7 @@ const ChartPalette = ({ onDragStart }) => {
       >
         <div className="chart-palette-title">Add Chart</div>
         
-        {CHART_OPTIONS.map((chartOption) => (
+        {filteredChartOptions.map((chartOption) => (
           <div
             key={chartOption.id}
             className="chart-palette-item"

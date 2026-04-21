@@ -58,6 +58,53 @@ export const MOCK_DATA_TABLES = {
     { region: 'East', sales: 68400 },
     { region: 'West', sales: 74300 },
   ],
+  // Sample data for bubble/point maps — lat/lng in decimal degrees, value for bubble size
+  us_cities: [
+    { city: 'New York',       lat: 40.7128, lng: -74.0060,  population: 8336817 },
+    { city: 'Los Angeles',    lat: 34.0522, lng: -118.2437, population: 3979576 },
+    { city: 'Chicago',        lat: 41.8781, lng: -87.6298,  population: 2693976 },
+    { city: 'Houston',        lat: 29.7604, lng: -95.3698,  population: 2320268 },
+    { city: 'Phoenix',        lat: 33.4484, lng: -112.0740, population: 1608139 },
+    { city: 'Philadelphia',   lat: 39.9526, lng: -75.1652,  population: 1603797 },
+    { city: 'San Antonio',    lat: 29.4241, lng: -98.4936,  population: 1434625 },
+    { city: 'San Diego',      lat: 32.7157, lng: -117.1611, population: 1386932 },
+    { city: 'Dallas',         lat: 32.7767, lng: -96.7970,  population: 1304379 },
+    { city: 'San Jose',       lat: 37.3382, lng: -121.8863, population: 1013240 },
+    { city: 'Austin',         lat: 30.2672, lng: -97.7431,  population:  961855 },
+    { city: 'Jacksonville',   lat: 30.3322, lng: -81.6557,  population:  949611 },
+    { city: 'San Francisco',  lat: 37.7749, lng: -122.4194, population:  883305 },
+    { city: 'Columbus',       lat: 39.9612, lng: -82.9988,  population:  905748 },
+    { city: 'Charlotte',      lat: 35.2271, lng: -80.8431,  population:  885708 },
+    { city: 'Indianapolis',   lat: 39.7684, lng: -86.1581,  population:  887642 },
+    { city: 'Seattle',        lat: 47.6062, lng: -122.3321, population:  744955 },
+    { city: 'Denver',         lat: 39.7392, lng: -104.9903, population:  715522 },
+    { city: 'Nashville',      lat: 36.1627, lng: -86.7816,  population:  689447 },
+    { city: 'Oklahoma City',  lat: 35.4676, lng: -97.5164,  population:  655057 },
+  ],
+  // Sample data for choropleth maps — state_code matches US state ISO 3166-2 codes
+  // Use labelColumn: state_code, valueColumn: population (or sales_index)
+  us_states: [
+    { state_code: 'US-CA', state_name: 'California',     population: 39538223, sales_index: 95 },
+    { state_code: 'US-TX', state_name: 'Texas',          population: 29145505, sales_index: 88 },
+    { state_code: 'US-FL', state_name: 'Florida',        population: 21538187, sales_index: 82 },
+    { state_code: 'US-NY', state_name: 'New York',       population: 20201249, sales_index: 91 },
+    { state_code: 'US-PA', state_name: 'Pennsylvania',   population: 13002700, sales_index: 74 },
+    { state_code: 'US-IL', state_name: 'Illinois',       population: 12812508, sales_index: 78 },
+    { state_code: 'US-OH', state_name: 'Ohio',           population: 11799448, sales_index: 71 },
+    { state_code: 'US-GA', state_name: 'Georgia',        population: 10711908, sales_index: 69 },
+    { state_code: 'US-NC', state_name: 'North Carolina', population: 10439388, sales_index: 67 },
+    { state_code: 'US-MI', state_name: 'Michigan',       population: 10037773, sales_index: 65 },
+    { state_code: 'US-NJ', state_name: 'New Jersey',     population:  9288994, sales_index: 80 },
+    { state_code: 'US-VA', state_name: 'Virginia',       population:  8631393, sales_index: 76 },
+    { state_code: 'US-WA', state_name: 'Washington',     population:  7693612, sales_index: 84 },
+    { state_code: 'US-AZ', state_name: 'Arizona',        population:  7276316, sales_index: 62 },
+    { state_code: 'US-MA', state_name: 'Massachusetts',  population:  6981974, sales_index: 87 },
+    { state_code: 'US-TN', state_name: 'Tennessee',      population:  6910840, sales_index: 59 },
+    { state_code: 'US-IN', state_name: 'Indiana',        population:  6785528, sales_index: 57 },
+    { state_code: 'US-MO', state_name: 'Missouri',       population:  6196540, sales_index: 55 },
+    { state_code: 'US-MD', state_name: 'Maryland',       population:  6177224, sales_index: 72 },
+    { state_code: 'US-WI', state_name: 'Wisconsin',      population:  5893718, sales_index: 61 },
+  ],
 };
 
 // Cache for tables, columns, and unique values
@@ -125,10 +172,10 @@ export const getUniqueValuesForColumn = (columnName) => {
   if (uniqueValuesCache[columnName]) {
     return uniqueValuesCache[columnName];
   }
-  
+
   const values = new Set();
   const tables = getCachedTables();
-  
+
   tables.forEach((tableName) => {
     const cols = getCachedColumns(tableName);
     if (cols.includes(columnName)) {
@@ -140,10 +187,87 @@ export const getUniqueValuesForColumn = (columnName) => {
       });
     }
   });
-  
+
   const result = Array.from(values).sort();
   uniqueValuesCache[columnName] = result;
   return result;
+};
+
+/**
+ * Get unique values for a specific column within a single table
+ * @param {string} tableName - Name of the table
+ * @param {string} columnName - Name of the column
+ * @returns {Array} Array of unique values sorted appropriately
+ */
+export const getUniqueValuesForTableColumn = (tableName, columnName) => {
+  const tableData = MOCK_DATA_TABLES[tableName];
+  if (!tableData) return [];
+  const values = new Set();
+  tableData.forEach((row) => {
+    if (row[columnName] !== undefined) values.add(row[columnName]);
+  });
+  return Array.from(values).sort((a, b) => {
+    if (typeof a === 'number' && typeof b === 'number') return a - b;
+    return String(a).localeCompare(String(b));
+  });
+};
+
+const isNoValueOp = (op) => op === 'isBlank' || op === 'isNotBlank';
+
+const applyCondition = (rowValue, condition) => {
+  const { operator, value } = condition;
+  const str = String(rowValue ?? '').toLowerCase();
+  const cond = String(value ?? '').toLowerCase();
+  const numRow = parseFloat(rowValue);
+  const numCond = parseFloat(value);
+
+  switch (operator) {
+    case 'is':             return str === cond;
+    case 'isNot':          return str !== cond;
+    case 'contains':       return str.includes(cond);
+    case 'doesNotContain': return !str.includes(cond);
+    case 'startsWith':     return str.startsWith(cond);
+    case 'endsWith':       return str.endsWith(cond);
+    case 'isBlank':        return rowValue === null || rowValue === undefined || rowValue === '';
+    case 'isNotBlank':     return rowValue !== null && rowValue !== undefined && rowValue !== '';
+    case 'eq':             return numRow === numCond;
+    case 'neq':            return numRow !== numCond;
+    case 'gt':             return numRow > numCond;
+    case 'gte':            return numRow >= numCond;
+    case 'lt':             return numRow < numCond;
+    case 'lte':            return numRow <= numCond;
+    default:               return true;
+  }
+};
+
+const applyFilterToRow = (row, columnName, filterDef) => {
+  const rowValue = row[columnName];
+
+  if (Array.isArray(filterDef)) {
+    if (filterDef.length === 0) return true;
+    return filterDef.includes(rowValue);
+  }
+
+  if (!filterDef || typeof filterDef !== 'object') return true;
+
+  const { mode, filterType, values, logicalOperator, conditions } = filterDef;
+
+  if (mode === 'basic') {
+    if (!values || values.length === 0) return true;
+    const included = values.includes(rowValue);
+    return filterType === 'exclude' ? !included : included;
+  }
+
+  if (mode === 'advanced') {
+    const active = (conditions || []).filter(
+      (c) => isNoValueOp(c.operator) || (c.value !== '' && c.value !== null && c.value !== undefined)
+    );
+    if (active.length === 0) return true;
+    const results = active.map((c) => applyCondition(rowValue, c));
+    return logicalOperator === 'or' ? results.some(Boolean) : results.every(Boolean);
+  }
+
+  return true;
 };
 
 /**
@@ -169,20 +293,9 @@ export const fetchChartData = async (tableName, labelColumn, valueColumn, filter
   let filteredData = tableData;
   if (filters && Object.keys(filters).length > 0) {
     filteredData = tableData.filter((row) => {
-      // Check each filter column
-      for (const [columnName, filterValues] of Object.entries(filters)) {
-        // Skip empty filters
-        if (!filterValues || !Array.isArray(filterValues) || filterValues.length === 0) {
-          continue;
-        }
-        
-        // Get the row value for this column
-        const rowValue = row[columnName];
-        
-        // If the row's column value is not in the filter values, exclude it
-        if (rowValue !== undefined && !filterValues.includes(rowValue)) {
-          return false;
-        }
+      for (const [columnName, filterDef] of Object.entries(filters)) {
+        if (!filterDef) continue;
+        if (!applyFilterToRow(row, columnName, filterDef)) return false;
       }
       return true;
     });
@@ -217,20 +330,9 @@ export const fetchTableData = async (tableName, columns = null, filters = null) 
   let filteredData = tableData;
   if (filters && Object.keys(filters).length > 0) {
     filteredData = tableData.filter((row) => {
-      // Check each filter column
-      for (const [columnName, filterValues] of Object.entries(filters)) {
-        // Skip empty filters
-        if (!filterValues || !Array.isArray(filterValues) || filterValues.length === 0) {
-          continue;
-        }
-        
-        // Get the row value for this column
-        const rowValue = row[columnName];
-        
-        // If the row's column value is not in the filter values, exclude it
-        if (rowValue !== undefined && !filterValues.includes(rowValue)) {
-          return false;
-        }
+      for (const [columnName, filterDef] of Object.entries(filters)) {
+        if (!filterDef) continue;
+        if (!applyFilterToRow(row, columnName, filterDef)) return false;
       }
       return true;
     });

@@ -12,14 +12,15 @@
  * @package @holograph/dashboard-viewer
  */
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
 import GridLayout from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 
-// Import chart adapters
-import D3Adapter from './adapters/D3Adapter';
-import ChartJsAdapter from './adapters/ChartJsAdapter';
+// Lazy-load chart adapters so only the libraries used in the dashboard are downloaded
+const D3Adapter = React.lazy(() => import('./adapters/D3Adapter'));
+const ChartJsAdapter = React.lazy(() => import('./adapters/ChartJsAdapter'));
+const NivoAdapter = React.lazy(() => import('./adapters/NivoAdapter'));
 
 // Import data service
 import { fetchChartData, fetchTableData, initializeDataService } from './services/dataService';
@@ -88,6 +89,10 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData }) => {
 
       // Otherwise, fetch data from the data service
       if (!dataSource?.tableName) {
+        // For choropleth charts, pass empty array so demo data can be shown
+        if (effectiveChartType === CHART_TYPES.NIVO_CHOROPLETH) {
+          setChartData([]);
+        }
         setLoading(false);
         return;
       }
@@ -142,6 +147,8 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData }) => {
     switch (library) {
       case CHART_LIBRARIES.D3:
         return D3Adapter;
+      case CHART_LIBRARIES.NIVO:
+        return NivoAdapter;
       case CHART_LIBRARIES.CHARTJS:
       default:
         return ChartJsAdapter;
@@ -179,9 +186,11 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData }) => {
   }
 
   // Empty data state
-  const isEmpty = zone.componentType === COMPONENT_TYPES.TABLE 
-    ? !tableData || tableData.length === 0 
-    : !chartData || chartData.length === 0;
+  // For choropleth charts, show demo data even when no data source is connected
+  const isChoropleth = effectiveChartType === CHART_TYPES.NIVO_CHOROPLETH;
+  const isEmpty = zone.componentType === COMPONENT_TYPES.TABLE
+    ? !tableData || tableData.length === 0
+    : !isChoropleth && (!chartData || chartData.length === 0);
 
   if (isEmpty) {
     return (
@@ -225,15 +234,22 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData }) => {
   return (
     <div ref={containerRef} style={containerBaseStyle}>
       {Adapter && (
-        <Adapter
-          data={chartData}
-          theme={theme}
-          width={dimensions.width}
-          height={dimensions.height}
-          title={title}
-          chartType={effectiveChartType}
-          legend={legend}
-        />
+        <Suspense fallback={
+          <div style={containerBaseStyle} className="viewer-zone-loading">
+            <div className="viewer-spinner" />
+            <span className="viewer-zone-loading-text">Loading...</span>
+          </div>
+        }>
+          <Adapter
+            data={chartData}
+            theme={theme}
+            width={dimensions.width}
+            height={dimensions.height}
+            title={title}
+            chartType={effectiveChartType}
+            legend={legend}
+          />
+        </Suspense>
       )}
     </div>
   );
@@ -291,7 +307,7 @@ const DashboardViewer = ({
 
     const updateWidth = () => {
       if (containerRef.current) {
-        setGridWidth(Math.max(400, containerRef.current.offsetWidth - 20));
+        setGridWidth(Math.max(400, containerRef.current.offsetWidth - 40));
       }
     };
 
@@ -326,6 +342,7 @@ const DashboardViewer = ({
   const getLibraryAttr = (lib) => {
     if (lib === CHART_LIBRARIES.D3) return 'd3';
     if (lib === CHART_LIBRARIES.CHARTJS) return 'chartjs';
+    if (lib === CHART_LIBRARIES.NIVO) return 'nivo';
     return 'chartjs';
   };
 
@@ -350,55 +367,50 @@ const DashboardViewer = ({
 
   return (
     <div className={`dashboard-viewer ${className}`} ref={containerRef}>
-    </div>
-  );
-};
-        {dashboard.zones?.length === 0 ? (
-          <div className="viewer-empty-state">
-            <p>No charts to display</p>
-          </div>
-        ) : (
-          <GridLayout
-            className="layout"
-            layout={layout}
-            cols={cols}
-            rowHeight={rowHeight}
-            margin={margin}
-            width={gridWidth}
-            draggable={false}
-            isDraggable={false}
-            isResizable={false}
-            compactType="vertical"
-            preventCollision={false}
-            useCSSTransforms={true}
-            containerPadding={[10, 10]}
-          >
-            {dashboard.zones?.map((zone) => (
-              <div
-                key={zone.id}
-                className="viewer-zone-card"
-                data-component-type={zone.componentType === COMPONENT_TYPES.TABLE ? 'table' : 'chart'}
-                data-library={getLibraryAttr(zone.library)}
-                data-theme={zone.theme || 'default'}
-              >
-                {(zone.showHeader !== false) && (
-                  <div className="viewer-zone-header">
-                    <h3 className="viewer-zone-title">{zone.title}</h3>
-                  </div>
-                )}
-                <div className="viewer-zone-chart-container">
-                  <ZoneContent
-                    zone={zone}
-                    filters={currentFilters}
-                    onFilterChange={handleFilterChange}
-                    zoneData={data[zone.id]}
-                  />
+      {dashboard.zones?.length === 0 ? (
+        <div className="viewer-empty-state">
+          <p>No charts to display</p>
+        </div>
+      ) : (
+        <GridLayout
+          className="layout"
+          layout={layout}
+          cols={cols}
+          rowHeight={rowHeight}
+          margin={margin}
+          width={gridWidth}
+          isDraggable={false}
+          isResizable={false}
+          compactType="vertical"
+          preventCollision={false}
+          useCSSTransforms={true}
+          containerPadding={[10, 10]}
+        >
+          {dashboard.zones?.map((zone) => (
+            <div
+              key={zone.id}
+              className="viewer-zone-card"
+              data-component-type={zone.componentType === COMPONENT_TYPES.TABLE ? 'table' : 'chart'}
+              data-library={getLibraryAttr(zone.library)}
+              data-theme={zone.theme || 'default'}
+            >
+              {(zone.showHeader !== false) && (
+                <div className="viewer-zone-header">
+                  <h3 className="viewer-zone-title">{zone.title}</h3>
                 </div>
+              )}
+              <div className="viewer-zone-chart-container">
+                <ZoneContent
+                  zone={zone}
+                  filters={currentFilters}
+                  onFilterChange={handleFilterChange}
+                  zoneData={data[zone.id]}
+                />
               </div>
-            ))}
-          </GridLayout>
-        )}
-      </div>
+            </div>
+          ))}
+        </GridLayout>
+      )}
     </div>
   );
 };

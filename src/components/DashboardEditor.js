@@ -18,11 +18,12 @@ import RichTextComponent from './RichTextComponent';
 import PropertyPanel from './PropertyPanel';
 import ChartPalette from './ChartPalette';
 import FilterBar from './FilterBar';
-import { CHART_LIBRARIES, COMPONENT_TYPES, createZoneConfig } from '../types/schema';
+import { CHART_LIBRARIES, CHART_TYPES, COMPONENT_TYPES, createZoneConfig } from '../types/schema';
 import { useFilters } from '../hooks/useFilters';
 import { getTableColumns, initializeDataService } from '../services/dataService';
+import { getMatchingRules } from '../utils/securityUtils';
 
-const DashboardEditor = ({ dashboard, onDashboardUpdate }) => {
+const DashboardEditor = ({ dashboard, onDashboardUpdate, enabledLibraries, securityRules = [], settings = null }) => {
   const [selectedZone, setSelectedZone] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [gridWidth, setGridWidth] = useState(1200);
@@ -54,28 +55,39 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate }) => {
   }, [dashboard.zones, configureFilters]);
 
   // Handle layout change from react-grid-layout
+  // NOTE: react-grid-layout v2 calls onLayoutChange inside a useEffect([layout, onLayoutChange]),
+  // so this fires on every render where layout or this callback changes — not just on user
+  // drag/resize. Guard against unnecessary updates to prevent an infinite re-render cascade
+  // that breaks filter propagation.
   const handleLayoutChange = useCallback(
     (layout) => {
+      let hasChanges = false;
       const updatedZones = dashboard.zones.map((zone) => {
         const layoutItem = layout.find((item) => item.i === zone.id);
         if (layoutItem) {
-          return {
-            ...zone,
-            gridPosition: {
-              x: layoutItem.x,
-              y: layoutItem.y,
-              w: layoutItem.w,
-              h: layoutItem.h,
-            },
-          };
+          const { x, y, w, h } = zone.gridPosition;
+          if (layoutItem.x !== x || layoutItem.y !== y || layoutItem.w !== w || layoutItem.h !== h) {
+            hasChanges = true;
+            return {
+              ...zone,
+              gridPosition: {
+                x: layoutItem.x,
+                y: layoutItem.y,
+                w: layoutItem.w,
+                h: layoutItem.h,
+              },
+            };
+          }
         }
         return zone;
       });
 
-      onDashboardUpdate({
-        ...dashboard,
-        zones: updatedZones,
-      });
+      if (hasChanges) {
+        onDashboardUpdate({
+          ...dashboard,
+          zones: updatedZones,
+        });
+      }
     },
     [dashboard, onDashboardUpdate]
   );
@@ -178,13 +190,29 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate }) => {
           h: 4,
         };
 
-        onDashboardUpdate({
+        // Choropleth: pre-populate with the us_states sample table
+        if (chartOption.chartType === CHART_TYPES.NIVO_CHOROPLETH) {
+          newZone.dataSource = { tableName: 'us_states', labelColumn: 'state_code', valueColumn: 'sales_index' };
+        }
+        // Point map: pre-populate with the us_cities sample table
+        if (chartOption.chartType === CHART_TYPES.CHARTJS_BUBBLEMAP) {
+          newZone.dataSource = { tableName: 'us_cities', labelColumn: 'city', latColumn: 'lat', lngColumn: 'lng', valueColumn: 'population' };
+          newZone.title = 'City Map';
+        }
+
+        const updatedDashboard = {
           ...dashboard,
           zones: [...dashboard.zones, newZone],
-        });
+        };
+
+        onDashboardUpdate(updatedDashboard);
 
         // Open property panel for the new zone
-        setTimeout(() => setSelectedZone(newZone), 100);
+        setTimeout(() => {
+          // Find the zone in the updated dashboard to ensure we have the latest version
+          const zoneInDashboard = updatedDashboard.zones.find(z => z.id === newZone.id);
+          setSelectedZone(zoneInDashboard || newZone);
+        }, 100);
       } catch (err) {
         console.error('Error adding chart:', err);
       }
@@ -218,6 +246,16 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate }) => {
         w: 4,
         h: 4,
       };
+
+      // Choropleth: pre-populate with the us_states sample table
+      if (chartOption.chartType === CHART_TYPES.NIVO_CHOROPLETH) {
+        newZone.dataSource = { tableName: 'us_states', labelColumn: 'state_code', valueColumn: 'sales_index' };
+      }
+      // Point map: pre-populate with the us_cities sample table
+      if (chartOption.chartType === CHART_TYPES.CHARTJS_BUBBLEMAP) {
+        newZone.dataSource = { tableName: 'us_cities', labelColumn: 'city', latColumn: 'lat', lngColumn: 'lng', valueColumn: 'population' };
+        newZone.title = 'City Map';
+      }
 
       onDashboardUpdate({
         ...dashboard,
@@ -287,7 +325,11 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate }) => {
   }, []);
 
   // Generate layout items for react-grid-layout
-  const layout = dashboard.zones.map((zone) => ({
+  // IMPORTANT: must be memoized — react-grid-layout v2 calls onLayoutChange in a
+  // useEffect([layout]) hook, so a new array reference on every render triggers
+  // handleLayoutChange → onDashboardUpdate → cascade that prevents filter fetches
+  // from completing.
+  const layout = useMemo(() => dashboard.zones.map((zone) => ({
     i: zone.id,
     x: zone.gridPosition.x,
     y: zone.gridPosition.y,
@@ -295,7 +337,7 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate }) => {
     h: zone.gridPosition.h,
     minW: 2,
     minH: 2,
-  }));
+  })), [dashboard.zones]);
 
   const getZoneBadgeClass = (zone) => {
     if (zone.componentType === COMPONENT_TYPES.TABLE) {
@@ -307,7 +349,9 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate }) => {
     if (zone.componentType === COMPONENT_TYPES.RICHTEXT) {
       return 'zone-badge richtext';
     }
-    return zone.library === CHART_LIBRARIES.D3 ? 'zone-badge d3' : 'zone-badge chartjs';
+    if (zone.library === CHART_LIBRARIES.NIVO) return 'zone-badge nivo';
+    if (zone.library === CHART_LIBRARIES.D3) return 'zone-badge d3';
+    return 'zone-badge chartjs';
   };
 
   const getZoneBadgeText = (zone) => {
@@ -320,13 +364,15 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate }) => {
     if (zone.componentType === COMPONENT_TYPES.RICHTEXT) {
       return 'Text';
     }
-    return zone.library === CHART_LIBRARIES.D3 ? 'D3.js' : 'Chart.js';
+    if (zone.library === CHART_LIBRARIES.NIVO) return 'Nivo';
+    if (zone.library === CHART_LIBRARIES.D3) return 'D3.js';
+    return 'Chart.js';
   };
 
   return (
     <>
       {/* Chart Palette */}
-      <ChartPalette onDragStart={handlePaletteDragStart} />
+      <ChartPalette onDragStart={handlePaletteDragStart} enabledLibraries={enabledLibraries} />
       
       <div className="dashboard-editor-container">
         {/* Header */}
@@ -394,7 +440,26 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate }) => {
                         <span className={getZoneBadgeClass(zone)}>
                           {getZoneBadgeText(zone)}
                         </span>
-                        <span 
+                        {(() => {
+                          const matchingRules = getMatchingRules(zone, securityRules, settings);
+                          if (matchingRules.length === 0) return null;
+                          const tooltip = matchingRules.map(r => {
+                            const path = [r.datasource, r.tableName, r.columnName].filter(Boolean).join('.');
+                            return `${path} → [${r.roles.join(', ')}]`;
+                          }).join('\n');
+                          return (
+                            <span
+                              title={`Security rules apply:\n${tooltip}`}
+                              draggable={false}
+                              onMouseDown={(e) => e.stopPropagation()}
+                              style={{
+                                fontSize: '13px', cursor: 'help', opacity: 0.7,
+                                userSelect: 'none', lineHeight: 1,
+                              }}
+                            >🔒</span>
+                          );
+                        })()}
+                        <span
                           className="zone-settings-btn"
                           draggable={false}
                           onClick={(e) => handleGearClick(e, zone)}

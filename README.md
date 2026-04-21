@@ -5,6 +5,11 @@ A zero-VM dashboard application with pluggable chart adapters (D3.js and Chart.j
 ## Table of Contents
 
 - [Installation](#installation)
+- [Using the Dashboard Viewer in Another React App](#using-the-dashboard-viewer-in-another-react-app)
+  - [Props](#props)
+  - [With Filters](#with-filters)
+  - [Filter Types](#filter-types)
+  - [Filter Operators](#filter-operators)
 - [Filters for Consumer/Reading](#filters-for-consumerreading)
   - [Global Filter API](#global-filter-api)
   - [React Component Integration](#react-component-integration)
@@ -15,8 +20,9 @@ A zero-VM dashboard application with pluggable chart adapters (D3.js and Chart.j
   - [Webhook Payloads](#webhook-payloads)
   - [Save Draft](#save-draft)
   - [Publish](#publish)
-  - [List Documents](#list-documents)
-  - [Custom Handlers](#custom-handlers)
+- [List Documents](#list-documents)
+- [Custom Handlers](#custom-handlers)
+- [Choropleth Map Configuration](#choropleth-map-configuration)
 - [Dashboard Schema](#dashboard-schema)
 - [API Reference](#api-reference)
 
@@ -98,33 +104,128 @@ function App() {
 
 ### Props
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `dashboard` | object | The dashboard schema object (required) |
-| `filters` | object | Optional initial filters to apply |
-| `onFilterChange` | function | Callback when filters change |
-| `webhookConfig` | object | Configuration for data loading webhooks |
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `dashboard` | object | — | The dashboard schema object (required) |
+| `data` | object | `{}` | Optional data keyed by zone ID; bypasses the data service when provided |
+| `filters` | object | `{}` | Filter definitions to apply to all charts (see [Filter Types](#filter-types)) |
+| `onFilterChange` | function | — | Called with the current filter object whenever filters change |
+| `className` | string | `''` | Additional CSS class applied to the root element |
 
 ### With Filters
+
+Pass a `filters` object to the viewer. Keys are column names; values are filter definitions. The viewer keeps its internal state in sync whenever the prop changes, so you can drive it from your own state.
 
 ```jsx
 import { DashboardViewer } from '@holograph/dashboard-viewer';
 
 function App() {
-  const [filters, setFilters] = useState({});
+  const [filters, setFilters] = useState({
+    region: {
+      mode: 'basic',
+      filterType: 'include',
+      values: ['North', 'South'],
+    },
+  });
 
   return (
-    <DashboardViewer 
+    <DashboardViewer
       dashboard={myDashboard}
       filters={filters}
-      onFilterChange={(newFilters) => {
-        setFilters(newFilters);
-        // Optionally sync with parent app
-      }}
+      onFilterChange={setFilters}
     />
   );
 }
 ```
+
+### Filter Types
+
+There are three filter formats. All three can be mixed in the same `filters` object.
+
+#### Basic filter
+
+Show only rows where a column's value is in (or not in) a fixed list — equivalent to Power BI's "Basic filtering".
+
+```js
+// Include: only show rows where region is North or South
+region: {
+  mode: 'basic',
+  filterType: 'include',   // 'include' | 'exclude'
+  values: ['North', 'South'],
+}
+
+// Exclude: hide rows where region is West
+region: {
+  mode: 'basic',
+  filterType: 'exclude',
+  values: ['West'],
+}
+```
+
+#### Advanced filter
+
+Apply up to two operator-based conditions joined by `and` / `or` — equivalent to Power BI's "Advanced filtering".
+
+```js
+// revenue between 10 000 and 30 000
+revenue: {
+  mode: 'advanced',
+  logicalOperator: 'and',   // 'and' | 'or'
+  conditions: [
+    { operator: 'gte', value: '10000' },
+    { operator: 'lte', value: '30000' },
+  ],
+}
+
+// product name starts with "Widget" OR is blank
+product: {
+  mode: 'advanced',
+  logicalOperator: 'or',
+  conditions: [
+    { operator: 'startsWith', value: 'Widget' },
+    { operator: 'isBlank',    value: '' },
+  ],
+}
+```
+
+#### Legacy array format
+
+The original simple include-list shorthand is still supported:
+
+```js
+// Equivalent to mode:'basic', filterType:'include', values:[…]
+region: ['North', 'South']
+```
+
+### Filter Operators
+
+Operators are inferred from column type (numeric columns automatically use the number set in the editor's FilterBar, but you can use either set in prop-driven filters).
+
+**Text operators**
+
+| Operator | Description |
+|----------|-------------|
+| `is` | Exact match (case-insensitive) |
+| `isNot` | Does not match |
+| `contains` | Value contains the string |
+| `doesNotContain` | Value does not contain the string |
+| `startsWith` | Value starts with the string |
+| `endsWith` | Value ends with the string |
+| `isBlank` | Value is null, undefined, or empty string |
+| `isNotBlank` | Value is not blank |
+
+**Number operators**
+
+| Operator | Description |
+|----------|-------------|
+| `eq` | Equal to |
+| `neq` | Not equal to |
+| `gt` | Greater than |
+| `gte` | Greater than or equal to |
+| `lt` | Less than |
+| `lte` | Less than or equal to |
+| `isBlank` | Value is null or undefined |
+| `isNotBlank` | Value is not null or undefined |
 
 ### With External Data Source
 
@@ -168,16 +269,38 @@ When Holograph loads, it exposes a global `window.Holograph` object with filter 
 
 #### Filter Object Structure
 
-Filters are passed as objects where keys are column names and values are arrays of allowed values:
+Filters are passed as objects where keys are column names. Each value is a filter definition — see [Filter Types](#filter-types) for the full format. The simple array shorthand is also accepted for backwards compatibility.
 
 ```javascript
-// Single filter
+// Simple include list (legacy shorthand)
 { region: ['North', 'South'] }
 
-// Multiple filters
-{ 
-  region: ['North', 'South'], 
-  quarter: ['Q1', 'Q2'] 
+// Basic include/exclude (Power BI style)
+{
+  region: { mode: 'basic', filterType: 'include', values: ['North', 'South'] },
+  quarter: { mode: 'basic', filterType: 'exclude', values: ['Q4'] },
+}
+
+// Advanced operator conditions
+{
+  revenue: {
+    mode: 'advanced',
+    logicalOperator: 'and',
+    conditions: [
+      { operator: 'gte', value: '10000' },
+      { operator: 'lt',  value: '50000' },
+    ],
+  },
+}
+
+// Multiple formats can be mixed in the same object
+{
+  region:  { mode: 'basic', filterType: 'include', values: ['North'] },
+  revenue: { mode: 'advanced', logicalOperator: 'or', conditions: [
+    { operator: 'gt', value: '20000' },
+    { operator: 'isBlank', value: '' },
+  ]},
+  quarter: ['Q1', 'Q2'],   // legacy array still works
 }
 ```
 
@@ -233,20 +356,33 @@ function Dashboard() {
 #### Setting Filters from Console
 
 ```javascript
-// Filter by region
+// Basic include (legacy shorthand still works)
 window.Holograph.setFilters({ region: ['North', 'South'] });
 
-// Filter by multiple columns
-window.Holograph.setFilters({ 
-  region: ['North'], 
-  quarter: ['Q1', 'Q2'] 
+// Basic include using full format
+window.Holograph.setFilters({
+  region: { mode: 'basic', filterType: 'include', values: ['North', 'South'] },
 });
 
-// Add another filter
-window.Holograph.setFilter('month', ['Jan', 'Feb']);
+// Exclude specific values
+window.Holograph.setFilter('region', {
+  mode: 'basic',
+  filterType: 'exclude',
+  values: ['West'],
+});
+
+// Advanced: revenue between two values
+window.Holograph.setFilter('revenue', {
+  mode: 'advanced',
+  logicalOperator: 'and',
+  conditions: [
+    { operator: 'gte', value: '10000' },
+    { operator: 'lte', value: '30000' },
+  ],
+});
 
 // Clear a specific filter
-window.Holograph.clearFilter('quarter');
+window.Holograph.clearFilter('region');
 
 // Clear all filters
 window.Holograph.clearAllFilters();
@@ -260,8 +396,8 @@ if (window.Holograph.hasFilters()) {
   console.log('Active filters:', window.Holograph.getFilters());
 }
 
-// Filter with empty array shows all data (removes filter)
-window.Holograph.setFilter('region', []);
+// Clear a filter by setting an empty values list
+window.Holograph.setFilter('region', { mode: 'basic', filterType: 'include', values: [] });
 ```
 
 ---
@@ -500,6 +636,260 @@ configureWebhooks({
 
 ---
 
+## Tooltip Customization
+
+Holograph provides customizable tooltips for all chart types. You can control both the appearance and content of tooltips through the Property Panel.
+
+### Tooltip Text Templates
+
+When configuring tooltips in the Property Panel, you can customize the text displayed using template placeholders:
+
+#### Title Text
+Controls the bold part of the tooltip (typically the category or data identifier).
+
+**Available placeholders:**
+- `{id}` - The data identifier (e.g., "Jan", "US-CA", "Q1")
+- `{label}` - Alternative label field if available
+
+**Examples:**
+- `{id}` - Shows just the identifier (e.g., "Jan")
+- `Month: {id}` - Shows "Month: Jan"
+- `Category: {label}` - Shows "Category: Sales"
+
+#### Value Text
+Controls the value part of the tooltip (typically the data value).
+
+**Available placeholders:**
+- `{value}` - The formatted data value (e.g., "$1,234", "45.6%", "123")
+
+**Examples:**
+- `{value}` - Shows just the formatted value (e.g., "$1,234")
+- `Amount: {value}` - Shows "Amount: $1,234"
+- `Total: {value}` - Shows "Total: 45.6%"
+
+### Tooltip Appearance
+
+In addition to text customization, you can control the visual appearance:
+
+- **Background Color** - Set custom background color or use "Auto" for theme-based coloring
+- **Text Color** - Set custom text color or use "Auto" for theme-based coloring
+- **Border Color** - Set custom border color or use "Auto" for theme-based coloring
+- **Value Format** - Choose from Auto, Number, Currency, or Percentage
+- **Position** - Auto (recommended), Top, Bottom, Left, Right, or Center
+- **Show Color Indicators** - Display color dots next to values (Chart.js only)
+
+### Examples
+
+#### Bar Chart with Custom Tooltips
+```javascript
+{
+  "id": "revenue-chart",
+  "componentType": "chart",
+  "library": "chartjs",
+  "chartType": "bar",
+  "title": "Monthly Revenue",
+  "tooltip": {
+    "enabled": true,
+    "title": "Month: {id}",
+    "label": "Revenue: {value}",
+    "format": "currency",
+    "backgroundColor": "#ffffff",
+    "textColor": "#000000",
+    "borderColor": "#3b82f6",
+    "position": "auto",
+    "showColors": true
+  }
+}
+```
+
+#### Pie Chart with Percentage
+```javascript
+{
+  "id": "sales-pie",
+  "componentType": "chart",
+  "library": "d3",
+  "chartType": "pie",
+  "title": "Sales by Category",
+  "tooltip": {
+    "enabled": true,
+    "title": "{label}",
+    "label": "{value} ({percentage}%)",
+    "format": "currency"
+  }
+}
+```
+
+### Chart Library Support
+
+All chart libraries support tooltip customization:
+
+- **Chart.js** - Full support including color indicators and advanced positioning
+- **D3.js** - Full support with hover animations
+- **Nivo** - Full support including choropleth maps
+
+---
+
+## CSS Customization
+
+Holograph dashboards can be fully customized through CSS. The viewer uses CSS custom properties (CSS variables) for all styling, allowing complete visual customization without JavaScript changes.
+
+### CSS Classes for Targeting
+
+| Class | Description |
+|-------|-------------|
+| `.holograph-viewer` | Main dashboard container |
+| `.viewer-dashboard-header` | Dashboard title/subtitle area |
+| `.viewer-dashboard-title` | Main dashboard title |
+| `.viewer-dashboard-subtitle` | Dashboard subtitle |
+| `.viewer-dashboard-grid` | Grid layout container |
+| `.viewer-zone-card` | Individual chart/table zone |
+| `.viewer-zone-header` | Zone title bar |
+| `.viewer-zone-title` | Zone title text |
+| `.viewer-zone-chart-container` | Chart content area |
+| `.viewer-table` | Table component |
+| `.viewer-empty-state` | Empty state display |
+
+### CSS Custom Properties
+
+Override these variables to customize appearance:
+
+```css
+.holograph-viewer {
+  /* Layout */
+  --hv-viewer-bg: #f9fafb;
+  --hv-viewer-padding: 20px;
+  --hv-viewer-radius: 8px;
+
+  /* Zone Cards */
+  --hv-zone-bg: #ffffff;
+  --hv-zone-radius: 8px;
+  --hv-header-bg: #f9fafb;
+  --hv-header-padding: 12px 16px;
+
+  /* Typography */
+  --hv-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --hv-title-size: 24px;
+  --hv-title-weight: 600;
+  --hv-subtitle-size: 14px;
+  --hv-zone-title-size: 14px;
+  --hv-zone-title-weight: 600;
+  --hv-body-font-size: 14px;
+
+  /* Colors */
+  --hv-text-primary: #111827;
+  --hv-text-secondary: #6b7280;
+  --hv-text-tertiary: #4b5563;
+  --hv-text-inverse: #ffffff;
+  --hv-border-color: #e5e7eb;
+  --hv-border-strong: #d1d5db;
+  --hv-primary: #3b82f6;
+  --hv-primary-hover: #2563eb;
+  --hv-success: #10b981;
+  --hv-warning: #f59e0b;
+  --hv-error: #dc2626;
+
+  /* Shadows */
+  --hv-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --hv-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --hv-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+
+  /* Transitions */
+  --hv-transition-fast: 150ms ease;
+  --hv-transition-normal: 200ms ease;
+  --hv-transition-slow: 300ms ease;
+
+  /* Grid */
+  --hv-grid-gap: 10px;
+  --hv-min-zone-height: 150px;
+}
+```
+
+### Example Customizations
+
+#### Dark Theme
+```css
+.holograph-viewer {
+  --hv-viewer-bg: #1f2937;
+  --hv-zone-bg: #374151;
+  --hv-header-bg: #374151;
+  --hv-text-primary: #f9fafb;
+  --hv-text-secondary: #d1d5db;
+  --hv-border-color: #4b5563;
+  --hv-primary: #60a5fa;
+}
+```
+
+#### Compact Layout
+```css
+.holograph-viewer {
+  --hv-viewer-padding: 12px;
+  --hv-header-padding: 8px 12px;
+  --hv-grid-gap: 8px;
+  --hv-zone-radius: 4px;
+}
+```
+
+#### High Contrast
+```css
+.holograph-viewer {
+  --hv-border-color: #000000;
+  --hv-border-strong: #000000;
+  --hv-text-primary: #000000;
+  --hv-zone-bg: #ffffff;
+  --hv-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+```
+
+### Component-Specific Overrides
+
+Target specific dashboard instances:
+
+```css
+/* Specific dashboard */
+#dashboard-sales {
+  --hv-primary: #dc2626;
+  --hv-viewer-bg: #fef2f2;
+}
+
+/* Department-specific styling */
+.holograph-viewer[data-department="finance"] {
+  --hv-primary: #059669;
+  --hv-zone-bg: #f0fdf4;
+}
+
+/* Environment-specific */
+.holograph-viewer[data-env="staging"] {
+  --hv-viewer-bg: #fefce8;
+  --hv-border-color: #f59e0b;
+}
+```
+
+### Responsive Customization
+
+```css
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .holograph-viewer {
+    --hv-viewer-padding: 12px;
+    --hv-title-size: 20px;
+    --hv-zone-title-size: 13px;
+  }
+}
+
+/* Print styles */
+@media print {
+  .holograph-viewer {
+    --hv-viewer-bg: #ffffff;
+    --hv-zone-bg: #ffffff;
+    --hv-shadow-sm: none;
+    --hv-shadow-md: none;
+    --hv-shadow-lg: none;
+  }
+}
+```
+
+---
+
 ## Dashboard Schema
 
 The dashboard is stored as a JSON object with the following structure:
@@ -515,15 +905,21 @@ The dashboard is stored as a JSON object with the following structure:
     {
       "id": "zone-1",
       "componentType": "chart", // chart, table, image, richtext
-      "library": "chartjs",    // chartjs or d3
-      "chartType": "line",     // Chart type
+      "library": "nivo",       // chartjs, d3, or nivo
+      "chartType": "choropleth", // Chart type (line, bar, pie, choropleth, etc.)
       "theme": "default",      // Color theme
       "title": "Chart Title",
       "showHeader": true,
+      // Choropleth-specific properties
+      "mapFeatures": "world-50m", // Geographical data source
+      "projectionType": "naturalEarth1", // Map projection
+      "projectionScale": 100,   // Map scale (50-200)
+      "matchBy": "id",          // Data matching method
+      "geoJsonUrl": "https://example.com/custom.geojson", // Custom GeoJSON URL
       "dataSource": {
-        "tableName": "sales_data",
-        "labelColumn": "month",
-        "valueColumn": "revenue"
+        "tableName": "geographic_data",
+        "labelColumn": "region_name",
+        "valueColumn": "metric_value"
       },
       "gridPosition": {
         "x": 0,                 // X position (grid units)
@@ -563,6 +959,7 @@ The dashboard is stored as a JSON object with the following structure:
 |---------|-------------|
 | `chartjs` | Chart.js library |
 | `d3` | D3.js library |
+| `nivo` | Nivo library (includes choropleth maps) |
 
 ### Chart Types
 
@@ -571,6 +968,125 @@ The dashboard is stored as a JSON object with the following structure:
 
 **D3.js:**
 - `bar`, `line`, `area`, `pie`, `donut`, `scatter`
+
+**Nivo:**
+- `line`, `bar`, `pie`, `choropleth`
+
+### Choropleth Map Configuration
+
+Choropleth maps visualize geographic data by coloring regions based on data values. Holograph supports choropleth maps through the Nivo library.
+
+#### Prerequisites
+
+1. **Install Nivo Geo Package:**
+   ```bash
+   npm install @nivo/geo
+   ```
+
+2. **Enable Nivo Library:**
+   Go to Settings → Chart Libraries and enable "Nivo"
+
+#### Creating a Choropleth Map
+
+1. **Add a Chart Zone:**
+    - Drag a chart from the palette
+    - Select "Nivo" as the rendering library
+    - Choose "Choropleth Map" as the chart type
+    - **Demo data will display automatically** (US states population data)
+
+2. **Configure Map Data:**
+    - **Geographical Data Source:** Choose from preset maps or provide custom GeoJSON
+      - World (50m resolution)
+      - World (110m resolution)
+      - United States (default - shows US states)
+      - Europe
+      - Custom GeoJSON URL
+
+    - **Projection Settings:**
+      - **Projection Type:** Natural Earth 1, Mercator, Orthographic, Equirectangular, Albers USA
+      - **Scale:** Adjust map zoom level (50-200)
+
+    - **Data Matching:**
+      - Match your data to map regions by ID, Name, ISO Code, or custom function
+
+3. **Connect Your Data:**
+    - Select a data source table with region identifiers and values
+    - Demo data automatically disappears when you connect real data
+
+#### Data Format
+
+Your data should include region identifiers that match the geographical features. **Demo data (US states population) displays automatically until you connect a data source.**
+
+```javascript
+// Example data format (same as demo data)
+const choroplethData = [
+  { id: 'US-CA', label: 'California', value: 39538223 },
+  { id: 'US-TX', label: 'Texas', value: 29145505 },
+  { id: 'US-FL', label: 'Florida', value: 21538187 },
+  // ... more states
+];
+```
+
+#### Example Configuration
+
+```javascript
+const choroplethZone = {
+  id: "population-map",
+  componentType: "chart",
+  library: "nivo",
+  chartType: "choropleth",
+  theme: "default",
+  title: "US Population by State",
+  showHeader: true,
+  mapFeatures: "usa",                    // Use USA map
+  projectionType: "albersUsa",          // Albers USA projection
+  projectionScale: 100,                 // Map scale
+  matchBy: "id",                        // Match data by ID field
+  dataSource: {
+    tableName: "population_data",
+    labelColumn: "state_name",
+    valueColumn: "population"
+  },
+  gridPosition: { x: 0, y: 0, w: 12, h: 8 }
+};
+```
+
+#### Custom GeoJSON
+
+For custom maps, provide a GeoJSON URL:
+
+```javascript
+const customChoroplethZone = {
+  id: "custom-map",
+  componentType: "chart",
+  library: "nivo",
+  chartType: "choropleth",
+  theme: "ocean",
+  title: "Custom Region Map",
+  mapFeatures: "custom",
+  geoJsonUrl: "https://example.com/my-regions.geojson",
+  projectionType: "naturalEarth1",
+  projectionScale: 150,
+  matchBy: "properties.name",           // Match by GeoJSON properties
+  // ... other configuration
+};
+```
+
+#### Common Issues
+
+**Map Not Loading:**
+- Ensure `@nivo/geo` package is installed
+- Check that your GeoJSON URL is accessible
+- Verify data matching (IDs must match between your data and GeoJSON features)
+
+**Data Not Displaying:**
+- Ensure your data includes the correct identifier field (`id`, `name`, etc.)
+- Check that the `matchBy` setting matches your data structure
+- Verify that region identifiers exist in the geographical data
+
+**Performance Issues:**
+- Use appropriate resolution (50m for detailed maps, 110m for faster loading)
+- Consider data sampling for very large datasets
 
 ### Color Themes
 
@@ -581,6 +1097,114 @@ The dashboard is stored as a JSON object with the following structure:
 | `sunset` | Orange/Red |
 | `forest` | Green/Teal |
 | `monochrome` | Gray scale |
+
+---
+
+## Security Settings
+
+Holograph includes a role-based security rule system. Rules are authored in the designer and consumed by your backend for enforcement — **the designer does not enforce rules itself**.
+
+### Accessing Security Settings
+
+- **Dashboard list** → 🔒 Security button
+- **Dashboard editor top bar** → 🔒 Security button
+
+### Rule format
+
+```json
+{
+  "version": "1.0",
+  "rules": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "datasource": "sales_db",
+      "tableName": null,
+      "columnName": null,
+      "roles": ["admin", "analyst"],
+      "description": "Entire sales_db datasource — admin and analyst only",
+      "createdAt": "2026-04-06T12:00:00.000Z",
+      "updatedAt": "2026-04-06T12:00:00.000Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "datasource": "sales_db",
+      "tableName": "customers",
+      "columnName": null,
+      "roles": ["sales_team", "admin"],
+      "description": "Customers table — sales team and admin"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440002",
+      "datasource": "sales_db",
+      "tableName": "customers",
+      "columnName": "ssn",
+      "roles": ["hr_admin"],
+      "description": "SSN column — HR admin only"
+    }
+  ]
+}
+```
+
+### Granularity
+
+| Fields set | Scope |
+|---|---|
+| `datasource` only | All tables and columns in that datasource |
+| `datasource` + `tableName` | All columns in that table |
+| `datasource` + `tableName` + `columnName` | That specific column only |
+
+### Webhook endpoints
+
+Configure in the Security panel:
+
+| Setting | Method | Payload |
+|---|---|---|
+| List Security Rules URL | `GET` | Response: `{ version, rules }` |
+| Save Security Rules URL | `POST` | Body: `{ version, rules }` — full replace |
+
+Expected POST response: `{ "success": true }`
+
+### Backend enforcement guide
+
+```
+For each query against datasource D, table T, column C:
+  1. Find all rules where rule.datasource === D
+  2. Find the most specific applicable rule:
+       column:     rule.tableName === T && rule.columnName === C
+       table:      rule.tableName === T && rule.columnName === null
+       datasource: rule.tableName === null
+  3. Check if the requesting user's role is in rule.roles
+  4. If no rule matches, apply your default policy (allow-all or deny-all)
+```
+
+More specific rules take precedence. Roles are additive — a user needs to match at least one role in the applicable rule. Enforcement strategy is left to the backend.
+
+### Configuring security webhooks programmatically
+
+```javascript
+import { configureSecurityWebhookUrls } from './services/webhookService';
+
+configureSecurityWebhookUrls({
+  listSecurityUrl: 'https://api.example.com/security-rules',
+  securitySaveUrl: 'https://api.example.com/security-rules/save',
+});
+```
+
+### Designer lock badges
+
+When security rules are configured, zone cards in the editor show a 🔒 badge in the zone header whenever the zone's datasource/table/columns match a rule. Hovering the badge shows a tooltip listing which rules apply. The chart still renders normally — the badge is purely informational for dashboard authors.
+
+The datasource name is taken from **⚙️ Settings → Data Source → Database Name**.
+
+### Preview role simulation
+
+In the Preview modal, a **Security Preview** toolbar lets authors simulate what a specific role would see:
+
+1. Toggle **Security Preview ON**
+2. Select a role from the dropdown (populated from all roles defined in your rules)
+3. Zones the selected role cannot access are replaced with a grayed-out restricted placeholder showing a lock icon and "Not visible to role: X"
+
+This lets authors verify the layout impact of security rules before publishing.
 
 ---
 
@@ -614,24 +1238,30 @@ import {
   getWebhookUrls,          // Get current URLs
   getWebhooks,             // Get current handlers
   resetWebhooks,           // Reset to defaults
-  invokeSave,              // Trigger save webhook
-  invokePublish,           // Trigger publish webhook
-  invokeListDocuments      // Trigger list webhook
+  invokeSave,                    // Trigger save webhook
+  invokePublish,                 // Trigger publish webhook
+  invokeListDocuments,           // Trigger list webhook
+  configureSecurityWebhookUrls,  // Configure security rule URLs
+  invokeSaveSecurityRules,       // POST security rules to backend
+  invokeListSecurityRules,       // GET security rules from backend
 } from './services/webhookService';
 ```
 
 ### Data Service
 
 ```javascript
-import { 
-  fetchChartData,           // Fetch data for charts
-  fetchTableData,           // Fetch raw table data
-  getAvailableTables,       // List available tables
-  getTableColumns,          // Get columns for a table
-  initializeDataService,    // Initialize the service
-  getUniqueValuesForColumn  // Get unique values for filtering
+import {
+  fetchChartData,                // Fetch data for charts
+  fetchTableData,                // Fetch raw table data
+  getAvailableTables,            // List available tables
+  getTableColumns,               // Get columns for a table
+  initializeDataService,         // Initialize the service
+  getUniqueValuesForColumn,      // Get unique values for a column across all tables
+  getUniqueValuesForTableColumn, // Get unique values for a column within one table
 } from './services/dataService';
 ```
+
+Both `fetchChartData` and `fetchTableData` accept a `filters` argument in any of the three formats described in [Filter Types](#filter-types).
 
 ---
 

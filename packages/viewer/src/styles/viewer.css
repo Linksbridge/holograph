@@ -1,86 +1,184 @@
 /**
- * Dashboard Viewer Styles
- * 
- * Styles for the embeddable dashboard viewer component.
- * All colors, spacing, and other design tokens are exposed as CSS custom properties
- * for easy theming via external stylesheets.
- * 
- * Customization example:
- * 
- * .my-custom-viewer {
- *   --hv-viewer-bg: #1a1a2e;
- *   --hv-viewer-primary: #00d4ff;
- *   --hv-zone-bg: #16213e;
- *   --hv-text-primary: #eaeaea;
+ * Holograph Dashboard Viewer Styles
+ *
+ * CSS custom properties for complete visual customization.
+ * Override these variables in your CSS to match your brand.
+ *
+ * Example:
+ * .holograph-viewer {
+ *   --hv-viewer-bg: #your-background;
+ *   --hv-primary: #your-brand-color;
+ *   --hv-text-primary: #your-text-color;
  * }
  */
 
-/* CSS Custom Properties - Design Tokens */
+/* CSS Custom Properties - Override these to customize appearance */
 .dashboard-viewer {
-  /* Colors - Backgrounds */
-  --hv-viewer-bg: #f9fafb;
+  /* Layout (matching dashboard.css defaults) */
+  --hv-viewer-bg: #f3f4f6;
+  --hv-viewer-padding: 20px;
+  --hv-viewer-radius: 8px;
+
+  /* Zone Cards (matching zone-card-* variables) */
   --hv-zone-bg: #ffffff;
+  --hv-zone-radius: 8px;
   --hv-header-bg: #f9fafb;
-  --hv-table-header-bg: #f9fafb;
-  --hv-table-row-hover-bg: #f9fafb;
-  --hv-placeholder-bg: rgba(59, 130, 246, 0.2);
-  
-  /* Colors - Text */
-  --hv-text-primary: #111827;
+  --hv-header-padding: 12px 16px;
+
+  /* Typography (matching dashboard title/subtitle styles) */
+  --hv-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --hv-title-size: 24px;
+  --hv-title-weight: 700;
+  --hv-subtitle-size: 14px;
+  --hv-zone-title-size: 14px;
+  --hv-zone-title-weight: 600;
+  --hv-body-font-size: 14px;
+
+  /* Colors (matching dashboard.css colors) */
+  --hv-text-primary: #1f2937;
   --hv-text-secondary: #6b7280;
   --hv-text-tertiary: #4b5563;
   --hv-text-inverse: #ffffff;
-  
-  /* Colors - Borders */
   --hv-border-color: #e5e7eb;
   --hv-border-strong: #d1d5db;
-  
-  /* Colors - Accents & States */
   --hv-primary: #3b82f6;
   --hv-primary-hover: #2563eb;
   --hv-success: #10b981;
   --hv-warning: #f59e0b;
   --hv-error: #dc2626;
-  --hv-error-bg: #fef2f2;
-  --hv-info: #3b82f6;
-  
-  /* Spacing */
-  --hv-viewer-padding: 20px;
-  --hv-viewer-radius: 8px;
-  --hv-zone-radius: 8px;
-  --hv-header-padding: 12px 16px;
-  --hv-content-padding: 12px;
-  --hv-cell-padding: 10px 12px;
-  
-  /* Typography */
-  --hv-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --hv-title-size: 24px;
-  --hv-title-weight: 600;
-  --hv-subtitle-size: 14px;
-  --hv-zone-title-size: 14px;
-  --hv-zone-title-weight: 600;
-  --hv-table-font-size: 13px;
-  --hv-body-font-size: 14px;
-  
-  /* Shadows */
-  --hv-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
-  --hv-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+  /* Shadows (matching dashboard shadow patterns) */
+  --hv-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --hv-shadow-md: 0 4px 12px rgba(59, 130, 246, 0.2);
   --hv-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
-  
+
   /* Transitions */
   --hv-transition-fast: 150ms ease;
   --hv-transition-normal: 200ms ease;
   --hv-transition-slow: 300ms ease;
-  
+
   /* Grid */
   --hv-grid-gap: 10px;
   --hv-min-zone-height: 150px;
-  --hv-min-viewer-height: 400px;
-  
-  /* Z-index */
-  --hv-z-base: 1;
-  --hv-z-drag: 3;
-  --hv-z-placeholder: 2;
+}
+
+/* Component Theme Layer - Department/Product specific */
+.holograph-viewer[data-component-theme="analytics"] {
+  --hv-primary: var(--hv-analytics-primary, var(--hv-primary));
+  --hv-zone-bg: var(--hv-analytics-bg, var(--hv-zone-bg));
+  --hv-viewer-bg: var(--hv-analytics-viewer-bg, var(--hv-viewer-bg));
+}
+
+.holograph-viewer[data-component-theme="finance"] {
+  --hv-primary: var(--hv-finance-primary, var(--hv-primary));
+  --hv-success: var(--hv-finance-success, var(--hv-success));
+  --hv-zone-bg: var(--hv-finance-bg, var(--hv-zone-bg));
+}
+
+.holograph-viewer[data-component-theme="hr"] {
+  --hv-primary: var(--hv-hr-primary, var(--hv-primary));
+  --hv-zone-bg: var(--hv-hr-bg, var(--hv-zone-bg));
+}
+
+/* Instance Theme Layer - Dashboard-specific overrides */
+.holograph-viewer[data-instance-theme="executive"] {
+  --hv-viewer-bg: var(--hv-exec-bg, #1a1a2e);
+  --hv-zone-bg: var(--hv-exec-zone-bg, #16213e);
+  --hv-text-primary: var(--hv-exec-text, #e6e6e6);
+  --hv-primary: var(--hv-exec-primary, #00d4ff);
+}
+
+.holograph-viewer[data-instance-theme="marketing"] {
+  --hv-viewer-bg: var(--hv-mkt-bg, #fff8f0);
+  --hv-zone-bg: var(--hv-mkt-zone-bg, #ffffff);
+  --hv-text-primary: var(--hv-mkt-text, #2d1810);
+  --hv-primary: var(--hv-mkt-primary, #f97316);
+}
+
+/* ==========================================================================
+   LIVE THEME PREVIEW SYSTEM
+   ========================================================================== */
+
+/* Preview mode styling */
+.holograph-viewer[data-preview-mode="true"] {
+  position: relative;
+  border: 2px dashed var(--hv-primary);
+  border-radius: calc(var(--hv-viewer-radius) + 2px);
+}
+
+.holograph-viewer[data-preview-mode="true"]::before {
+  content: '🎨 Theme Preview';
+  position: absolute;
+  top: -12px;
+  left: 16px;
+  background: var(--hv-primary);
+  color: var(--hv-text-inverse);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  z-index: 1000;
+}
+
+/* Preview controls overlay */
+.holograph-viewer[data-preview-mode="true"]::after {
+  content: 'Use applyTheme() to persist changes';
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.holograph-viewer[data-preview-mode="true"]:hover::after {
+  opacity: 1;
+}
+
+/* ==========================================================================
+   ENTERPRISE THEME VALIDATION
+   ========================================================================== */
+
+/* Theme validation indicators */
+.holograph-viewer[data-theme-valid="false"] {
+  --hv-error: #dc2626;
+  border: 1px solid var(--hv-error);
+}
+
+.holograph-viewer[data-theme-valid="false"]::before {
+  content: '⚠️ Theme Validation Failed';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--hv-error);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  z-index: 1000;
+}
+
+/* Theme migration indicators */
+.holograph-viewer[data-theme-migrated="true"] {
+  position: relative;
+}
+
+.holograph-viewer[data-theme-migrated="true"]::before {
+  content: '⬆️ Theme Migrated';
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: var(--hv-success);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  z-index: 1000;
 }
 
 /* Base Viewer Container */
@@ -135,6 +233,9 @@
 
 /* Zone Card */
 .viewer-zone-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   background-color: var(--hv-zone-bg);
   border-radius: var(--hv-zone-radius);
   box-shadow: var(--hv-shadow-sm);
@@ -166,8 +267,10 @@
 
 /* Zone Chart Container */
 .viewer-zone-chart-container {
-  padding: var(--hv-content-padding);
-  min-height: var(--hv-min-zone-height);
+  flex: 1;
+  min-height: 0;
+  padding: 8px;
+  overflow: hidden;
 }
 
 /* Loading State */

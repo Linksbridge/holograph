@@ -1,49 +1,118 @@
 /**
  * FilterBar Component
- * 
- * A component that provides a UI for manually configuring and applying
- * multiple filters to the dashboard. This allows users to interactively filter
- * data across all charts using multiple independent filter criteria.
- * 
- * Flow: Add Filter -> Select Table -> Select Column -> Select Values -> Repeat
+ *
+ * Provides Power BI-style filtering with two modes:
+ * - Basic: include/exclude with a searchable checkbox list
+ * - Advanced: up to two operator-based conditions with AND/OR logic
+ *
+ * Operators mirror PBI:
+ *   Text  — is, is not, contains, does not contain, starts with, ends with, is blank, is not blank
+ *   Number — is equal to, is not equal to, gt, gte, lt, lte, is blank, is not blank
  */
 
 import React, { useState, useEffect } from 'react';
 import { useFilters } from '../hooks/useFilters';
-import { 
-  getCachedTables, 
-  getCachedColumns, 
-  getUniqueValuesForColumn,
-  initializeDataService 
+import {
+  getCachedTables,
+  getCachedColumns,
+  getUniqueValuesForTableColumn,
+  initializeDataService,
 } from '../services/dataService';
 
-/**
- * Individual filter definition
- * @typedef {Object} FilterDefinition
- * @property {string} id - Unique identifier for this filter
- * @property {string} tableName - Selected table
- * @property {string} columnName - Selected column
- * @property {Array} values - Selected filter values
- */
+// ── Operator definitions ──────────────────────────────────────────────────────
+
+const TEXT_OPERATORS = [
+  { value: 'is',             label: 'is' },
+  { value: 'isNot',          label: 'is not' },
+  { value: 'contains',       label: 'contains' },
+  { value: 'doesNotContain', label: 'does not contain' },
+  { value: 'startsWith',     label: 'starts with' },
+  { value: 'endsWith',       label: 'ends with' },
+  { value: 'isBlank',        label: 'is blank' },
+  { value: 'isNotBlank',     label: 'is not blank' },
+];
+
+const NUMBER_OPERATORS = [
+  { value: 'eq',         label: 'is equal to' },
+  { value: 'neq',        label: 'is not equal to' },
+  { value: 'gt',         label: 'is greater than' },
+  { value: 'gte',        label: 'is greater than or equal to' },
+  { value: 'lt',         label: 'is less than' },
+  { value: 'lte',        label: 'is less than or equal to' },
+  { value: 'isBlank',    label: 'is blank' },
+  { value: 'isNotBlank', label: 'is not blank' },
+];
+
+const isNoValueOp = (op) => op === 'isBlank' || op === 'isNotBlank';
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const detectColumnType = (values) => {
+  if (!values || values.length === 0) return 'text';
+  const numCount = values.filter((v) => typeof v === 'number').length;
+  return numCount > values.length * 0.7 ? 'number' : 'text';
+};
+
+const getOpLabel = (op) => {
+  const found = [...TEXT_OPERATORS, ...NUMBER_OPERATORS].find((o) => o.value === op);
+  return found ? found.label : op;
+};
+
+const getFilterSummary = (column, filterDef) => {
+  if (Array.isArray(filterDef)) {
+    const preview = filterDef.slice(0, 3).join(', ') + (filterDef.length > 3 ? ` +${filterDef.length - 3}` : '');
+    return `${column}: ${preview}`;
+  }
+  if (!filterDef || typeof filterDef !== 'object') return column;
+
+  const { mode, filterType, values, logicalOperator, conditions } = filterDef;
+
+  if (mode === 'basic') {
+    if (!values?.length) return column;
+    const sym = filterType === 'exclude' ? ' \u2260' : ':';
+    const preview = values.slice(0, 2).join(', ') + (values.length > 2 ? ` +${values.length - 2}` : '');
+    return `${column}${sym} ${preview}`;
+  }
+
+  if (mode === 'advanced') {
+    const active = (conditions || []).filter(
+      (c) => isNoValueOp(c.operator) || (c.value !== '' && c.value !== null && c.value !== undefined)
+    );
+    if (!active.length) return column;
+    const parts = active.map((c) =>
+      isNoValueOp(c.operator) ? getOpLabel(c.operator) : `${getOpLabel(c.operator)} ${c.value}`
+    );
+    return `${column}: ${parts.join(` ${logicalOperator} `)}`;
+  }
+
+  return column;
+};
+
+const createEmptyFilter = () => ({
+  id: `filter-${Date.now()}`,
+  tableName: '',
+  columnName: '',
+  mode: 'basic',
+  filterType: 'include',
+  values: [],
+  valueSearch: '',
+  logicalOperator: 'and',
+  conditions: [
+    { operator: 'is', value: '' },
+    { operator: 'is', value: '' },
+  ],
+});
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 const FilterBar = ({ visible = true }) => {
-  const { 
-    filters, 
-    setFilter, 
-    clearFilter, 
-    clearAllFilters,
-    hasActiveFilters 
-  } = useFilters();
+  const { filters, setFilter, clearFilter, clearAllFilters, hasActiveFilters } = useFilters();
 
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [isInitialized, setIsInitialized]   = useState(false);
   const [availableTables, setAvailableTables] = useState([]);
-  
-  // Pending filters being configured (not yet applied)
-  const [pendingFilters, setPendingFilters] = useState([]);
-  // Track which pending filter is currently being edited
+  const [pendingFilters, setPendingFilters]   = useState([]);
   const [activePendingIndex, setActivePendingIndex] = useState(0);
 
-  // Initialize data service on mount
   useEffect(() => {
     const init = async () => {
       await initializeDataService();
@@ -53,133 +122,127 @@ const FilterBar = ({ visible = true }) => {
     init();
   }, []);
 
-  // Get the currently active pending filter
   const activePendingFilter = pendingFilters[activePendingIndex] || null;
 
-  // Get columns for the active pending filter's table
   const [availableColumns, setAvailableColumns] = useState([]);
   useEffect(() => {
-    if (!activePendingFilter?.tableName) {
-      setAvailableColumns([]);
-      return;
-    }
-
-    const columns = getCachedColumns(activePendingFilter.tableName);
-    setAvailableColumns(columns);
+    if (!activePendingFilter?.tableName) { setAvailableColumns([]); return; }
+    setAvailableColumns(getCachedColumns(activePendingFilter.tableName));
   }, [activePendingFilter?.tableName]);
 
-  // Get available values for the active pending filter's column
   const [availableValues, setAvailableValues] = useState([]);
   useEffect(() => {
-    if (!activePendingFilter?.columnName) {
+    if (!activePendingFilter?.tableName || !activePendingFilter?.columnName) {
       setAvailableValues([]);
       return;
     }
+    setAvailableValues(getUniqueValuesForTableColumn(activePendingFilter.tableName, activePendingFilter.columnName));
+  }, [activePendingFilter?.tableName, activePendingFilter?.columnName]);
 
-    const values = getUniqueValuesForColumn(activePendingFilter.columnName);
-    setAvailableValues(values);
-  }, [activePendingFilter?.columnName]);
+  const columnType = detectColumnType(availableValues);
+  const operators  = columnType === 'number' ? NUMBER_OPERATORS : TEXT_OPERATORS;
+  const defaultOp  = columnType === 'number' ? 'eq' : 'is';
 
-  // Add a new empty filter definition
+  // ── Pending filter mutation helpers ──────────────────────────────────────
+
+  const updatePendingFilter = (props) => {
+    const updated = [...pendingFilters];
+    updated[activePendingIndex] = { ...updated[activePendingIndex], ...props };
+
+    if (props.tableName !== undefined) {
+      updated[activePendingIndex].columnName  = '';
+      updated[activePendingIndex].values      = [];
+      updated[activePendingIndex].valueSearch = '';
+    }
+    if (props.columnName !== undefined) {
+      updated[activePendingIndex].values      = [];
+      updated[activePendingIndex].valueSearch = '';
+      updated[activePendingIndex].conditions  = [
+        { operator: defaultOp, value: '' },
+        { operator: defaultOp, value: '' },
+      ];
+    }
+    setPendingFilters(updated);
+  };
+
+  const updateCondition = (condIdx, props) => {
+    const updated     = [...pendingFilters];
+    const conditions  = [...(updated[activePendingIndex].conditions || [])];
+    conditions[condIdx] = { ...conditions[condIdx], ...props };
+    if (props.operator && isNoValueOp(props.operator)) {
+      conditions[condIdx].value = '';
+    }
+    updated[activePendingIndex] = { ...updated[activePendingIndex], conditions };
+    setPendingFilters(updated);
+  };
+
+  const handleValueToggle = (value) => {
+    const current = activePendingFilter.values || [];
+    const newVals = current.includes(value)
+      ? current.filter((v) => v !== value)
+      : [...current, value];
+    updatePendingFilter({ values: newVals });
+  };
+
+  const filteredValues = activePendingFilter?.valueSearch
+    ? availableValues.filter((v) =>
+        String(v).toLowerCase().includes(activePendingFilter.valueSearch.toLowerCase())
+      )
+    : availableValues;
+
+  const handleSelectAll   = () => updatePendingFilter({ values: availableValues });
+  const handleClearValues = () => updatePendingFilter({ values: [] });
+
+  // ── Apply / remove logic ─────────────────────────────────────────────────
+
+  const canApply = () => {
+    if (!activePendingFilter?.columnName) return false;
+    if (activePendingFilter.mode === 'basic') return activePendingFilter.values?.length > 0;
+    return (activePendingFilter.conditions || []).some(
+      (c) => isNoValueOp(c.operator) || (c.value !== '' && c.value !== null)
+    );
+  };
+
+  const handleApplyFilter = () => {
+    if (!canApply()) return;
+    const f = activePendingFilter;
+
+    if (f.mode === 'basic') {
+      setFilter(f.columnName, { mode: 'basic', filterType: f.filterType, values: f.values });
+    } else {
+      setFilter(f.columnName, {
+        mode: 'advanced',
+        logicalOperator: f.logicalOperator,
+        conditions: f.conditions.map((c) => ({ ...c })),
+      });
+    }
+
+    const updated = pendingFilters.filter((_, idx) => idx !== activePendingIndex);
+    setPendingFilters(updated);
+    setActivePendingIndex(Math.max(0, Math.min(activePendingIndex, updated.length - 1)));
+  };
+
   const handleAddFilter = () => {
-    const newFilter = {
-      id: `filter-${Date.now()}`,
-      tableName: '',
-      columnName: '',
-      values: [],
-    };
+    const newFilter = createEmptyFilter();
     setPendingFilters([...pendingFilters, newFilter]);
     setActivePendingIndex(pendingFilters.length);
   };
 
-  // Update a pending filter's property
-  const updatePendingFilter = (property, value) => {
-    const updated = [...pendingFilters];
-    updated[activePendingIndex] = {
-      ...updated[activePendingIndex],
-      [property]: value,
-    };
-    
-    // Reset column and values when table changes
-    if (property === 'tableName') {
-      updated[activePendingIndex].columnName = '';
-      updated[activePendingIndex].values = [];
-    }
-    
-    // Reset values when column changes
-    if (property === 'columnName') {
-      updated[activePendingIndex].values = [];
-    }
-    
-    setPendingFilters(updated);
-  };
-
-  // Toggle a value in the pending filter
-  const handleValueToggle = (value) => {
-    const currentValues = activePendingFilter.values || [];
-    const newValues = currentValues.includes(value)
-      ? currentValues.filter((v) => v !== value)
-      : [...currentValues, value];
-    
-    updatePendingFilter('values', newValues);
-  };
-
-  // Apply the pending filter to the actual filters
-  const handleApplyFilter = () => {
-    if (!activePendingFilter?.columnName || !activePendingFilter?.values?.length) {
-      return;
-    }
-
-    setFilter(activePendingFilter.columnName, activePendingFilter.values);
-    
-    // Clear this pending filter after applying
-    const updated = pendingFilters.filter((_, idx) => idx !== activePendingIndex);
-    setPendingFilters(updated);
-    setActivePendingIndex(Math.min(activePendingIndex, updated.length - 1));
-  };
-
-  // Remove a pending filter without applying
   const handleRemovePendingFilter = (index) => {
     const updated = pendingFilters.filter((_, idx) => idx !== index);
     setPendingFilters(updated);
-    setActivePendingIndex(Math.min(activePendingIndex, updated.length - 1));
+    setActivePendingIndex(Math.max(0, Math.min(activePendingIndex, updated.length - 1)));
   };
 
-  // Handle table selection change for active pending filter
-  const handleTableChange = (e) => {
-    updatePendingFilter('tableName', e.target.value);
-  };
-
-  // Handle column selection change for active pending filter
-  const handleColumnChange = (e) => {
-    updatePendingFilter('columnName', e.target.value);
-  };
-
-  // Handle select all values
-  const handleSelectAll = () => {
-    updatePendingFilter('values', availableValues);
-  };
-
-  // Handle clear values
-  const handleClearValues = () => {
-    updatePendingFilter('values', []);
-  };
-
-  // Handle clearing an applied filter
-  const handleClearAppliedFilter = (column) => {
-    clearFilter(column);
-  };
-
-  // Handle clearing all filters (both pending and applied)
   const handleClearAll = () => {
     setPendingFilters([]);
     setActivePendingIndex(0);
     clearAllFilters();
   };
 
-  if (!visible || !isInitialized) {
-    return null;
-  }
+  if (!visible || !isInitialized) return null;
+
+  // ── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div className="filter-bar">
@@ -187,180 +250,266 @@ const FilterBar = ({ visible = true }) => {
         <span className="filter-bar-title">Filters</span>
         <div className="filter-bar-header-actions">
           {hasActiveFilters() && (
-            <button 
-              className="filter-bar-clear-all"
-              onClick={handleClearAll}
-            >
+            <button className="filter-bar-clear-all" onClick={handleClearAll}>
               Clear All
             </button>
           )}
         </div>
       </div>
-      
-      <div className="filter-bar-content">
-        {/* Pending Filters Section */}
-        {(pendingFilters.length > 0 || hasActiveFilters()) && (
-          <div className="filter-bar-section">
-            <div className="filter-bar-section-title">Configure Filters</div>
-            
-            {/* Pending filter tabs */}
-            {pendingFilters.length > 0 && (
-              <div className="filter-bar-pending-tabs">
-                {pendingFilters.map((filter, index) => (
-                  <div 
-                    key={filter.id}
-                    className={`filter-bar-pending-tab ${index === activePendingIndex ? 'active' : ''}`}
-                    onClick={() => setActivePendingIndex(index)}
-                  >
-                    <span>Filter {index + 1}</span>
-                    <button
-                      className="filter-bar-pending-tab-remove"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemovePendingFilter(index);
-                      }}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-                <button 
-                  className="filter-bar-add-btn"
-                  onClick={handleAddFilter}
-                  title="Add another filter"
-                >
-                  +
-                </button>
-              </div>
-            )}
 
-            {/* Active pending filter configuration */}
+      <div className="filter-bar-content">
+
+        {/* ── Pending filter tabs ─────────────────────────────────────────── */}
+        {pendingFilters.length > 0 && (
+          <div className="filter-bar-section">
+            <div className="filter-bar-pending-tabs">
+              {pendingFilters.map((filter, index) => (
+                <div
+                  key={filter.id}
+                  className={`filter-bar-pending-tab ${index === activePendingIndex ? 'active' : ''}`}
+                  onClick={() => setActivePendingIndex(index)}
+                >
+                  <span>Filter {index + 1}</span>
+                  <button
+                    className="filter-bar-pending-tab-remove"
+                    onClick={(e) => { e.stopPropagation(); handleRemovePendingFilter(index); }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              <button className="filter-bar-add-btn" onClick={handleAddFilter} title="Add another filter">
+                +
+              </button>
+            </div>
+
+            {/* ── Active pending filter config ──────────────────────────── */}
             {activePendingFilter && (
               <div className="filter-bar-pending-config">
-                {/* Table Selection */}
+
+                {/* Table */}
                 <div className="filter-bar-row">
                   <label className="filter-bar-label">Table:</label>
-                  <select 
+                  <select
                     className="filter-bar-select"
                     value={activePendingFilter.tableName}
-                    onChange={handleTableChange}
+                    onChange={(e) => updatePendingFilter({ tableName: e.target.value })}
                   >
                     <option value="">Select a table...</option>
-                    {availableTables.map((table) => (
-                      <option key={table} value={table}>{table}</option>
-                    ))}
+                    {availableTables.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
-                
-                {/* Column Selection */}
+
+                {/* Column */}
                 {activePendingFilter.tableName && availableColumns.length > 0 && (
                   <div className="filter-bar-row">
                     <label className="filter-bar-label">Column:</label>
-                    <select 
+                    <select
                       className="filter-bar-select"
                       value={activePendingFilter.columnName}
-                      onChange={handleColumnChange}
+                      onChange={(e) => updatePendingFilter({ columnName: e.target.value })}
                     >
                       <option value="">Select a column...</option>
-                      {availableColumns.map((col) => (
-                        <option key={col} value={col}>{col}</option>
-                      ))}
+                      {availableColumns.map((c) => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
                 )}
-                
-                {/* Values Selection */}
+
+                {/* Mode tabs + filter body */}
                 {activePendingFilter.columnName && (
                   <>
-                    <div className="filter-bar-row filter-bar-actions">
-                      <button 
-                        className="filter-bar-btn"
-                        onClick={handleSelectAll}
+                    <div className="filter-bar-mode-tabs">
+                      <button
+                        className={`filter-bar-mode-tab ${activePendingFilter.mode === 'basic' ? 'active' : ''}`}
+                        onClick={() => updatePendingFilter({ mode: 'basic' })}
                       >
-                        Select All
+                        Basic
                       </button>
-                      <button 
-                        className="filter-bar-btn filter-bar-btn-secondary"
-                        onClick={handleClearValues}
+                      <button
+                        className={`filter-bar-mode-tab ${activePendingFilter.mode === 'advanced' ? 'active' : ''}`}
+                        onClick={() => updatePendingFilter({ mode: 'advanced' })}
                       >
-                        Clear
+                        Advanced
                       </button>
                     </div>
-                    
-                    <div className="filter-bar-values">
-                      <label className="filter-bar-label">Values:</label>
-                      <div className="filter-bar-values-list">
-                        {availableValues.length === 0 ? (
-                          <span className="filter-bar-empty">No values available</span>
-                        ) : (
-                          availableValues.map((value) => (
-                            <label key={value} className="filter-bar-checkbox">
-                              <input
-                                type="checkbox"
-                                checked={activePendingFilter.values.includes(value)}
-                                onChange={() => handleValueToggle(value)}
-                              />
-                              <span>{String(value)}</span>
-                            </label>
-                          ))
-                        )}
+
+                    {/* ── BASIC MODE ─────────────────────────────────────── */}
+                    {activePendingFilter.mode === 'basic' && (
+                      <div className="filter-bar-basic-mode">
+                        {/* Include / Exclude toggle */}
+                        <div className="filter-bar-filter-type">
+                          <button
+                            className={`filter-bar-filter-type-btn ${activePendingFilter.filterType === 'include' ? 'active' : ''}`}
+                            onClick={() => updatePendingFilter({ filterType: 'include' })}
+                          >
+                            Include
+                          </button>
+                          <button
+                            className={`filter-bar-filter-type-btn ${activePendingFilter.filterType === 'exclude' ? 'active' : ''}`}
+                            onClick={() => updatePendingFilter({ filterType: 'exclude' })}
+                          >
+                            Exclude
+                          </button>
+                        </div>
+
+                        {/* Search */}
+                        <input
+                          type="text"
+                          className="filter-bar-search-input"
+                          placeholder="Search values..."
+                          value={activePendingFilter.valueSearch || ''}
+                          onChange={(e) => updatePendingFilter({ valueSearch: e.target.value })}
+                        />
+
+                        {/* Select All row */}
+                        <div className="filter-bar-select-all-row">
+                          <label className="filter-bar-checkbox">
+                            <input
+                              type="checkbox"
+                              checked={
+                                availableValues.length > 0 &&
+                                activePendingFilter.values.length === availableValues.length
+                              }
+                              onChange={(e) => (e.target.checked ? handleSelectAll() : handleClearValues())}
+                            />
+                            <span>(Select all)</span>
+                          </label>
+                        </div>
+
+                        {/* Values list */}
+                        <div className="filter-bar-values-list">
+                          {filteredValues.length === 0 ? (
+                            <span className="filter-bar-empty">No values available</span>
+                          ) : (
+                            filteredValues.map((value) => (
+                              <label key={value} className="filter-bar-checkbox">
+                                <input
+                                  type="checkbox"
+                                  checked={activePendingFilter.values.includes(value)}
+                                  onChange={() => handleValueToggle(value)}
+                                />
+                                <span>{String(value)}</span>
+                              </label>
+                            ))
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    )}
+
+                    {/* ── ADVANCED MODE ──────────────────────────────────── */}
+                    {activePendingFilter.mode === 'advanced' && (
+                      <div className="filter-bar-advanced-mode">
+                        {/* Condition 1 */}
+                        <div className="filter-bar-condition-row">
+                          <select
+                            className="filter-bar-condition-op"
+                            value={activePendingFilter.conditions[0]?.operator || defaultOp}
+                            onChange={(e) => updateCondition(0, { operator: e.target.value })}
+                          >
+                            {operators.map((op) => (
+                              <option key={op.value} value={op.value}>{op.label}</option>
+                            ))}
+                          </select>
+                          {!isNoValueOp(activePendingFilter.conditions[0]?.operator) && (
+                            <input
+                              type={columnType === 'number' ? 'number' : 'text'}
+                              className="filter-bar-condition-value"
+                              placeholder="Value..."
+                              value={activePendingFilter.conditions[0]?.value || ''}
+                              onChange={(e) => updateCondition(0, { value: e.target.value })}
+                            />
+                          )}
+                        </div>
+
+                        {/* AND / OR toggle */}
+                        <div className="filter-bar-logic-toggle">
+                          <button
+                            className={`filter-bar-logic-btn ${activePendingFilter.logicalOperator === 'and' ? 'active' : ''}`}
+                            onClick={() => updatePendingFilter({ logicalOperator: 'and' })}
+                          >
+                            And
+                          </button>
+                          <button
+                            className={`filter-bar-logic-btn ${activePendingFilter.logicalOperator === 'or' ? 'active' : ''}`}
+                            onClick={() => updatePendingFilter({ logicalOperator: 'or' })}
+                          >
+                            Or
+                          </button>
+                        </div>
+
+                        {/* Condition 2 */}
+                        <div className="filter-bar-condition-row">
+                          <select
+                            className="filter-bar-condition-op"
+                            value={activePendingFilter.conditions[1]?.operator || defaultOp}
+                            onChange={(e) => updateCondition(1, { operator: e.target.value })}
+                          >
+                            {operators.map((op) => (
+                              <option key={op.value} value={op.value}>{op.label}</option>
+                            ))}
+                          </select>
+                          {!isNoValueOp(activePendingFilter.conditions[1]?.operator) && (
+                            <input
+                              type={columnType === 'number' ? 'number' : 'text'}
+                              className="filter-bar-condition-value"
+                              placeholder="Value..."
+                              value={activePendingFilter.conditions[1]?.value || ''}
+                              onChange={(e) => updateCondition(1, { value: e.target.value })}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Apply button */}
+                    {canApply() && (
+                      <div className="filter-bar-row" style={{ marginTop: '12px' }}>
+                        <button
+                          className="filter-bar-btn filter-bar-btn-primary"
+                          onClick={handleApplyFilter}
+                        >
+                          Apply Filter
+                        </button>
+                      </div>
+                    )}
                   </>
                 )}
-
-                {/* Apply Button */}
-                {activePendingFilter.columnName && activePendingFilter.values?.length > 0 && (
-                  <div className="filter-bar-row">
-                    <button 
-                      className="filter-bar-btn filter-bar-btn-primary"
-                      onClick={handleApplyFilter}
-                    >
-                      Apply Filter
-                    </button>
-                  </div>
-                )}
               </div>
-            )}
-
-            {/* Add Filter button (shown when no pending filters) */}
-            {pendingFilters.length === 0 && (
-              <button 
-                className="filter-bar-add-filter-btn"
-                onClick={handleAddFilter}
-              >
-                + Add Filter
-              </button>
             )}
           </div>
         )}
 
-        {/* Show "Add Filter" button at bottom if no filters at all */}
+        {/* ── Empty state ─────────────────────────────────────────────────── */}
         {pendingFilters.length === 0 && !hasActiveFilters() && (
           <div className="filter-bar-empty-state">
             <p>No filters configured</p>
-            <button 
-              className="filter-bar-add-filter-btn"
-              onClick={handleAddFilter}
-            >
+            <button className="filter-bar-add-filter-btn" onClick={handleAddFilter}>
               + Add Filter
             </button>
           </div>
         )}
 
-        {/* Active Filters Display */}
+        {pendingFilters.length === 0 && hasActiveFilters() && (
+          <div className="filter-bar-section">
+            <button className="filter-bar-add-filter-btn" onClick={handleAddFilter}>
+              + Add Filter
+            </button>
+          </div>
+        )}
+
+        {/* ── Active filter tags ───────────────────────────────────────────── */}
         {hasActiveFilters() && (
           <div className="filter-bar-active">
             <span className="filter-bar-label">Active Filters:</span>
             <div className="filter-bar-tags">
-              {Object.entries(filters).map(([column, values]) => (
+              {Object.entries(filters).map(([column, filterDef]) => (
                 <span key={column} className="filter-bar-tag">
-                  <span className="filter-bar-tag-content">
-                    <strong>{column}:</strong> {values.join(', ')}
+                  <span className="filter-bar-tag-content" title={getFilterSummary(column, filterDef)}>
+                    {getFilterSummary(column, filterDef)}
                   </span>
                   <button
                     className="filter-bar-tag-remove"
-                    onClick={() => handleClearAppliedFilter(column)}
+                    onClick={() => clearFilter(column)}
                     title="Remove filter"
                   >
                     ×
@@ -370,6 +519,7 @@ const FilterBar = ({ visible = true }) => {
             </div>
           </div>
         )}
+
       </div>
     </div>
   );
