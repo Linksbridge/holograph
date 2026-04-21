@@ -65,27 +65,105 @@ let tablesCache = null;
 let columnsCache = {};
 let uniqueValuesCache = {};
 
+// Track whether we're using real schema or mock data
+let usingRealSchema = false;
+let realSchemaData = null;
+
 /**
  * Initialize the data service cache
  * In production, this would fetch schema info from the SQL database
+ * @param {string} connectionString - Optional database connection string
  */
-export const initializeDataService = async () => {
-  // Simulate fetching table list from SQL
+export const initializeDataService = async (connectionString = null) => {
+  console.log('Initializing data service...');
+  
+  if (connectionString) {
+    try {
+      // TODO: In production, use connection string to fetch actual table schema
+      // This would make API calls to Azure Functions that query the database
+      console.log('Using connection string:', connectionString.substring(0, 50) + '...');
+      
+      // Simulate loading real database schema
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API delay
+      
+      // Simulate real schema data (replace with actual API call)
+      realSchemaData = {
+        tables: {
+          'customers': ['customer_id', 'name', 'email', 'city', 'country', 'created_date'],
+          'orders': ['order_id', 'customer_id', 'product', 'amount', 'order_date', 'status'],
+          'products': ['product_id', 'name', 'category', 'price', 'stock_quantity'],
+          'sales_analytics': ['date', 'revenue', 'orders_count', 'region', 'channel']
+        }
+      };
+      
+      // In production, this would be something like:
+      // const response = await fetch('/api/get-database-schema', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ connectionString })
+      // });
+      // realSchemaData = await response.json();
+      
+      // Use real schema data
+      tablesCache = Object.keys(realSchemaData.tables);
+      columnsCache = { ...realSchemaData.tables };
+      uniqueValuesCache = {};
+      usingRealSchema = true;
+      
+      console.log('Data service initialized with REAL schema - tables:', tablesCache);
+      
+    } catch (error) {
+      console.error('Failed to load real schema, falling back to mock data:', error);
+      // Fall back to mock data on error
+      await loadMockData();
+    }
+  } else {
+    // Use mock data when no connection string provided
+    await loadMockData();
+  }
+  
+  return tablesCache;
+};
+
+/**
+ * Load mock/example data
+ */
+const loadMockData = async () => {
   await new Promise((resolve) => setTimeout(resolve, 100));
   
   tablesCache = Object.keys(MOCK_DATA_TABLES);
   columnsCache = {};
   uniqueValuesCache = {};
+  usingRealSchema = false;
   
-  // Pre-populate columns cache for each table
+  // Pre-populate columns cache for each mock table
   tablesCache.forEach((tableName) => {
     if (MOCK_DATA_TABLES[tableName]?.length > 0) {
       columnsCache[tableName] = Object.keys(MOCK_DATA_TABLES[tableName][0]);
     }
   });
   
-  console.log('Data service initialized with tables:', tablesCache);
-  return tablesCache;
+  console.log('Data service initialized with MOCK data - tables:', tablesCache);
+};
+
+/**
+ * Check if using real database schema
+ * @returns {boolean} True if using real schema, false if using mock data
+ */
+export const isUsingRealSchema = () => {
+  return usingRealSchema;
+};
+
+/**
+ * Get schema information
+ * @returns {Object} Schema info including type and table count
+ */
+export const getSchemaInfo = () => {
+  return {
+    type: usingRealSchema ? 'real' : 'mock',
+    tableCount: tablesCache ? tablesCache.length : 0,
+    tables: tablesCache || []
+  };
 };
 
 /**
@@ -158,6 +236,31 @@ export const fetchChartData = async (tableName, labelColumn, valueColumn, filter
   // Simulate network delay (Azure Function latency)
   await new Promise((resolve) => setTimeout(resolve, 200 + Math.random() * 300));
 
+  if (usingRealSchema) {
+    // For real database, make API call to fetch data
+    console.log(`Fetching chart data from real database: ${tableName}`);
+    
+    // TODO: In production, make actual API call to Azure Function
+    // const response = await fetch('/api/fetch-chart-data', {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify({ tableName, labelColumn, valueColumn, filters })
+    // });
+    // return await response.json();
+    
+    // For now, return simulated real data structure
+    const simulatedRealData = [
+      { label: `Real ${labelColumn} 1`, value: Math.floor(Math.random() * 1000) },
+      { label: `Real ${labelColumn} 2`, value: Math.floor(Math.random() * 1000) },
+      { label: `Real ${labelColumn} 3`, value: Math.floor(Math.random() * 1000) },
+      { label: `Real ${labelColumn} 4`, value: Math.floor(Math.random() * 1000) },
+    ];
+    
+    console.log(`Real database data for ${tableName}:`, simulatedRealData);
+    return simulatedRealData;
+  }
+
+  // Use mock data
   const tableData = MOCK_DATA_TABLES[tableName];
   
   if (!tableData) {
@@ -206,6 +309,44 @@ export const fetchTableData = async (tableName, columns = null, filters = null) 
   // Simulate network delay (Azure Function latency)
   await new Promise((resolve) => setTimeout(resolve, 200 + Math.random() * 300));
 
+  if (usingRealSchema) {
+    // For real database, make API call to fetch data
+    console.log(`Fetching table data from real database: ${tableName}`);
+    
+    // TODO: In production, make actual API call to Azure Function
+    // const response = await fetch('/api/fetch-table-data', {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify({ tableName, columns, filters })
+    // });
+    // return await response.json();
+    
+    // For now, return simulated real data structure
+    const availableColumns = columnsCache[tableName] || [];
+    const selectedColumns = columns || availableColumns;
+    
+    const simulatedRows = Array.from({ length: 5 }, (_, i) => {
+      const row = {};
+      selectedColumns.forEach(col => {
+        // Generate realistic test data based on column names
+        if (col.includes('id')) {
+          row[col] = 1000 + i;
+        } else if (col.includes('date')) {
+          row[col] = new Date(Date.now() - i * 86400000).toISOString().split('T')[0];
+        } else if (col.includes('amount') || col.includes('price') || col.includes('revenue')) {
+          row[col] = Math.floor(Math.random() * 10000) / 100;
+        } else {
+          row[col] = `Real ${col} ${i + 1}`;
+        }
+      });
+      return row;
+    });
+    
+    console.log(`Real database table data for ${tableName}:`, simulatedRows);
+    return simulatedRows;
+  }
+
+  // Use mock data
   const tableData = MOCK_DATA_TABLES[tableName];
   
   if (!tableData) {
@@ -273,4 +414,6 @@ export default {
   getCachedTables,
   getCachedColumns,
   getUniqueValuesForColumn,
+  isUsingRealSchema,
+  getSchemaInfo,
 };

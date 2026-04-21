@@ -148,15 +148,23 @@ const AppContent = () => {
 
   // Refresh dashboards from webhook
   const handleRefreshDashboards = useCallback(async () => {
+    console.log('Refreshing dashboards from configured URL...');
+    
     const result = await invokeListDocuments();
     
     if (result.success && Array.isArray(result.result)) {
+      console.log(`Successfully loaded ${result.result.length} dashboards from URL`);
       setDashboards(result.result);
     } else if (result.success && result.result) {
       // Single dashboard returned, wrap it in array
+      console.log('Successfully loaded 1 dashboard from URL');
       setDashboards([result.result]);
     } else {
-      console.error('Failed to fetch dashboards:', result.error);
+      console.error('Failed to fetch dashboards:', result.error || result.message);
+      // Don't clear existing dashboards on error, just log it
+      if (result.message) {
+        console.info('Document loading message:', result.message);
+      }
     }
   }, []);
 
@@ -177,7 +185,7 @@ const AppContent = () => {
   }, [currentDashboard]);
 
   // Handle settings save
-  const handleSettingsSave = useCallback((newSettings) => {
+  const handleSettingsSave = useCallback(async (newSettings) => {
     setSettings(newSettings);
     
     // Configure webhook URLs from settings
@@ -187,10 +195,21 @@ const AppContent = () => {
         publishUrl: newSettings.saveLocations.publishUrl || '',
         listDocumentsUrl: newSettings.saveLocations.listDocumentsUrl || '',
       });
+      
+      // Auto-refresh documents if listDocumentsUrl is provided
+      if (newSettings.saveLocations.listDocumentsUrl?.trim()) {
+        console.log('List Documents URL configured, refreshing documents...');
+        try {
+          await handleRefreshDashboards();
+          console.log('Documents successfully refreshed from URL');
+        } catch (error) {
+          console.error('Failed to refresh documents after settings save:', error);
+        }
+      }
     }
     
     console.log('Settings saved:', newSettings);
-  }, []);
+  }, [handleRefreshDashboards]);
 
   // Get badge class based on status
   const getStatusBadgeClass = (status) => {

@@ -18,6 +18,16 @@ const defaultHandlers = {
     console.log(JSON.stringify(dashboard, null, 2));
     return { success: true, dashboard };
   },
+  onListDocuments: async (dashboardId) => {
+    console.log('=== WEBHOOK: onListDocuments ===');
+    console.log('Dashboard ID:', dashboardId || 'all');
+    // Return empty array as fallback when no webhook URL is configured
+    return { 
+      success: true, 
+      result: [],
+      message: 'No documents found - configure List Documents URL to load from external source'
+    };
+  },
 };
 
 // Current handlers (can be overridden)

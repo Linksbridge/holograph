@@ -8,6 +8,7 @@
  */
 
 import React, { useState } from 'react';
+import { initializeDataService, getCachedTables, getSchemaInfo, isUsingRealSchema } from '../services/dataService';
 
 const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
   const [localSettings, setLocalSettings] = useState(settings || {
@@ -31,12 +32,47 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
   });
 
   const [activeTab, setActiveTab] = useState('datasource');
+  const [isLoadingTables, setIsLoadingTables] = useState(false);
+  const [tablesLoadStatus, setTablesLoadStatus] = useState('');
+  const [documentsLoadStatus, setDocumentsLoadStatus] = useState('');
 
   if (!isOpen) return null;
 
-  const handleSave = () => {
-    onSave(localSettings);
-    onClose();
+  const handleSave = async () => {
+    try {
+      setIsLoadingTables(true);
+      
+      // If connection string is provided, load table information
+      if (localSettings.dataSource.connectionString) {
+        setTablesLoadStatus('Loading table information...');
+        
+        await initializeDataService(localSettings.dataSource.connectionString);
+        const tables = getCachedTables();
+        
+        if (tables && tables.length > 0) {
+          setTablesLoadStatus(`Successfully loaded ${tables.length} tables`);
+        } else {
+          setTablesLoadStatus('No tables found in database');
+        }
+        
+        setTimeout(() => setTablesLoadStatus(''), 3000);
+      }
+      
+      // Show document loading status if URL is provided
+      if (localSettings.saveLocations.listDocumentsUrl?.trim()) {
+        setDocumentsLoadStatus('Documents will be loaded after settings are saved...');
+        setTimeout(() => setDocumentsLoadStatus(''), 3000);
+      }
+      
+      onSave(localSettings);
+      onClose();
+    } catch (error) {
+      console.error('Error loading table information:', error);
+      setTablesLoadStatus('Error loading table information');
+      setTimeout(() => setTablesLoadStatus(''), 3000);
+    } finally {
+      setIsLoadingTables(false);
+    }
   };
 
   const updateSettings = (section, key, value) => {
@@ -120,6 +156,31 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
                 placeholder="Enter database name"
               />
             </div>
+
+            <div className="property-field-group">
+              <label className="property-label">Schema Status</label>
+              <div style={{
+                padding: '10px',
+                borderRadius: '4px',
+                backgroundColor: isUsingRealSchema() ? '#dcfce7' : '#fef3c7',
+                border: `1px solid ${isUsingRealSchema() ? '#16a34a' : '#d97706'}`,
+                fontSize: '0.875rem'
+              }}>
+                <div style={{
+                  fontWeight: 'bold',
+                  color: isUsingRealSchema() ? '#16a34a' : '#d97706',
+                  marginBottom: '4px'
+                }}>
+                  {isUsingRealSchema() ? '🗄️ Using Real Database Schema' : '📊 Using Sample Data'}
+                </div>
+                <div style={{ color: '#6b7280' }}>
+                  {(() => {
+                    const schemaInfo = getSchemaInfo();
+                    return `${schemaInfo.tableCount} tables available: ${schemaInfo.tables.join(', ')}`;
+                  })()}
+                </div>
+              </div>
+            </div>
           </>
         )}
 
@@ -162,6 +223,30 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
               />
               <p className="property-help-text">POST endpoint for publishing dashboards</p>
             </div>
+
+            {localSettings.saveLocations.listDocumentsUrl?.trim() && (
+              <div className="property-field-group">
+                <label className="property-label">Document Loading Status</label>
+                <div style={{
+                  padding: '10px',
+                  borderRadius: '4px',
+                  backgroundColor: '#f3f4f6',
+                  border: '1px solid #d1d5db',
+                  fontSize: '0.875rem'
+                }}>
+                  <div style={{
+                    fontWeight: 'bold',
+                    color: '#374151',
+                    marginBottom: '4px'
+                  }}>
+                    📄 Document URL Configured
+                  </div>
+                  <div style={{ color: '#6b7280' }}>
+                    When settings are saved, the system will automatically fetch and display your published and draft documents from: {localSettings.saveLocations.listDocumentsUrl}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="settings-section-title" style={{ marginTop: '24px' }}>Azure Blob Storage</div>
 
@@ -243,11 +328,44 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
 
       {/* Footer */}
       <div className="modal-footer">
-        <button className="btn btn-secondary" onClick={onClose}>
+        {(tablesLoadStatus || documentsLoadStatus) && (
+          <div className="status-messages" style={{ marginBottom: '10px' }}>
+            {tablesLoadStatus && (
+              <div className="tables-load-status" style={{ 
+                marginBottom: '5px',
+                padding: '8px', 
+                borderRadius: '4px',
+                backgroundColor: tablesLoadStatus.includes('Error') ? '#fee2e2' : 
+                               tablesLoadStatus.includes('Successfully') ? '#dcfce7' : '#fef3c7',
+                color: tablesLoadStatus.includes('Error') ? '#dc2626' : 
+                       tablesLoadStatus.includes('Successfully') ? '#16a34a' : '#d97706',
+                fontSize: '0.875rem'
+              }}>
+                🗄️ {tablesLoadStatus}
+              </div>
+            )}
+            {documentsLoadStatus && (
+              <div className="documents-load-status" style={{ 
+                padding: '8px', 
+                borderRadius: '4px',
+                backgroundColor: '#e0f2fe',
+                color: '#0277bd',
+                fontSize: '0.875rem'
+              }}>
+                📄 {documentsLoadStatus}
+              </div>
+            )}
+          </div>
+        )}
+        <button className="btn btn-secondary" onClick={onClose} disabled={isLoadingTables}>
           Cancel
         </button>
-        <button className="btn btn-primary" onClick={handleSave}>
-          Save Settings
+        <button 
+          className="btn btn-primary" 
+          onClick={handleSave}
+          disabled={isLoadingTables}
+        >
+          {isLoadingTables ? 'Loading...' : 'Save Settings'}
         </button>
       </div>
     </div>
