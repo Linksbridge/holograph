@@ -463,114 +463,29 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
                 )}
 
                 {/* Table Mappings */}
-                {globalSettings.tables && (
-                  <div className="settings-subsection" style={{
-                    marginBottom: '20px',
-                    padding: '15px',
-                    backgroundColor: '#f9fafb',
-                    borderRadius: '6px',
-                    border: '1px solid #e5e7eb'
+                {/* Note: Tables are loaded dynamically from database schema */}
+                <div className="settings-subsection" style={{
+                  marginBottom: '20px',
+                  padding: '15px',
+                  backgroundColor: '#f0f9ff',
+                  borderRadius: '6px',
+                  border: '1px solid #0284c7'
+                }}>
+                  <h4 style={{ marginTop: '0', marginBottom: '15px', color: '#374151' }}>📊 Table Information</h4>
+                  <div style={{
+                    padding: '12px',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    color: '#6b7280',
+                    fontSize: '0.875rem',
+                    textAlign: 'center'
                   }}>
-                    <h4 style={{ marginTop: '0', marginBottom: '15px', color: '#374151' }}>Table Mappings</h4>
-                    
-                    {Object.entries(globalSettings.tables).map(([key, table]) => (
-                      <div key={key} className="property-field-group">
-                        <label className="property-label" style={{ textTransform: 'capitalize' }}>
-                          {key.replace(/([A-Z])/g, ' $1').trim()}
-                        </label>
-                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                          <div className="readonly-value" style={{
-                            padding: '8px 12px',
-                            backgroundColor: '#ffffff',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '4px',
-                            color: '#6b7280',
-                            fontFamily: 'monospace',
-                            flex: '1'
-                          }}>
-                            {table.name || table}
-                          </div>
-                          {table.type && (
-                            <span style={{
-                              padding: '4px 8px',
-                              backgroundColor: table.type === 'transactional' ? '#dcfce7' : '#dbeafe',
-                              color: table.type === 'transactional' ? '#166534' : '#1e40af',
-                              borderRadius: '12px',
-                              fontSize: '0.75rem',
-                              textTransform: 'capitalize'
-                            }}>
-                              {table.type}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                    Tables are loaded automatically from the database schema when you connect.
+                    <br />
+                    Configure your connection in the "Data Source" tab to see available tables.
                   </div>
-                )}
-
-                {/* Schema Configuration */}
-                {globalSettings.schema && (
-                  <div className="settings-subsection" style={{
-                    marginBottom: '20px',
-                    padding: '15px',
-                    backgroundColor: '#f9fafb',
-                    borderRadius: '6px',
-                    border: '1px solid #e5e7eb'
-                  }}>
-                    <h4 style={{ marginTop: '0', marginBottom: '15px', color: '#374151' }}>Schema Configuration</h4>
-                    
-                    <div className="property-field-group">
-                      <label className="property-label">Default Schema</label>
-                      <div className="readonly-value" style={{
-                        padding: '8px 12px',
-                        backgroundColor: '#ffffff',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '4px',
-                        color: '#6b7280',
-                        fontFamily: 'monospace'
-                      }}>
-                        {globalSettings.schema.defaultSchema || 'dbo'}
-                      </div>
-                    </div>
-
-                    <div className="property-field-group">
-                      <label className="property-label">Table Prefix</label>
-                      <div className="readonly-value" style={{
-                        padding: '8px 12px',
-                        backgroundColor: '#ffffff',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '4px',
-                        color: '#6b7280',
-                        fontFamily: 'monospace'
-                      }}>
-                        {globalSettings.schema.tablePrefix || '(none)'}
-                      </div>
-                    </div>
-
-                    {globalSettings.schema.requiredTables && (
-                      <div className="property-field-group">
-                        <label className="property-label">Required Tables</label>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                          {globalSettings.schema.requiredTables.map(tableName => (
-                            <span
-                              key={tableName}
-                              style={{
-                                padding: '4px 8px',
-                                backgroundColor: '#fef3c7',
-                                color: '#92400e',
-                                borderRadius: '12px',
-                                fontSize: '0.8rem',
-                                fontFamily: 'monospace'
-                              }}
-                            >
-                              {tableName}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+                </div>
 
                 {/* Data Source Policy */}
                 {globalSettings.dataSource && (

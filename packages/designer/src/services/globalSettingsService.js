@@ -115,21 +115,11 @@ class GlobalSettingsService {
         defaultServer: 'localhost',
         defaultTimeout: 30
       },
-      tables: {
-        salesData: { name: 'sales_data', type: 'transactional' },
-        customerData: { name: 'customers', type: 'master' },
-        productData: { name: 'products', type: 'master' }
-      },
       dataSource: {
         defaultType: 'azure-sql',
         allowedTypes: ['azure-sql', 'postgresql', 'mysql'],
         queryTimeout: 30000,
         enableCaching: true
-      },
-      schema: {
-        defaultSchema: 'dbo',
-        tablePrefix: '',
-        requiredTables: ['sales_data', 'customers']
       }
     };
   }
@@ -233,19 +223,12 @@ export const useGlobalDatabase = () => {
   };
 };
 
-export const useGlobalTables = () => {
+export const useGlobalDataSource = () => {
   const { settings } = useGlobalSettings();
-  return settings.tables || {
-    salesData: { name: 'sales_data', type: 'transactional' },
-    customerData: { name: 'customers', type: 'master' }
-  };
-};
-
-export const useGlobalSchema = () => {
-  const { settings } = useGlobalSettings();
-  return settings.schema || {
-    defaultSchema: 'dbo',
-    tablePrefix: '',
-    requiredTables: ['sales_data', 'customers']
+  return settings.dataSource || {
+    defaultType: 'azure-sql',
+    allowedTypes: ['azure-sql', 'postgresql', 'mysql'],
+    queryTimeout: 30000,
+    enableCaching: true
   };
 };
