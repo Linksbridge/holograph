@@ -15,6 +15,7 @@ import PreviewModal from './components/PreviewModal';
 import { FilterProvider, initializeGlobalFilterAPI, useFilters } from './hooks/useFilters';
 import { createInitialDashboard } from './types/schema';
 import { invokeSave, invokePublish, configureWebhookUrls, invokeListDocuments } from './services/webhookService';
+import { globalSettingsService } from './services/globalSettingsService';
 import './styles/dashboard.css';
 
 // Inner component that uses filter context
