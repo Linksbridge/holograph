@@ -9,6 +9,7 @@
 
 import React, { useState } from 'react';
 import { initializeDataService, getCachedTables, getSchemaInfo, isUsingRealSchema } from '../services/dataService';
+import { useGlobalSettings } from '../services/globalSettingsService';
 
 const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
   const [localSettings, setLocalSettings] = useState(settings || {
@@ -24,6 +25,7 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
       saveDraftUrl: '',
       publishUrl: '',
       listDocumentsUrl: '',
+      globalSettingsUrl: '',
     },
     general: {
       autoSave: true,
@@ -35,6 +37,9 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
   const [isLoadingTables, setIsLoadingTables] = useState(false);
   const [tablesLoadStatus, setTablesLoadStatus] = useState('');
   const [documentsLoadStatus, setDocumentsLoadStatus] = useState('');
+  
+  // Global settings
+  const { settings: globalSettings, loading: globalLoading, error: globalError, refreshSettings } = useGlobalSettings(localSettings);
 
   if (!isOpen) return null;
 
@@ -111,6 +116,20 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
           onClick={() => setActiveTab('general')}
         >
           General
+        </button>
+        <button
+          className={`settings-tab ${activeTab === 'global' ? 'active' : ''}`}
+          onClick={() => setActiveTab('global')}
+          title="Site-wide settings (read-only)"
+        >
+          🌐 Global
+        </button>
+        <button
+          className={`settings-tab ${activeTab === 'global' ? 'active' : ''}`}
+          onClick={() => setActiveTab('global')}
+          title="Site-wide settings (read-only)"
+        >
+          🌐 Global
         </button>
       </div>
 
@@ -321,6 +340,334 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
                   onChange={(e) => updateSettings('general', 'autoSaveInterval', parseInt(e.target.value))}
                 />
               </div>
+            )}
+          </>
+        )}
+
+        {activeTab === 'global' && (
+          <>
+            <div className="settings-section-title">
+              🌐 Global Database Settings (Read-Only)
+              <div style={{ fontSize: '0.875rem', fontWeight: 'normal', color: '#6b7280', marginTop: '4px' }}>
+                These database settings are shared across all users
+              </div>
+            </div>
+
+            {globalLoading && (
+              <div style={{ padding: '20px', textAlign: 'center', color: '#6b7280' }}>
+                Loading global settings...
+              </div>
+            )}
+
+            {globalError && (
+              <div style={{
+                padding: '15px',
+                backgroundColor: '#fee2e2',
+                border: '1px solid #dc2626',
+                borderRadius: '4px',
+                color: '#dc2626',
+                marginBottom: '15px'
+              }}>
+                ⚠️ Unable to load global settings: {globalError}
+                {!localSettings.saveLocations?.globalSettingsUrl && (
+                  <div style={{ marginTop: '8px', fontSize: '0.875rem' }}>
+                    💡 Configure the Global Settings Function URL in the "Save Locations" tab
+                  </div>
+                )}
+                <button
+                  onClick={refreshSettings}
+                  style={{
+                    marginLeft: '10px',
+                    padding: '4px 8px',
+                    fontSize: '0.8rem',
+                    border: '1px solid #dc2626',
+                    backgroundColor: 'white',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {!globalLoading && !globalError && (
+              <>
+                {/* Database Configuration */}
+                {globalSettings.database && (
+                  <div className="settings-subsection" style={{
+                    marginBottom: '20px',
+                    padding: '15px',
+                    backgroundColor: '#f9fafb',
+                    borderRadius: '6px',
+                    border: '1px solid #e5e7eb'
+                  }}>
+                    <h4 style={{ marginTop: '0', marginBottom: '15px', color: '#374151' }}>Database Configuration</h4>
+                    
+                    <div className="property-field-group">
+                      <label className="property-label">Default Database Name</label>
+                      <div className="readonly-value" style={{
+                        padding: '8px 12px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '4px',
+                        color: '#6b7280',
+                        fontFamily: 'monospace'
+                      }}>
+                        {globalSettings.database.defaultDatabaseName || 'DashboardDB'}
+                      </div>
+                    </div>
+
+                    <div className="property-field-group">
+                      <label className="property-label">Default Server</label>
+                      <div className="readonly-value" style={{
+                        padding: '8px 12px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '4px',
+                        color: '#6b7280',
+                        fontFamily: 'monospace'
+                      }}>
+                        {globalSettings.database.defaultServer || 'localhost'}
+                      </div>
+                    </div>
+
+                    <div className="property-field-group">
+                      <label className="property-label">Connection Template</label>
+                      <div className="readonly-value" style={{
+                        padding: '8px 12px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '4px',
+                        color: '#6b7280',
+                        fontFamily: 'monospace',
+                        fontSize: '0.8rem',
+                        wordBreak: 'break-all'
+                      }}>
+                        {globalSettings.database.connectionStringTemplate || 'Server={server};Database={database};...'}
+                      </div>
+                    </div>
+
+                    <div className="property-field-group">
+                      <label className="property-label">Default Query Timeout</label>
+                      <div className="readonly-value" style={{
+                        padding: '8px 12px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '4px',
+                        color: '#6b7280'
+                      }}>
+                        {globalSettings.database.defaultTimeout || 30} seconds
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Table Mappings */}
+                {globalSettings.tables && (
+                  <div className="settings-subsection" style={{
+                    marginBottom: '20px',
+                    padding: '15px',
+                    backgroundColor: '#f9fafb',
+                    borderRadius: '6px',
+                    border: '1px solid #e5e7eb'
+                  }}>
+                    <h4 style={{ marginTop: '0', marginBottom: '15px', color: '#374151' }}>Table Mappings</h4>
+                    
+                    {Object.entries(globalSettings.tables).map(([key, table]) => (
+                      <div key={key} className="property-field-group">
+                        <label className="property-label" style={{ textTransform: 'capitalize' }}>
+                          {key.replace(/([A-Z])/g, ' $1').trim()}
+                        </label>
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                          <div className="readonly-value" style={{
+                            padding: '8px 12px',
+                            backgroundColor: '#ffffff',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '4px',
+                            color: '#6b7280',
+                            fontFamily: 'monospace',
+                            flex: '1'
+                          }}>
+                            {table.name || table}
+                          </div>
+                          {table.type && (
+                            <span style={{
+                              padding: '4px 8px',
+                              backgroundColor: table.type === 'transactional' ? '#dcfce7' : '#dbeafe',
+                              color: table.type === 'transactional' ? '#166534' : '#1e40af',
+                              borderRadius: '12px',
+                              fontSize: '0.75rem',
+                              textTransform: 'capitalize'
+                            }}>
+                              {table.type}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Schema Configuration */}
+                {globalSettings.schema && (
+                  <div className="settings-subsection" style={{
+                    marginBottom: '20px',
+                    padding: '15px',
+                    backgroundColor: '#f9fafb',
+                    borderRadius: '6px',
+                    border: '1px solid #e5e7eb'
+                  }}>
+                    <h4 style={{ marginTop: '0', marginBottom: '15px', color: '#374151' }}>Schema Configuration</h4>
+                    
+                    <div className="property-field-group">
+                      <label className="property-label">Default Schema</label>
+                      <div className="readonly-value" style={{
+                        padding: '8px 12px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '4px',
+                        color: '#6b7280',
+                        fontFamily: 'monospace'
+                      }}>
+                        {globalSettings.schema.defaultSchema || 'dbo'}
+                      </div>
+                    </div>
+
+                    <div className="property-field-group">
+                      <label className="property-label">Table Prefix</label>
+                      <div className="readonly-value" style={{
+                        padding: '8px 12px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '4px',
+                        color: '#6b7280',
+                        fontFamily: 'monospace'
+                      }}>
+                        {globalSettings.schema.tablePrefix || '(none)'}
+                      </div>
+                    </div>
+
+                    {globalSettings.schema.requiredTables && (
+                      <div className="property-field-group">
+                        <label className="property-label">Required Tables</label>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                          {globalSettings.schema.requiredTables.map(tableName => (
+                            <span
+                              key={tableName}
+                              style={{
+                                padding: '4px 8px',
+                                backgroundColor: '#fef3c7',
+                                color: '#92400e',
+                                borderRadius: '12px',
+                                fontSize: '0.8rem',
+                                fontFamily: 'monospace'
+                              }}
+                            >
+                              {tableName}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Data Source Policy */}
+                {globalSettings.dataSource && (
+                  <div className="settings-subsection" style={{
+                    marginBottom: '20px',
+                    padding: '15px',
+                    backgroundColor: '#f9fafb',
+                    borderRadius: '6px',
+                    border: '1px solid #e5e7eb'
+                  }}>
+                    <h4 style={{ marginTop: '0', marginBottom: '15px', color: '#374151' }}>Data Source Policy</h4>
+                    
+                    <div className="property-field-group">
+                      <label className="property-label">Default Database Type</label>
+                      <div className="readonly-value" style={{
+                        padding: '8px 12px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '4px',
+                        color: '#6b7280',
+                        textTransform: 'capitalize'
+                      }}>
+                        {globalSettings.dataSource.defaultType || 'azure-sql'}
+                      </div>
+                    </div>
+
+                    {globalSettings.dataSource.allowedTypes && (
+                      <div className="property-field-group">
+                        <label className="property-label">Allowed Database Types</label>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                          {globalSettings.dataSource.allowedTypes.map(type => (
+                            <span
+                              key={type}
+                              style={{
+                                padding: '4px 8px',
+                                backgroundColor: '#dbeafe',
+                                color: '#1e40af',
+                                borderRadius: '12px',
+                                fontSize: '0.8rem',
+                                textTransform: 'capitalize'
+                              }}
+                            >
+                              {type.replace('-', ' ')}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="property-field-group">
+                      <label className="property-label">Query Timeout</label>
+                      <div className="readonly-value" style={{
+                        padding: '8px 12px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '4px',
+                        color: '#6b7280'
+                      }}>
+                        {globalSettings.dataSource.queryTimeout || 30000}ms
+                      </div>
+                    </div>
+
+                    <div className="property-field-group">
+                      <label className="property-label">Caching</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{
+                          display: 'inline-block',
+                          width: '16px',
+                          height: '16px',
+                          backgroundColor: globalSettings.dataSource.enableCaching ? '#16a34a' : '#dc2626',
+                          borderRadius: '2px'
+                        }} />
+                        <span style={{ color: '#6b7280' }}>
+                          {globalSettings.dataSource.enableCaching ? 'Enabled' : 'Disabled'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Refresh Button */}
+                <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '15px', textAlign: 'center' }}>
+                  <button
+                    onClick={refreshSettings}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: '#f3f4f6',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem'
+                    }}
+                  >
+                    🔄 Refresh Database Settings
+                  </button>
+                </div>
+              </>
             )}
           </>
         )}
