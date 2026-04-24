@@ -21,7 +21,7 @@ class GlobalSettingsService {
     this.cache = new Map();
     this.lastFetch = 0;
     this.fetchInterval = 30000; // 30 seconds cache
-    this.globalSettingsUrl = process.env.REACT_APP_GLOBAL_SETTINGS_URL || '';
+    this.globalSettingsUrl = process.env.REACT_APP_DEFAULT_GLOBAL_SETTINGS_URL || '';
     
     // Auto-load settings if URL is configured in environment
     if (this.globalSettingsUrl) {

@@ -36,7 +36,7 @@ jobs:
           npm run build
         env:
           REACT_APP_DATABASE_CONNECTION_STRING: ${{ secrets.DATABASE_CONNECTION_STRING }}
-          REACT_APP_DEFAULT_GLOBAL_SETTINGS_URL: 1000monkeys-cafudffjbwbjc8gu.westus2-01.azurewebsites.net/api/globalsettings
+          REACT_APP_DEFAULT_GLOBAL_SETTINGS_URL: https://1000monkeys-cafudffjbwbjc8gu.westus2-01.azurewebsites.net/api/globalsettings
           
       - name: Prepare build output for deployment
         run: |
