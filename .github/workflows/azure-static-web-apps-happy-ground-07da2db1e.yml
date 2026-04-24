@@ -37,7 +37,7 @@ jobs:
         env:
           REACT_APP_DATABASE_CONNECTION_STRING: ${{ secrets.DATABASE_CONNECTION_STRING }}
           REACT_APP_DEFAULT_GLOBAL_SETTINGS_URL: https://1000monkeys-cafudffjbwbjc8gu.westus2-01.azurewebsites.net/api/settings/global
-          REACT_APP_DATABASE_SCHEMA_URL: https://1000monkeys-cafudffjbwbjc8gu.westus2-01.azurewebsites.net/api/database/schema
+          REACT_APP_DATABASE_SCHEMA_URL: https://1000monkeys-cafudffjbwbjc8gu.westus2-01.azurewebsites.net/api/schema
           
       - name: Prepare build output for deployment
         run: |

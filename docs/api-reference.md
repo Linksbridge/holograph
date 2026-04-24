@@ -24,47 +24,42 @@ GET {globalSettingsUrl}
 
 No body, no auth headers.
 
-### Required response shape
+### Actual response shape (observed)
+
+The live endpoint returns a double-nested structure — the outer `settings` object wraps another `success`/`settings` pair:
 
 ```json
 {
   "success": true,
   "settings": {
-    "database": {
-      "value": {
-        "defaultDatabaseName": "MyDatabase",
-        "defaultServer": "myserver.database.windows.net",
-        "connectionStringTemplate": "Server={server};Database={database};User Id={user};Password={password};",
-        "defaultTimeout": 30
-      }
-    },
-    "dataSource": {
-      "value": {
+    "success": true,
+    "settings": {
+      "database": {
+        "defaultDatabaseName": "Sandbox-Frontend",
+        "connectionStringTemplate": "Server=tcp:sqlsvr-prod.database.windows.net,1433;Initial Catalog=Sandbox-Frontend;Authentication=Active Directory Managed Identity;User Id=<identity-guid>;Encrypt=True;",
+        "defaultServer": "sqlsvr-prod.database.windows.net",
+        "defaultTimeout": 60
+      },
+      "dataSource": {
         "defaultType": "azure-sql",
-        "allowedTypes": ["azure-sql", "postgresql", "mysql"],
+        "allowedTypes": ["azure-sql", "postgresql"],
         "queryTimeout": 30000,
         "enableCaching": true
       }
     }
-  }
+  },
+  "lastModified": "2026-04-24T21:02:04.537Z",
+  "timestamp": "2026-04-24T21:02:04.537Z"
 }
 ```
+
+The designer handles this automatically — if `data.settings.settings` exists it unwraps the inner object before parsing.
 
 **Parsing rules:**
 - The response must have `success: true` and a `settings` object, otherwise the designer falls back to hardcoded defaults.
-- Each key under `settings` is read as `setting.value || setting` — so you can either wrap the value in `{ value: ... }` (as above) or return the value directly:
-
-```json
-{
-  "success": true,
-  "settings": {
-    "database": {
-      "defaultDatabaseName": "MyDatabase",
-      "defaultServer": "myserver.database.windows.net"
-    }
-  }
-}
-```
+- The `success` key inside `settings` is ignored during parsing; only non-`success` keys are stored.
+- Each setting value is read as `setting.value || setting`, so you can either wrap in `{ value: ... }` or return the object directly.
+- `lastModified` and `timestamp` at the top level are ignored.
 
 **Fallback defaults** (used when the endpoint is unreachable or not configured):
 
@@ -98,7 +93,13 @@ No body, no auth headers.
 - **URL source (priority order):**
   1. Settings Panel → Data Source tab → **Schema URL** field (`dataSource.schemaUrl`)
   2. Environment variable `REACT_APP_DATABASE_SCHEMA_URL` (baked in at build time)
-- **Database name:** appended to the URL as a path segment when provided via Settings Panel → **Database Name** field (`dataSource.databaseName`)
+- **Connection string source (priority order):**
+  1. Settings Panel → Data Source tab → **Connection String** field (`dataSource.connectionString`)
+  2. Environment variable `REACT_APP_DATABASE_CONNECTION_STRING` (baked in at build time)
+  3. `database.connectionStringTemplate` from the Global Settings response (used automatically on mount if no local value is set)
+- **Database name source (priority order):**
+  1. Settings Panel → Data Source tab → **Database Name** field (`dataSource.databaseName`)
+  2. `database.defaultDatabaseName` from the Global Settings response
 
 ### Request
 
@@ -107,7 +108,7 @@ POST {schemaUrl}/{databaseName}
 Content-Type: application/json
 
 {
-  "connectionString": "Server=tcp:myserver.database.windows.net,1433;Initial Catalog=MyDatabase;..."
+  "connectionString": "Server=tcp:sqlsvr-prod.database.windows.net,1433;Initial Catalog=Sandbox-Frontend;Authentication=Active Directory Managed Identity;User Id=<identity-guid>;Encrypt=True;"
 }
 ```
 
@@ -115,6 +116,11 @@ If no database name is configured the path segment is omitted:
 
 ```
 POST {schemaUrl}
+Content-Type: application/json
+
+{
+  "connectionString": "..."
+}
 ```
 
 ### Required response shape
