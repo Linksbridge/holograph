@@ -1,9 +1,11 @@
 /**
- * Mock Data Service
- * 
- * Simulates an Azure Function that returns data from SQL sources.
- * In production, this would be replaced with actual API calls to Azure Functions.
+ * Data Service
+ *
+ * Fetches real database schema from a configurable API endpoint, falling back
+ * to sample data when no connection is configured.
  */
+
+import { globalSettingsService } from './globalSettingsService';
 
 export const MOCK_DATA_TABLES = {
   sales_data: [
@@ -79,9 +81,14 @@ export const initializeDataService = async (connectionString = null, schemaUrl =
 
   const resolvedSchemaUrl = schemaUrl || process.env.REACT_APP_DATABASE_SCHEMA_URL;
 
-  if (connectionString && resolvedSchemaUrl) {
+  // Fall back to global settings for connection string and database name
+  const globalDb = globalSettingsService.cache.get('database') || {};
+  const resolvedConnectionString = connectionString || globalDb.connectionStringTemplate || null;
+  const resolvedDatabaseName = databaseName || globalDb.defaultDatabaseName || null;
+
+  if (resolvedConnectionString && resolvedSchemaUrl) {
     try {
-      const url = databaseName ? `${resolvedSchemaUrl}/${databaseName}` : resolvedSchemaUrl;
+      const url = resolvedDatabaseName ? `${resolvedSchemaUrl}/${resolvedDatabaseName}` : resolvedSchemaUrl;
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

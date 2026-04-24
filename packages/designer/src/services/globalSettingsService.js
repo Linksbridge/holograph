@@ -80,9 +80,17 @@ class GlobalSettingsService {
       const data = await response.json();
       
       if (data.success && data.settings) {
+        // Handle double-nested response: { settings: { settings: { database: ... } } }
+        let settingsData = data.settings;
+        if (settingsData.settings && typeof settingsData.settings === 'object') {
+          settingsData = settingsData.settings;
+        }
+
         this.cache.clear();
-        Object.entries(data.settings).forEach(([key, setting]) => {
-          this.cache.set(key, setting.value || setting);
+        Object.entries(settingsData).forEach(([key, setting]) => {
+          if (key !== 'success') {
+            this.cache.set(key, setting.value || setting);
+          }
         });
         this.lastFetch = now;
         return Object.fromEntries(this.cache);
