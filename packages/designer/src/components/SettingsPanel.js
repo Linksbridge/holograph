@@ -16,6 +16,7 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
     dataSource: {
       type: 'azure-sql',
       connectionString: process.env.REACT_APP_DATABASE_CONNECTION_STRING || '',
+      schemaUrl: process.env.REACT_APP_DATABASE_SCHEMA_URL || '',
       databaseName: '',
     },
     saveLocations: {
@@ -51,7 +52,7 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
       if (localSettings.dataSource.connectionString) {
         setTablesLoadStatus('Loading table information...');
         
-        await initializeDataService(localSettings.dataSource.connectionString);
+        await initializeDataService(localSettings.dataSource.connectionString, localSettings.dataSource.schemaUrl, localSettings.dataSource.databaseName);
         const tables = getCachedTables();
         
         if (tables && tables.length > 0) {
@@ -163,6 +164,18 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
                 placeholder="DefaultEndpoints=..."
               />
               <p className="property-help-text">Leave empty to use environment variable</p>
+            </div>
+
+            <div className="property-field-group">
+              <label className="property-label">Schema URL</label>
+              <input
+                type="text"
+                className="property-input"
+                value={localSettings.dataSource.schemaUrl}
+                onChange={(e) => updateSettings('dataSource', 'schemaUrl', e.target.value)}
+                placeholder="https://api.example.com/api/get-database-schema"
+              />
+              <p className="property-help-text">POST endpoint that returns table and column names from the database</p>
             </div>
 
             <div className="property-field-group">

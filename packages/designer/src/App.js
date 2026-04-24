@@ -263,6 +263,7 @@ const AppContent = () => {
             <DashboardEditor
               dashboard={currentDashboard.schema}
               onDashboardUpdate={handleDashboardUpdate}
+              settings={settings}
             />
           </div>
         </>

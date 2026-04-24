@@ -26,7 +26,7 @@ import {
  * @property {Array} values - Selected filter values
  */
 
-const FilterBar = ({ visible = true }) => {
+const FilterBar = ({ visible = true, settings }) => {
   const { 
     filters, 
     setFilter, 
@@ -46,7 +46,11 @@ const FilterBar = ({ visible = true }) => {
   // Initialize data service on mount
   useEffect(() => {
     const init = async () => {
-      await initializeDataService();
+      await initializeDataService(
+        settings?.dataSource?.connectionString,
+        settings?.dataSource?.schemaUrl,
+        settings?.dataSource?.databaseName
+      );
       setAvailableTables(getCachedTables());
       setIsInitialized(true);
     };

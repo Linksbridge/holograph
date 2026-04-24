@@ -74,54 +74,40 @@ let realSchemaData = null;
  * In production, this would fetch schema info from the SQL database
  * @param {string} connectionString - Optional database connection string
  */
-export const initializeDataService = async (connectionString = null) => {
+export const initializeDataService = async (connectionString = null, schemaUrl = null, databaseName = null) => {
   console.log('Initializing data service...');
-  
-  if (connectionString) {
+
+  const resolvedSchemaUrl = schemaUrl || process.env.REACT_APP_DATABASE_SCHEMA_URL;
+
+  if (connectionString && resolvedSchemaUrl) {
     try {
-      // TODO: In production, use connection string to fetch actual table schema
-      // This would make API calls to Azure Functions that query the database
-      console.log('Using connection string:', connectionString.substring(0, 50) + '...');
-      
-      // Simulate loading real database schema
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API delay
-      
-      // Simulate real schema data (replace with actual API call)
-      realSchemaData = {
-        tables: {
-          'customers': ['customer_id', 'name', 'email', 'city', 'country', 'created_date'],
-          'orders': ['order_id', 'customer_id', 'product', 'amount', 'order_date', 'status'],
-          'products': ['product_id', 'name', 'category', 'price', 'stock_quantity'],
-          'sales_analytics': ['date', 'revenue', 'orders_count', 'region', 'channel']
-        }
-      };
-      
-      // In production, this would be something like:
-      // const response = await fetch('/api/get-database-schema', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ connectionString })
-      // });
-      // realSchemaData = await response.json();
-      
-      // Use real schema data
+      const url = databaseName ? `${resolvedSchemaUrl}/${databaseName}` : resolvedSchemaUrl;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ connectionString }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Schema endpoint returned ${response.status}`);
+      }
+
+      realSchemaData = await response.json();
+
       tablesCache = Object.keys(realSchemaData.tables);
       columnsCache = { ...realSchemaData.tables };
       uniqueValuesCache = {};
       usingRealSchema = true;
-      
+
       console.log('Data service initialized with REAL schema - tables:', tablesCache);
-      
     } catch (error) {
       console.error('Failed to load real schema, falling back to mock data:', error);
-      // Fall back to mock data on error
       await loadMockData();
     }
   } else {
-    // Use mock data when no connection string provided
     await loadMockData();
   }
-  
+
   return tablesCache;
 };
 

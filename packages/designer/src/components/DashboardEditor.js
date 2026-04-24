@@ -22,7 +22,7 @@ import { CHART_LIBRARIES, COMPONENT_TYPES, createZoneConfig } from '../types/sch
 import { useFilters } from '../hooks/useFilters';
 import { getTableColumns, initializeDataService } from '../services/dataService';
 
-const DashboardEditor = ({ dashboard, onDashboardUpdate }) => {
+const DashboardEditor = ({ dashboard, onDashboardUpdate, settings }) => {
   const [selectedZone, setSelectedZone] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [gridWidth, setGridWidth] = useState(1200);
@@ -36,7 +36,11 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate }) => {
   // Initialize data service and configure filters
   useEffect(() => {
     const init = async () => {
-      await initializeDataService();
+      await initializeDataService(
+        settings?.dataSource?.connectionString,
+        settings?.dataSource?.schemaUrl,
+        settings?.dataSource?.databaseName
+      );
       
       // Configure which columns can be filtered for each zone based on dataSource
       const filterConfig = {};
@@ -340,7 +344,7 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate }) => {
         )}
 
         {/* Filter Bar */}
-        <FilterBar />
+        <FilterBar settings={settings} />
 
         {/* Grid Layout */}
         <div 
