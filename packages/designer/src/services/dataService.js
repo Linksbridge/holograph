@@ -86,14 +86,10 @@ export const initializeDataService = async (connectionString = null, schemaUrl =
   const resolvedConnectionString = connectionString || globalDb.connectionStringTemplate || null;
   const resolvedDatabaseName = databaseName || globalDb.defaultDatabaseName || null;
 
-  if (resolvedConnectionString && resolvedSchemaUrl) {
+  if (resolvedSchemaUrl) {
     try {
       const url = resolvedDatabaseName ? `${resolvedSchemaUrl}/${resolvedDatabaseName}` : resolvedSchemaUrl;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ connectionString }),
-      });
+      const response = await fetch(url);
 
       if (!response.ok) {
         throw new Error(`Schema endpoint returned ${response.status}`);
