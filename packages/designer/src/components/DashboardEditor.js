@@ -24,11 +24,13 @@ import { getTableColumns, initializeDataService } from '../services/dataService'
 
 const DashboardEditor = ({ dashboard, onDashboardUpdate, settings }) => {
   const [selectedZone, setSelectedZone] = useState(null);
+  const [activeZoneId, setActiveZoneId] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [gridWidth, setGridWidth] = useState(1200);
   const [currentBreakpoint, setCurrentBreakpoint] = useState({ breakpoint: 'lg', cols: 12, rowHeight: 30 });
   const gridRef = useRef(null);
   const draggedChartRef = useRef(null);
+  const deleteContextRef = useRef(null);
   
   // Get filter context
   const { filters, configureFilters } = useFilters();
@@ -107,21 +109,56 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate, settings }) => {
       // Only open panel if header is hidden
       if (zone.showHeader === false) {
         e.stopPropagation();
+        setActiveZoneId(zone.id);
         setSelectedZone(zone);
       }
     },
     []
   );
 
+  // Handle single click to select a zone
+  const handleZoneClick = useCallback((e, zone) => {
+    setActiveZoneId(zone.id);
+  }, []);
+
   // Handle gear button click to open property panel
   const handleGearClick = useCallback((e, zone) => {
     e.stopPropagation();
+    setActiveZoneId(zone.id);
     setSelectedZone(zone);
   }, []);
 
   // Handle closing property panel
   const handleClosePanel = useCallback(() => {
     setSelectedZone(null);
+  }, []);
+
+  // Keep delete context ref current so the keydown listener never goes stale
+  deleteContextRef.current = { activeZoneId, dashboard, onDashboardUpdate, selectedZone };
+
+  // Delete key removes the active zone after confirmation
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key !== 'Delete') return;
+      const tag = document.activeElement?.tagName;
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
+      if (document.activeElement?.isContentEditable) return;
+
+      const { activeZoneId, dashboard, onDashboardUpdate, selectedZone } = deleteContextRef.current;
+      if (!activeZoneId) return;
+
+      const zone = dashboard.zones.find((z) => z.id === activeZoneId);
+      if (!zone) return;
+
+      if (!window.confirm(`Delete "${zone.title || 'this chart'}"?`)) return;
+
+      onDashboardUpdate({ ...dashboard, zones: dashboard.zones.filter((z) => z.id !== activeZoneId) });
+      setActiveZoneId(null);
+      if (selectedZone?.id === activeZoneId) setSelectedZone(null);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // Handle drag over for dropping new charts
@@ -354,6 +391,7 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate, settings }) => {
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleNativeDrop}
+          onClick={(e) => { if (e.target === e.currentTarget) setActiveZoneId(null); }}
         >
           <div className={`dashboard-grid-drop-overlay ${isDragging ? 'active' : ''}`}>
             <span className="dashboard-grid-drop-text">Drop chart here</span>
@@ -386,7 +424,8 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate, settings }) => {
               {dashboard.zones.map((zone) => (
                 <div
                   key={zone.id}
-                  className={`zone-card ${selectedZone?.id === zone.id ? 'selected' : ''}`}
+                  className={`zone-card ${activeZoneId === zone.id ? 'selected' : ''}`}
+                  onClick={(e) => handleZoneClick(e, zone)}
                   onDoubleClick={(e) => handleZoneDoubleClick(e, zone)}
                 >
                   {(zone.showHeader !== false) && (
