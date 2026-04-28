@@ -18,25 +18,38 @@ import { invokeSave, invokePublish, configureWebhookUrls, invokeListDocuments } 
 import { globalSettingsService } from './services/globalSettingsService';
 import './styles/dashboard.css';
 
+const STORAGE_KEY = 'holograph_dashboards';
+
+const loadDashboards = () => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch (_) {}
+  return [{
+    id: 'demo-dashboard',
+    name: 'Demo Dashboard',
+    description: 'A sample dashboard with example charts',
+    status: 'published',
+    lastModified: new Date().toISOString(),
+    schema: createInitialDashboard(),
+  }];
+};
+
 // Inner component that uses filter context
 const AppContent = () => {
   // Dashboard management state
-  const [dashboards, setDashboards] = useState([
-    {
-      id: 'demo-dashboard',
-      name: 'Demo Dashboard',
-      description: 'A sample dashboard with example charts',
-      status: 'published',
-      lastModified: new Date().toISOString(),
-      schema: createInitialDashboard(),
-    },
-  ]);
+  const [dashboards, setDashboards] = useState(loadDashboards);
   
   const [currentDashboard, setCurrentDashboard] = useState(null);
   const [showNewModal, setShowNewModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
+
+  // Persist dashboards (including datasource config) across sessions
+  useEffect(() => {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(dashboards)); } catch (_) {}
+  }, [dashboards]);
 
   // Initialize webhook URLs from settings when settings change
   useEffect(() => {
