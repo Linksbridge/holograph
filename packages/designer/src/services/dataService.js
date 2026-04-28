@@ -81,8 +81,9 @@ export const initializeDataService = async (connectionString = null, schemaUrl =
 
   const resolvedSchemaUrl = schemaUrl || process.env.REACT_APP_DATABASE_SCHEMA_URL;
 
-  // Fall back to global settings for connection string and database name
-  const globalDb = globalSettingsService.cache.get('database') || {};
+  // Await global settings so we don't race against the startup fetch
+  const globalSettings = await globalSettingsService.getAllSettings();
+  const globalDb = globalSettings.database || {};
   const resolvedConnectionString = connectionString || globalDb.connectionStringTemplate || null;
   const resolvedDatabaseName = databaseName || globalDb.defaultDatabaseName || null;
 
@@ -97,8 +98,12 @@ export const initializeDataService = async (connectionString = null, schemaUrl =
 
       realSchemaData = await response.json();
 
-      tablesCache = Object.keys(realSchemaData.tables);
-      columnsCache = { ...realSchemaData.tables };
+      const tablesArray = realSchemaData.tables || [];
+      tablesCache = tablesArray.map(t => t.name);
+      columnsCache = {};
+      tablesArray.forEach(t => {
+        columnsCache[t.name] = t.columns.map(c => c.name);
+      });
       uniqueValuesCache = {};
       usingRealSchema = true;
 

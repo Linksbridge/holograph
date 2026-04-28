@@ -55,7 +55,7 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate, settings }) => {
       configureFilters(filterConfig);
     };
     init();
-  }, [dashboard.zones, configureFilters]);
+  }, [dashboard.zones, configureFilters, settings]);
 
   // Handle layout change from react-grid-layout
   const handleLayoutChange = useCallback(

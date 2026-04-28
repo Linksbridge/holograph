@@ -415,13 +415,14 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
         )}
 
         {/* Label Column - Only show for charts */}
-        {dataSource?.tableName && componentType === COMPONENT_TYPES.CHART && (
+        {componentType === COMPONENT_TYPES.CHART && (
           <div className="property-field-group">
             <label className="property-label">Label Column</label>
             <select
               className="property-select"
               value={dataSource?.labelColumn || ''}
               onChange={handleLabelColumnChange}
+              disabled={!dataSource?.tableName}
             >
               <option value="">Select column...</option>
               {tableColumns.map((col) => (
@@ -434,13 +435,14 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
         )}
 
         {/* Value Column - Only show for charts */}
-        {dataSource?.tableName && componentType === COMPONENT_TYPES.CHART && (
+        {componentType === COMPONENT_TYPES.CHART && (
           <div className="property-field-group">
             <label className="property-label">Value Column</label>
             <select
               className="property-select"
               value={dataSource?.valueColumn || ''}
               onChange={handleValueColumnChange}
+              disabled={!dataSource?.tableName}
             >
               <option value="">Select column...</option>
               {tableColumns.map((col) => (
