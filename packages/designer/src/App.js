@@ -25,7 +25,11 @@ const SETTINGS_KEY = 'holograph_settings';
 const loadDashboards = () => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      const valid = parsed.filter(d => d.id && d.name);
+      if (valid.length > 0) return valid;
+    }
   } catch (_) {}
   return [{
     id: 'demo-dashboard',
