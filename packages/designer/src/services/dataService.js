@@ -111,9 +111,9 @@ export const initializeDataService = async (connectionString = null, schemaUrl =
       });
       uniqueValuesCache = {};
       usingRealSchema = true;
-      // Priority: explicit param > global settings > derived from schema URL
+      // Priority: explicit param > global settings > env var > derived from schema URL
       const derivedDataQueryUrl = resolvedSchemaUrl.replace(/\/schema(\/|$)/, '/data$1').replace(/\/$/, '');
-      dataQueryUrl = explicitDataQueryUrl || globalWh.dataQueryUrl || derivedDataQueryUrl;
+      dataQueryUrl = explicitDataQueryUrl || globalWh.dataQueryUrl || process.env.REACT_APP_DATA_QUERY_URL || derivedDataQueryUrl;
       datasourceName = resolvedDatabaseName || null;
 
       console.log('Data service initialized with REAL schema - tables:', tablesCache);
@@ -250,16 +250,13 @@ const applyFilterToRow = (row, filters) => {
   return true;
 };
 
-const postQueryData = async (tableName, columns) => {
+const fetchQueryData = async (tableName) => {
   const context = { datasource: datasourceName || '', table: tableName };
-  const url = /\{(datasource|table)\}/.test(dataQueryUrl)
+  const base = /\{(datasource|table)\}/.test(dataQueryUrl)
     ? interpolateDataUrl(dataQueryUrl, context)
-    : (datasourceName ? `${dataQueryUrl}/${datasourceName}` : dataQueryUrl);
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tableName, columns, limit: 1000 }),
-  });
+    : (datasourceName ? `${dataQueryUrl}/${datasourceName}/${tableName}` : `${dataQueryUrl}/${tableName}`);
+  const url = `${base}?limit=1000`;
+  const response = await fetch(url);
   if (!response.ok) throw new Error(`Data query failed: ${response.status} ${response.statusText}`);
   const result = await response.json();
   return result.rows || [];
@@ -275,7 +272,7 @@ const postQueryData = async (tableName, columns) => {
  */
 export const fetchChartData = async (tableName, labelColumn, valueColumn, filters = null) => {
   if (usingRealSchema && dataQueryUrl) {
-    const rows = await postQueryData(tableName, [labelColumn, valueColumn]);
+    const rows = await fetchQueryData(tableName);
     let filtered = rows;
     if (filters && Object.keys(filters).length > 0) {
       filtered = rows.filter((row) => applyFilterToRow(row, filters));
@@ -340,7 +337,7 @@ export const fetchChartData = async (tableName, labelColumn, valueColumn, filter
  */
 export const fetchTableData = async (tableName, columns = null, filters = null) => {
   if (usingRealSchema && dataQueryUrl) {
-    const rows = await postQueryData(tableName, columns || []);
+    const rows = await fetchQueryData(tableName);
     let filtered = rows;
     if (filters && Object.keys(filters).length > 0) {
       filtered = rows.filter((row) => applyFilterToRow(row, filters));
