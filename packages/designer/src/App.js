@@ -5,7 +5,7 @@
  * displays the dashboard list, and handles dashboard creation/editing.
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import DashboardList from './components/DashboardList';
 import DashboardEditor from './components/DashboardEditor';
@@ -66,15 +66,16 @@ const AppContent = () => {
     try { if (settings) localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (_) {}
   }, [settings]);
 
-  // On startup: load global settings, apply webhooks, and fetch schema — all in one pass
+  // On startup: load global settings, apply webhooks, fetch schema, and auto-load dashboards
   useEffect(() => {
-    globalSettingsService.getAllSettings().then((gs) => {
+    globalSettingsService.getAllSettings().then(async (gs) => {
       const wh = gs?.webhooks;
       if (wh) {
         configureWebhookUrls({
           saveDraftUrl: wh.saveDraftUrl || '',
           publishUrl: wh.publishUrl || '',
           listDocumentsUrl: wh.listDocumentsUrl || '',
+          dataQueryUrl: wh.dataQueryUrl || '',
         });
         setSettings((prev) => {
           const prevSave = prev?.saveLocations || {};
@@ -82,17 +83,37 @@ const AppContent = () => {
             ...prev,
             saveLocations: {
               ...prevSave,
-              saveDraftUrl: prevSave.saveDraftUrl || wh.saveDraftUrl || '',
-              publishUrl: prevSave.publishUrl || wh.publishUrl || '',
-              listDocumentsUrl: prevSave.listDocumentsUrl || wh.listDocumentsUrl || '',
-              dataQueryUrl: prevSave.dataQueryUrl || wh.dataQueryUrl || '',
+              saveDraftUrl: wh.saveDraftUrl || prevSave.saveDraftUrl || '',
+              publishUrl: wh.publishUrl || prevSave.publishUrl || '',
+              listDocumentsUrl: wh.listDocumentsUrl || prevSave.listDocumentsUrl || '',
+              dataQueryUrl: wh.dataQueryUrl || prevSave.dataQueryUrl || '',
             },
           };
         });
       }
 
-      // Cache is warm — fetch schema now so PropertyPanel shows real tables immediately
-      initializeDataService();
+      // Pass already-fetched values directly so initializeDataService doesn't need to re-fetch
+      initializeDataService(
+        null,
+        null,
+        gs?.database?.defaultDatabaseName || null,
+        gs?.webhooks?.dataQueryUrl || null
+      );
+
+      // Auto-load dashboards if a list URL is available (removes the demo dashboard)
+      const listUrl = wh?.listDocumentsUrl || loadSettings()?.saveLocations?.listDocumentsUrl;
+      if (listUrl) {
+        if (!wh?.listDocumentsUrl) configureWebhookUrls({ listDocumentsUrl: listUrl });
+        const result = await invokeListDocuments();
+        if (result.success) {
+          const raw = result.result;
+          // Server now returns a flat array of full dashboard objects
+          const fetched = Array.isArray(raw) ? raw
+            : Array.isArray(raw?.documents) ? raw.documents.filter(d => d.id)
+            : null;
+          if (fetched && fetched.length > 0) setDashboards(fetched);
+        }
+      }
     });
   }, []);
 
@@ -249,13 +270,17 @@ const AppContent = () => {
     
     const result = await invokeListDocuments();
     
-    if (result.success && Array.isArray(result.result)) {
-      console.log(`Successfully loaded ${result.result.length} complete dashboard objects from URL`);
-      setDashboards(result.result);
-    } else if (result.success && result.result) {
-      // Single dashboard returned, wrap it in array
-      console.log('Successfully loaded 1 complete dashboard object from URL');
-      setDashboards([result.result]);
+    if (result.success) {
+      const raw = result.result;
+      const fetched = Array.isArray(raw) ? raw
+        : Array.isArray(raw?.documents) ? raw.documents.filter(d => d.id)
+        : null;
+      if (fetched && fetched.length > 0) {
+        console.log(`Successfully loaded ${fetched.length} dashboard objects from URL`);
+        setDashboards(fetched);
+      } else {
+        console.log('List returned no documents, keeping existing dashboards');
+      }
     } else {
       console.error('Failed to load dashboard objects:', result.error || result.message);
       // Don't clear existing dashboards on error, just log it
@@ -308,6 +333,13 @@ const AppContent = () => {
     console.log('Settings saved:', newSettings);
   }, [handleRefreshDashboards]);
 
+  // Memoize normalized schema so dashboard.zones stays stable between renders
+  const normalizedDashboardSchema = useMemo(() => {
+    if (!currentDashboard) return null;
+    const base = currentDashboard.schema ?? currentDashboard;
+    return { zones: [], ...base };
+  }, [currentDashboard]);
+
   // Get badge class based on status
   const getStatusBadgeClass = (status) => {
     return status === 'published' ? 'top-bar-badge published' : 'top-bar-badge draft';
@@ -357,7 +389,7 @@ const AppContent = () => {
           <TopBar />
           <div style={{ marginTop: '56px' }}>
             <DashboardEditor
-              dashboard={currentDashboard.schema}
+              dashboard={normalizedDashboardSchema}
               onDashboardUpdate={handleDashboardUpdate}
               settings={settings}
             />
@@ -395,7 +427,7 @@ const AppContent = () => {
       <PreviewModal
         isOpen={showPreview}
         onClose={() => setShowPreview(false)}
-        dashboard={currentDashboard?.schema}
+        dashboard={normalizedDashboardSchema}
       />
     </>
   );
