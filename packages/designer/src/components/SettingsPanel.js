@@ -68,10 +68,10 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
       ...prev,
       saveLocations: {
         ...prev.saveLocations,
-        saveDraftUrl: prev.saveLocations.saveDraftUrl || wh.saveDraftUrl || '',
-        publishUrl: prev.saveLocations.publishUrl || wh.publishUrl || '',
-        listDocumentsUrl: prev.saveLocations.listDocumentsUrl || wh.listDocumentsUrl || '',
-        dataQueryUrl: prev.saveLocations.dataQueryUrl || wh.dataQueryUrl || '',
+        saveDraftUrl: wh.saveDraftUrl || prev.saveLocations.saveDraftUrl || '',
+        publishUrl: wh.publishUrl || prev.saveLocations.publishUrl || '',
+        listDocumentsUrl: wh.listDocumentsUrl || prev.saveLocations.listDocumentsUrl || '',
+        dataQueryUrl: wh.dataQueryUrl || prev.saveLocations.dataQueryUrl || '',
       },
     }));
   }, [globalSettings?.webhooks]);

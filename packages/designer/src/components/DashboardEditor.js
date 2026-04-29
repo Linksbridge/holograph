@@ -48,7 +48,7 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate, settings }) => {
   // Configure filters separately — runs when zones change (e.g. new chart added)
   useEffect(() => {
     const filterConfig = {};
-    dashboard.zones.forEach((zone) => {
+    (dashboard.zones || []).forEach((zone) => {
       if (zone.dataSource?.tableName) {
         filterConfig[zone.id] = getTableColumns(zone.dataSource.tableName);
       }
@@ -198,11 +198,13 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate, settings }) => {
         const x = e.clientX - gridRect.left;
         const y = e.clientY - gridRect.top;
 
-        const colWidth = (gridRect.width - 20) / dashboard.layout.cols;
+        const cols = currentBreakpoint.cols || 12;
+        const rowHeight = currentBreakpoint.rowHeight || 30;
+        const colWidth = (gridRect.width - 20) / cols;
         const gridX = Math.max(0, Math.floor(x / colWidth));
-        const gridY = Math.max(0, Math.floor(y / dashboard.layout.rowHeight));
+        const gridY = Math.max(0, Math.floor(y / rowHeight));
 
-        const clampedX = Math.min(gridX, dashboard.layout.cols - 4);
+        const clampedX = Math.min(gridX, cols - 4);
 
         const newZone = createZoneConfig(`zone-${uuidv4()}`);
         newZone.componentType = chartOption.componentType || COMPONENT_TYPES.CHART;
@@ -406,7 +408,7 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate, settings }) => {
               layout={layout}
               cols={currentBreakpoint.cols}
               rowHeight={currentBreakpoint.rowHeight}
-              margin={dashboard.layout.margin}
+              margin={dashboard.layout?.margin || [10, 10]}
               width={gridWidth}
               onLayoutChange={handleLayoutChange}
               draggableHandle=".zone-drag-handle"
