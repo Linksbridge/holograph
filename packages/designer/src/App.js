@@ -14,8 +14,9 @@ import SettingsPanel from './components/SettingsPanel';
 import PreviewModal from './components/PreviewModal';
 import { FilterProvider, initializeGlobalFilterAPI, useFilters } from './hooks/useFilters';
 import { createInitialDashboard } from './types/schema';
-import { invokeSave, invokePublish, configureWebhookUrls, invokeListDocuments } from './services/webhookService';
+import { invokeSave, invokePublish, configureWebhookUrls, invokeListDocuments, invokeEditPublished, invokeDuplicate } from './services/webhookService';
 import { globalSettingsService } from './services/globalSettingsService';
+import { initializeDataService } from './services/dataService';
 import './styles/dashboard.css';
 
 const STORAGE_KEY = 'holograph_dashboards';
@@ -51,7 +52,36 @@ const AppContent = () => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(dashboards)); } catch (_) {}
   }, [dashboards]);
 
-  // Initialize webhook URLs from settings when settings change
+  // On startup: load global settings, apply webhooks, and fetch schema — all in one pass
+  useEffect(() => {
+    globalSettingsService.getAllSettings().then((gs) => {
+      const wh = gs?.webhooks;
+      if (wh) {
+        configureWebhookUrls({
+          saveDraftUrl: wh.saveDraftUrl || '',
+          publishUrl: wh.publishUrl || '',
+          listDocumentsUrl: wh.listDocumentsUrl || '',
+        });
+        setSettings((prev) => {
+          const prevSave = prev?.saveLocations || {};
+          return {
+            ...prev,
+            saveLocations: {
+              ...prevSave,
+              saveDraftUrl: prevSave.saveDraftUrl || wh.saveDraftUrl || '',
+              publishUrl: prevSave.publishUrl || wh.publishUrl || '',
+              listDocumentsUrl: prevSave.listDocumentsUrl || wh.listDocumentsUrl || '',
+            },
+          };
+        });
+      }
+
+      // Cache is warm — fetch schema now so PropertyPanel shows real tables immediately
+      initializeDataService();
+    });
+  }, []);
+
+  // Keep webhook URLs in sync when user manually changes settings
   useEffect(() => {
     if (settings?.saveLocations) {
       configureWebhookUrls({
@@ -148,6 +178,41 @@ const AppContent = () => {
       alert('Failed to publish: ' + (result.error || 'Unknown error'));
     }
   }, [currentDashboard]);
+
+  // Open a published dashboard for editing — marks it as draft locally and calls the API
+  const handleEditPublished = useCallback(async (dashboard) => {
+    const result = await invokeEditPublished(dashboard.id);
+    if (!result.success) {
+      alert('Failed to create draft from published: ' + (result.error || 'Unknown error'));
+      return;
+    }
+    const draftDashboard = { ...dashboard, status: 'draft', lastModified: new Date().toISOString() };
+    setDashboards((prev) =>
+      prev.map((d) => (d.id === draftDashboard.id ? draftDashboard : d))
+    );
+    setCurrentDashboard(draftDashboard);
+  }, []);
+
+  // Duplicate a published dashboard as a new draft with a new id
+  const handleDuplicate = useCallback(async (dashboard) => {
+    const newId = `dashboard-${uuidv4()}`;
+    const newName = `${dashboard.name} (copy)`;
+    const result = await invokeDuplicate(dashboard, newId, newName);
+    if (!result.success) {
+      alert('Failed to duplicate dashboard: ' + (result.error || 'Unknown error'));
+      return;
+    }
+    const duplicated = {
+      ...dashboard,
+      id: newId,
+      name: newName,
+      status: 'draft',
+      lastModified: new Date().toISOString(),
+      duplicatedFrom: dashboard.id,
+    };
+    setDashboards((prev) => [...prev, duplicated]);
+    setCurrentDashboard(duplicated);
+  }, []);
 
   // Delete dashboard
   const handleDeleteDashboard = useCallback((dashboardId) => {
@@ -288,6 +353,8 @@ const AppContent = () => {
           onSettings={() => setShowSettings(true)}
           onDelete={handleDeleteDashboard}
           onRefresh={handleRefreshDashboards}
+          onEditPublished={handleEditPublished}
+          onDuplicate={handleDuplicate}
         />
       )}
 

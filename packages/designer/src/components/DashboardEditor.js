@@ -35,29 +35,25 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate, settings }) => {
   // Get filter context
   const { filters, configureFilters } = useFilters();
   
-  // Initialize data service and configure filters
+  // Initialize data service only when settings change, not on every zone update
   useEffect(() => {
-    const init = async () => {
-      await initializeDataService(
-        settings?.dataSource?.connectionString,
-        settings?.dataSource?.schemaUrl,
-        settings?.dataSource?.databaseName
-      );
-      
-      // Configure which columns can be filtered for each zone based on dataSource
-      const filterConfig = {};
-      dashboard.zones.forEach((zone) => {
-        if (zone.dataSource?.tableName) {
-          // Get available columns from the table
-          const availableColumns = getTableColumns(zone.dataSource.tableName);
-          // Allow filtering on all columns that exist in the data
-          filterConfig[zone.id] = availableColumns;
-        }
-      });
-      configureFilters(filterConfig);
-    };
-    init();
-  }, [dashboard.zones, configureFilters, settings]);
+    initializeDataService(
+      settings?.dataSource?.connectionString,
+      settings?.dataSource?.schemaUrl,
+      settings?.dataSource?.databaseName
+    );
+  }, [settings]);
+
+  // Configure filters separately — runs when zones change (e.g. new chart added)
+  useEffect(() => {
+    const filterConfig = {};
+    dashboard.zones.forEach((zone) => {
+      if (zone.dataSource?.tableName) {
+        filterConfig[zone.id] = getTableColumns(zone.dataSource.tableName);
+      }
+    });
+    configureFilters(filterConfig);
+  }, [dashboard.zones, configureFilters]);
 
   // Handle layout change from react-grid-layout
   const handleLayoutChange = useCallback(

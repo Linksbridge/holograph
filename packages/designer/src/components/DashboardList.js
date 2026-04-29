@@ -1,14 +1,7 @@
-/**
- * DashboardList Component
- * 
- * A home view showing available dashboards with options to create new,
- * open existing, or manage dashboards.
- */
-
 import React from 'react';
 import BigLogo from '../big logo.png';
 
-const DashboardList = ({ dashboards, onSelect, onCreateNew, onSettings, onDelete, onRefresh }) => {
+const DashboardList = ({ dashboards, onSelect, onCreateNew, onSettings, onDelete, onRefresh, onEditPublished, onDuplicate }) => {
   return (
     <div className="dashboard-list-container">
       <div className="dashboard-list-logo">
@@ -17,7 +10,7 @@ const DashboardList = ({ dashboards, onSelect, onCreateNew, onSettings, onDelete
       <div className="dashboard-list-header">
         <h1 className="dashboard-list-title">Dashboards</h1>
         <p className="dashboard-list-subtitle">Create and manage your data visualizations</p>
-        
+
         <div className="dashboard-list-actions">
           <button className="btn btn-primary" onClick={onCreateNew}>
             <span>+</span>
@@ -42,38 +35,61 @@ const DashboardList = ({ dashboards, onSelect, onCreateNew, onSettings, onDelete
         </div>
       ) : (
         <div className="dashboard-list-grid">
-          {dashboards.map((dashboard) => (
-            <div
-              key={dashboard.id}
-              className="dashboard-card"
-              onClick={() => onSelect(dashboard)}
-            >
-              <button
-                className="dashboard-card-delete"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(dashboard.id);
-                }}
-                title="Delete dashboard"
+          {dashboards.map((dashboard) => {
+            const isPublished = dashboard.status === 'published';
+            return (
+              <div
+                key={dashboard.id}
+                className="dashboard-card"
+                onClick={() => onSelect(dashboard)}
               >
-                ×
-              </button>
-              
-              <h3 className="dashboard-card-title">{dashboard.name}</h3>
-              <p className="dashboard-card-description">
-                {dashboard.description || 'No description'}
-              </p>
-              
-              <div className="dashboard-card-meta">
-                <span className={`dashboard-card-badge ${dashboard.status || 'draft'}`}>
-                  {dashboard.status || 'Draft'}
-                </span>
-                <span className="dashboard-card-date">
-                  {dashboard.lastModified ? new Date(dashboard.lastModified).toLocaleDateString() : 'Just now'}
-                </span>
+                <button
+                  className="dashboard-card-delete"
+                  onClick={(e) => { e.stopPropagation(); onDelete(dashboard.id); }}
+                  title="Delete dashboard"
+                >
+                  ×
+                </button>
+
+                <h3 className="dashboard-card-title">{dashboard.name}</h3>
+                <p className="dashboard-card-description">
+                  {dashboard.description || 'No description'}
+                </p>
+
+                <div className="dashboard-card-meta">
+                  <span className={`dashboard-card-badge ${dashboard.status || 'draft'}`}>
+                    {dashboard.status || 'Draft'}
+                  </span>
+                  <span className="dashboard-card-date">
+                    {dashboard.lastModified ? new Date(dashboard.lastModified).toLocaleDateString() : 'Just now'}
+                  </span>
+                </div>
+
+                {isPublished && (
+                  <div className="dashboard-card-actions" onClick={(e) => e.stopPropagation()}>
+                    {onEditPublished && (
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => onEditPublished(dashboard)}
+                        title="Create a draft copy to edit without affecting the published version"
+                      >
+                        ✏️ Edit
+                      </button>
+                    )}
+                    {onDuplicate && (
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => onDuplicate(dashboard)}
+                        title="Duplicate as a new draft"
+                      >
+                        ⧉ Duplicate
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

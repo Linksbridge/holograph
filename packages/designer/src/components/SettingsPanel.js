@@ -7,7 +7,7 @@
  * - General dashboard settings
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { initializeDataService, getCachedTables, getSchemaInfo, isUsingRealSchema } from '../services/dataService';
 import { useGlobalSettings } from '../services/globalSettingsService';
 
@@ -42,7 +42,51 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
   // Global settings
   const { settings: globalSettings, loading: globalLoading, error: globalError, refreshSettings } = useGlobalSettings(localSettings);
 
+  // When global settings load, populate database name if the field is empty
+  useEffect(() => {
+    const dbName = globalSettings?.database?.defaultDatabaseName;
+    if (dbName && !localSettings.dataSource.databaseName) {
+      setLocalSettings((prev) => ({
+        ...prev,
+        dataSource: { ...prev.dataSource, databaseName: dbName },
+      }));
+    }
+  }, [globalSettings?.database?.defaultDatabaseName]);
+
+  // When global settings load, populate webhook URLs if the fields are empty
+  useEffect(() => {
+    const wh = globalSettings?.webhooks;
+    if (!wh) return;
+    setLocalSettings((prev) => ({
+      ...prev,
+      saveLocations: {
+        ...prev.saveLocations,
+        saveDraftUrl: prev.saveLocations.saveDraftUrl || wh.saveDraftUrl || '',
+        publishUrl: prev.saveLocations.publishUrl || wh.publishUrl || '',
+        listDocumentsUrl: prev.saveLocations.listDocumentsUrl || wh.listDocumentsUrl || '',
+      },
+    }));
+  }, [globalSettings?.webhooks]);
+
   if (!isOpen) return null;
+
+  const handleRefreshDataSettings = async () => {
+    setIsLoadingTables(true);
+    setTablesLoadStatus('Refreshing...');
+    try {
+      await refreshSettings();
+      const dbName = localSettings.dataSource.databaseName || globalSettings?.database?.defaultDatabaseName;
+      const schemaUrl = localSettings.dataSource.schemaUrl || process.env.REACT_APP_DATABASE_SCHEMA_URL;
+      await initializeDataService(null, schemaUrl, dbName);
+      const tables = getCachedTables();
+      setTablesLoadStatus(tables.length > 0 ? `Loaded ${tables.length} tables` : 'No tables found');
+    } catch (err) {
+      setTablesLoadStatus('Error refreshing settings');
+    } finally {
+      setIsLoadingTables(false);
+      setTimeout(() => setTablesLoadStatus(''), 3000);
+    }
+  };
 
   const handleSave = async () => {
     try {
@@ -117,13 +161,6 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
           onClick={() => setActiveTab('general')}
         >
           General
-        </button>
-        <button
-          className={`settings-tab ${activeTab === 'global' ? 'active' : ''}`}
-          onClick={() => setActiveTab('global')}
-          title="Site-wide settings (read-only)"
-        >
-          🌐 Global
         </button>
         <button
           className={`settings-tab ${activeTab === 'global' ? 'active' : ''}`}
@@ -475,6 +512,40 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
                   </div>
                 )}
 
+                {/* Webhook URLs */}
+                {globalSettings.webhooks && (
+                  <div className="settings-subsection" style={{
+                    marginBottom: '20px',
+                    padding: '15px',
+                    backgroundColor: '#f9fafb',
+                    borderRadius: '6px',
+                    border: '1px solid #e5e7eb'
+                  }}>
+                    <h4 style={{ marginTop: '0', marginBottom: '15px', color: '#374151' }}>Webhook URLs</h4>
+                    {[
+                      ['List Documents URL', globalSettings.webhooks.listDocumentsUrl],
+                      ['Save Draft URL', globalSettings.webhooks.saveDraftUrl],
+                      ['Publish URL', globalSettings.webhooks.publishUrl],
+                    ].map(([label, value]) => (
+                      <div className="property-field-group" key={label}>
+                        <label className="property-label">{label}</label>
+                        <div style={{
+                          padding: '8px 12px',
+                          backgroundColor: value ? '#ffffff' : '#f3f4f6',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '4px',
+                          color: value ? '#374151' : '#9ca3af',
+                          fontFamily: 'monospace',
+                          fontSize: '0.8rem',
+                          wordBreak: 'break-all'
+                        }}>
+                          {value || 'Not configured'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {/* Table Mappings */}
                 {/* Note: Tables are loaded dynamically from database schema */}
                 <div className="settings-subsection" style={{
@@ -582,18 +653,24 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
                 {/* Refresh Button */}
                 <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '15px', textAlign: 'center' }}>
                   <button
-                    onClick={refreshSettings}
+                    onClick={handleRefreshDataSettings}
+                    disabled={isLoadingTables}
                     style={{
                       padding: '8px 16px',
                       backgroundColor: '#f3f4f6',
                       border: '1px solid #d1d5db',
                       borderRadius: '4px',
-                      cursor: 'pointer',
+                      cursor: isLoadingTables ? 'not-allowed' : 'pointer',
                       fontSize: '0.875rem'
                     }}
                   >
-                    🔄 Refresh Database Settings
+                    {isLoadingTables ? '⏳ Refreshing...' : '🔄 Refresh Data Settings'}
                   </button>
+                  {tablesLoadStatus && (
+                    <div style={{ marginTop: '10px', fontSize: '0.875rem', color: tablesLoadStatus.includes('Error') ? '#dc2626' : '#16a34a' }}>
+                      {tablesLoadStatus}
+                    </div>
+                  )}
                 </div>
               </>
             )}

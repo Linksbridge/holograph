@@ -76,6 +76,19 @@ export const getWebhookUrls = () => {
 };
 
 /**
+ * Replace {param} placeholders in a URL template with values from a context object.
+ * Supports any property on the context — e.g. {id}, {name}, {status}.
+ * Values are URI-encoded. Unknown placeholders are left as-is.
+ * @param {string} url - URL template
+ * @param {Object} context - Key/value pairs to substitute
+ * @returns {string} Interpolated URL
+ */
+const interpolateUrl = (url, context = {}) =>
+  url.replace(/\{(\w+)\}/g, (match, key) =>
+    key in context ? encodeURIComponent(context[key]) : match
+  );
+
+/**
  * Make HTTP GET request to webhook URL
  * @param {string} url - The URL to GET from
  * @returns {Promise<Object>} Result from the request
@@ -158,7 +171,7 @@ async function postToWebhookUrl(url, data) {
 export const invokeSave = async (dashboard) => {
   // First try webhook URL if configured
   if (webhookUrls.saveDraftUrl) {
-    const urlResult = await postToWebhookUrl(webhookUrls.saveDraftUrl, dashboard);
+    const urlResult = await postToWebhookUrl(interpolateUrl(webhookUrls.saveDraftUrl, dashboard), dashboard);
     if (urlResult.success) {
       return urlResult;
     }
@@ -183,7 +196,7 @@ export const invokeSave = async (dashboard) => {
 export const invokePublish = async (dashboard) => {
   // First try webhook URL if configured
   if (webhookUrls.publishUrl) {
-    const urlResult = await postToWebhookUrl(webhookUrls.publishUrl, dashboard);
+    const urlResult = await postToWebhookUrl(interpolateUrl(webhookUrls.publishUrl, dashboard), dashboard);
     if (urlResult.success) {
       return urlResult;
     }
@@ -238,9 +251,10 @@ export const invokePublish = async (dashboard) => {
  * @returns {Promise<Object>} Result with complete dashboard objects including schemas
  */
 export const invokeListDocuments = async (dashboardId) => {
-  // Build URL with optional ID query param
-  let url = webhookUrls.listDocumentsUrl;
-  if (dashboardId) {
+  const context = dashboardId ? { id: dashboardId } : {};
+  let url = interpolateUrl(webhookUrls.listDocumentsUrl, context);
+  // If {id} wasn't in the template but an id was provided, append as query param
+  if (dashboardId && !webhookUrls.listDocumentsUrl.includes('{id}')) {
     const separator = url.includes('?') ? '&' : '?';
     url = `${url}${separator}id=${encodeURIComponent(dashboardId)}`;
   }
@@ -263,6 +277,36 @@ export const invokeListDocuments = async (dashboardId) => {
   }
 };
 
+/**
+ * Invoke edit-published: signals the API to create a draft copy of a published
+ * dashboard under the same id. The caller is responsible for opening the result.
+ * @param {string} id - The published dashboard id
+ * @returns {Promise<Object>} Result
+ */
+export const invokeEditPublished = async (id) => {
+  const url = interpolateUrl(webhookUrls.saveDraftUrl, { id });
+  return await postToWebhookUrl(url, { id, fromPublished: true });
+};
+
+/**
+ * Invoke duplicate: saves a new draft with a new id derived from a published dashboard.
+ * @param {Object} dashboard - Full dashboard object to duplicate (id will be replaced)
+ * @param {string} newId - New uuid for the copy
+ * @param {string} newName - Name for the copy
+ * @returns {Promise<Object>} Result
+ */
+export const invokeDuplicate = async (dashboard, newId, newName) => {
+  const copy = {
+    ...dashboard,
+    id: newId,
+    name: newName,
+    status: 'draft',
+    lastModified: new Date().toISOString(),
+    duplicatedFrom: dashboard.id,
+  };
+  return await postToWebhookUrl(webhookUrls.saveDraftUrl, copy);
+};
+
 export default {
   configureWebhooks,
   configureWebhookUrls,
@@ -272,4 +316,6 @@ export default {
   invokeSave,
   invokePublish,
   invokeListDocuments,
+  invokeEditPublished,
+  invokeDuplicate,
 };

@@ -193,6 +193,27 @@ export const invokePublish = async (dashboard) => {
 };
 
 /**
+ * Invoke edit-published: creates a draft copy of a published dashboard (same id)
+ * @param {string} id - The published dashboard id
+ * @returns {Promise<Object>} Result
+ */
+export const invokeEditPublished = async (id) => {
+  return await postToWebhookUrl(webhookUrls.saveDraftUrl, { id, fromPublished: true });
+};
+
+/**
+ * Invoke duplicate: creates a new draft from a published dashboard with a new id
+ * @param {string} id - The published dashboard id to copy from
+ * @param {string} [name] - Optional name override for the copy
+ * @returns {Promise<Object>} Result
+ */
+export const invokeDuplicate = async (id, name) => {
+  const payload = { id, duplicate: true };
+  if (name) payload.name = name;
+  return await postToWebhookUrl(webhookUrls.saveDraftUrl, payload);
+};
+
+/**
  * Invoke the list documents webhook
  * @param {string} [dashboardId] - Optional ID to fetch a specific dashboard
  * @returns {Promise<Object>} Result with dashboards array or single dashboard

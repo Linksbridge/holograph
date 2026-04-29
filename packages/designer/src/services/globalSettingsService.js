@@ -154,26 +154,24 @@ export const useGlobalSettings = (settingsConfig = {}) => {
 
   useEffect(() => {
     const globalSettingsUrl = settingsConfig.saveLocations?.globalSettingsUrl || '';
-    
-    // Update URL if it changed
+
     if (globalSettingsUrl !== currentUrl) {
       setCurrentUrl(globalSettingsUrl);
       if (globalSettingsUrl) {
         globalSettingsService.setGlobalSettingsUrl(globalSettingsUrl);
       }
+      // URL changed — let the next effect run handle the fetch
+      return;
     }
 
     const loadSettings = async () => {
       try {
         setLoading(true);
         setError(null);
-        
-        // Check if we already have cached settings from startup
-        if (globalSettingsService.cache.size > 0 && 
+
+        if (globalSettingsService.cache.size > 0 &&
             (Date.now() - globalSettingsService.lastFetch) < globalSettingsService.fetchInterval) {
-          const cachedSettings = Object.fromEntries(globalSettingsService.cache);
-          setSettings(cachedSettings);
-          console.log('Using cached global settings from startup');
+          setSettings(Object.fromEntries(globalSettingsService.cache));
         } else {
           const allSettings = await globalSettingsService.getAllSettings();
           setSettings(allSettings);
@@ -186,14 +184,9 @@ export const useGlobalSettings = (settingsConfig = {}) => {
       }
     };
 
-    // Load settings
     loadSettings();
-    
-    // Set up periodic refresh
-    const interval = setInterval(() => {
-      loadSettings();
-    }, 60000); // Refresh every minute
 
+    const interval = setInterval(loadSettings, 60000);
     return () => clearInterval(interval);
   }, [settingsConfig.saveLocations?.globalSettingsUrl, currentUrl]);
 
