@@ -11,28 +11,35 @@ import React, { useState, useEffect } from 'react';
 import { initializeDataService, getCachedTables, getSchemaInfo, isUsingRealSchema } from '../services/dataService';
 import { useGlobalSettings } from '../services/globalSettingsService';
 
+const defaults = {
+  dataSource: {
+    type: 'azure-sql',
+    connectionString: process.env.REACT_APP_DATABASE_CONNECTION_STRING || '',
+    schemaUrl: process.env.REACT_APP_DATABASE_SCHEMA_URL || '',
+    databaseName: '',
+  },
+  saveLocations: {
+    draftsContainer: 'drafts',
+    publishedContainer: 'published',
+    storageAccount: '',
+    saveDraftUrl: '',
+    publishUrl: '',
+    listDocumentsUrl: '',
+    dataQueryUrl: '',
+    globalSettingsUrl: '',
+  },
+  general: {
+    autoSave: true,
+    autoSaveInterval: 30,
+  },
+};
+
 const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
-  const [localSettings, setLocalSettings] = useState(settings || {
-    dataSource: {
-      type: 'azure-sql',
-      connectionString: process.env.REACT_APP_DATABASE_CONNECTION_STRING || '',
-      schemaUrl: process.env.REACT_APP_DATABASE_SCHEMA_URL || '',
-      databaseName: '',
-    },
-    saveLocations: {
-      draftsContainer: 'drafts',
-      publishedContainer: 'published',
-      storageAccount: '',
-      saveDraftUrl: '',
-      publishUrl: '',
-      listDocumentsUrl: '',
-      globalSettingsUrl: '',
-    },
-    general: {
-      autoSave: true,
-      autoSaveInterval: 30,
-    },
-  });
+  const [localSettings, setLocalSettings] = useState(() => ({
+    dataSource: { ...defaults.dataSource, ...settings?.dataSource },
+    saveLocations: { ...defaults.saveLocations, ...settings?.saveLocations },
+    general: { ...defaults.general, ...settings?.general },
+  }));
 
   const [activeTab, setActiveTab] = useState('datasource');
   const [isLoadingTables, setIsLoadingTables] = useState(false);
@@ -64,6 +71,7 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
         saveDraftUrl: prev.saveLocations.saveDraftUrl || wh.saveDraftUrl || '',
         publishUrl: prev.saveLocations.publishUrl || wh.publishUrl || '',
         listDocumentsUrl: prev.saveLocations.listDocumentsUrl || wh.listDocumentsUrl || '',
+        dataQueryUrl: prev.saveLocations.dataQueryUrl || wh.dataQueryUrl || '',
       },
     }));
   }, [globalSettings?.webhooks]);
@@ -77,7 +85,8 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
       await refreshSettings();
       const dbName = localSettings.dataSource.databaseName || globalSettings?.database?.defaultDatabaseName;
       const schemaUrl = localSettings.dataSource.schemaUrl || process.env.REACT_APP_DATABASE_SCHEMA_URL;
-      await initializeDataService(null, schemaUrl, dbName);
+      const dqUrl = localSettings.saveLocations.dataQueryUrl || null;
+      await initializeDataService(null, schemaUrl, dbName, dqUrl);
       const tables = getCachedTables();
       setTablesLoadStatus(tables.length > 0 ? `Loaded ${tables.length} tables` : 'No tables found');
     } catch (err) {
@@ -96,7 +105,7 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
       if (localSettings.dataSource.connectionString) {
         setTablesLoadStatus('Loading table information...');
         
-        await initializeDataService(localSettings.dataSource.connectionString, localSettings.dataSource.schemaUrl, localSettings.dataSource.databaseName);
+        await initializeDataService(localSettings.dataSource.connectionString, localSettings.dataSource.schemaUrl, localSettings.dataSource.databaseName, localSettings.saveLocations.dataQueryUrl || null);
         const tables = getCachedTables();
         
         if (tables && tables.length > 0) {
@@ -267,6 +276,18 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
                 placeholder="https://api.example.com/dashboards"
               />
               <p className="property-help-text">GET endpoint to list all dashboards with complete layout information (returns array of full dashboard objects including id, name, status, lastModified, schema, zones, etc.)</p>
+            </div>
+
+            <div className="property-field-group">
+              <label className="property-label">Data Query URL</label>
+              <input
+                type="text"
+                className="property-input"
+                value={localSettings.saveLocations.dataQueryUrl}
+                onChange={(e) => updateSettings('saveLocations', 'dataQueryUrl', e.target.value)}
+                placeholder="https://api.example.com/api/data"
+              />
+              <p className="property-help-text">POST endpoint for fetching chart and table data (e.g. <code>/api/data</code>); datasource name is appended as a path segment</p>
             </div>
 
             <div className="property-field-group">
@@ -524,6 +545,7 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
                     <h4 style={{ marginTop: '0', marginBottom: '15px', color: '#374151' }}>Webhook URLs</h4>
                     {[
                       ['List Documents URL', globalSettings.webhooks.listDocumentsUrl],
+                      ['Data Query URL', globalSettings.webhooks.dataQueryUrl],
                       ['Save Draft URL', globalSettings.webhooks.saveDraftUrl],
                       ['Publish URL', globalSettings.webhooks.publishUrl],
                     ].map(([label, value]) => (

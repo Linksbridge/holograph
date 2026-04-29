@@ -40,7 +40,8 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate, settings }) => {
     initializeDataService(
       settings?.dataSource?.connectionString,
       settings?.dataSource?.schemaUrl,
-      settings?.dataSource?.databaseName
+      settings?.dataSource?.databaseName,
+      settings?.saveLocations?.dataQueryUrl || null
     );
   }, [settings]);
 

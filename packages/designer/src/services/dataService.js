@@ -71,12 +71,16 @@ let uniqueValuesCache = {};
 let usingRealSchema = false;
 let realSchemaData = null;
 
+// Real data query endpoint (derived from schema URL)
+let dataQueryUrl = null;
+let datasourceName = null;
+
 /**
  * Initialize the data service cache
  * In production, this would fetch schema info from the SQL database
  * @param {string} connectionString - Optional database connection string
  */
-export const initializeDataService = async (connectionString = null, schemaUrl = null, databaseName = null) => {
+export const initializeDataService = async (connectionString = null, schemaUrl = null, databaseName = null, explicitDataQueryUrl = null) => {
   console.log('Initializing data service...');
 
   const resolvedSchemaUrl = schemaUrl || process.env.REACT_APP_DATABASE_SCHEMA_URL;
@@ -84,6 +88,7 @@ export const initializeDataService = async (connectionString = null, schemaUrl =
   // Await global settings so we don't race against the startup fetch
   const globalSettings = await globalSettingsService.getAllSettings();
   const globalDb = globalSettings.database || {};
+  const globalWh = globalSettings.webhooks || {};
   const resolvedConnectionString = connectionString || globalDb.connectionStringTemplate || null;
   const resolvedDatabaseName = databaseName || globalDb.defaultDatabaseName || null;
 
@@ -106,6 +111,10 @@ export const initializeDataService = async (connectionString = null, schemaUrl =
       });
       uniqueValuesCache = {};
       usingRealSchema = true;
+      // Priority: explicit param > global settings > derived from schema URL
+      const derivedDataQueryUrl = resolvedSchemaUrl.replace(/\/schema(\/|$)/, '/data$1').replace(/\/$/, '');
+      dataQueryUrl = explicitDataQueryUrl || globalWh.dataQueryUrl || derivedDataQueryUrl;
+      datasourceName = resolvedDatabaseName || null;
 
       console.log('Data service initialized with REAL schema - tables:', tablesCache);
     } catch (error) {
@@ -138,6 +147,15 @@ const loadMockData = async () => {
   });
   
   console.log('Data service initialized with MOCK data - tables:', tablesCache);
+};
+
+/**
+ * Update the data query URL without re-initializing the service.
+ * Useful when only the URL changes (e.g. saved from settings).
+ * @param {string} url - New base data query URL
+ */
+export const setDataQueryUrl = (url) => {
+  if (url) dataQueryUrl = url;
 };
 
 /**
@@ -218,8 +236,37 @@ export const getUniqueValuesForColumn = (columnName) => {
   return result;
 };
 
+const interpolateDataUrl = (template, context) =>
+  template.replace(/\{(\w+)\}/g, (match, key) =>
+    key in context ? encodeURIComponent(context[key]) : match
+  );
+
+const applyFilterToRow = (row, filters) => {
+  for (const [columnName, filterValues] of Object.entries(filters)) {
+    if (!filterValues || !Array.isArray(filterValues) || filterValues.length === 0) continue;
+    const rowValue = row[columnName];
+    if (rowValue !== undefined && !filterValues.includes(rowValue)) return false;
+  }
+  return true;
+};
+
+const postQueryData = async (tableName, columns) => {
+  const context = { datasource: datasourceName || '', table: tableName };
+  const url = /\{(datasource|table)\}/.test(dataQueryUrl)
+    ? interpolateDataUrl(dataQueryUrl, context)
+    : (datasourceName ? `${dataQueryUrl}/${datasourceName}` : dataQueryUrl);
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tableName, columns, limit: 1000 }),
+  });
+  if (!response.ok) throw new Error(`Data query failed: ${response.status} ${response.statusText}`);
+  const result = await response.json();
+  return result.rows || [];
+};
+
 /**
- * Simulates an Azure Function call to fetch data
+ * Fetch chart data from real database or mock
  * @param {string} tableName - Name of the SQL table
  * @param {string} labelColumn - Column to use for labels
  * @param {string} valueColumn - Column to use for values
@@ -227,31 +274,23 @@ export const getUniqueValuesForColumn = (columnName) => {
  * @returns {Promise<Array<{label: string, value: number}>>} Formatted chart data
  */
 export const fetchChartData = async (tableName, labelColumn, valueColumn, filters = null) => {
-  // Simulate network delay (Azure Function latency)
+  if (usingRealSchema && dataQueryUrl) {
+    const rows = await postQueryData(tableName, [labelColumn, valueColumn]);
+    let filtered = rows;
+    if (filters && Object.keys(filters).length > 0) {
+      filtered = rows.filter((row) => applyFilterToRow(row, filters));
+    }
+    return filtered.map((row) => ({
+      label: row[labelColumn],
+      value: row[valueColumn],
+    }));
+  }
+
+  // Simulate network delay for mock data
   await new Promise((resolve) => setTimeout(resolve, 200 + Math.random() * 300));
 
   if (usingRealSchema) {
-    // For real database, make API call to fetch data
-    console.log(`Fetching chart data from real database: ${tableName}`);
-    
-    // TODO: In production, make actual API call to Azure Function
-    // const response = await fetch('/api/fetch-chart-data', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ tableName, labelColumn, valueColumn, filters })
-    // });
-    // return await response.json();
-    
-    // For now, return simulated real data structure
-    const simulatedRealData = [
-      { label: `Real ${labelColumn} 1`, value: Math.floor(Math.random() * 1000) },
-      { label: `Real ${labelColumn} 2`, value: Math.floor(Math.random() * 1000) },
-      { label: `Real ${labelColumn} 3`, value: Math.floor(Math.random() * 1000) },
-      { label: `Real ${labelColumn} 4`, value: Math.floor(Math.random() * 1000) },
-    ];
-    
-    console.log(`Real database data for ${tableName}:`, simulatedRealData);
-    return simulatedRealData;
+    return [];
   }
 
   // Use mock data
@@ -300,45 +339,24 @@ export const fetchChartData = async (tableName, labelColumn, valueColumn, filter
  * @returns {Promise<Array<Object>>} Raw table data with all columns
  */
 export const fetchTableData = async (tableName, columns = null, filters = null) => {
-  // Simulate network delay (Azure Function latency)
-  await new Promise((resolve) => setTimeout(resolve, 200 + Math.random() * 300));
-
-  if (usingRealSchema) {
-    // For real database, make API call to fetch data
-    console.log(`Fetching table data from real database: ${tableName}`);
-    
-    // TODO: In production, make actual API call to Azure Function
-    // const response = await fetch('/api/fetch-table-data', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ tableName, columns, filters })
-    // });
-    // return await response.json();
-    
-    // For now, return simulated real data structure
-    const availableColumns = columnsCache[tableName] || [];
-    const selectedColumns = columns || availableColumns;
-    
-    const simulatedRows = Array.from({ length: 5 }, (_, i) => {
-      const row = {};
-      selectedColumns.forEach(col => {
-        // Generate realistic test data based on column names
-        if (col.includes('id')) {
-          row[col] = 1000 + i;
-        } else if (col.includes('date')) {
-          row[col] = new Date(Date.now() - i * 86400000).toISOString().split('T')[0];
-        } else if (col.includes('amount') || col.includes('price') || col.includes('revenue')) {
-          row[col] = Math.floor(Math.random() * 10000) / 100;
-        } else {
-          row[col] = `Real ${col} ${i + 1}`;
-        }
+  if (usingRealSchema && dataQueryUrl) {
+    const rows = await postQueryData(tableName, columns || []);
+    let filtered = rows;
+    if (filters && Object.keys(filters).length > 0) {
+      filtered = rows.filter((row) => applyFilterToRow(row, filters));
+    }
+    if (columns && columns.length > 0) {
+      return filtered.map((row) => {
+        const projected = {};
+        columns.forEach((col) => { projected[col] = row[col]; });
+        return projected;
       });
-      return row;
-    });
-    
-    console.log(`Real database table data for ${tableName}:`, simulatedRows);
-    return simulatedRows;
+    }
+    return filtered;
   }
+
+  // Simulate network delay for mock data
+  await new Promise((resolve) => setTimeout(resolve, 200 + Math.random() * 300));
 
   // Use mock data
   const tableData = MOCK_DATA_TABLES[tableName];
@@ -405,6 +423,7 @@ export default {
   getAvailableTables,
   getTableColumns,
   initializeDataService,
+  setDataQueryUrl,
   getCachedTables,
   getCachedColumns,
   getUniqueValuesForColumn,

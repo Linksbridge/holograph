@@ -169,23 +169,10 @@ async function postToWebhookUrl(url, data) {
  * @returns {Promise<Object>} Result from the handler
  */
 export const invokeSave = async (dashboard) => {
-  // First try webhook URL if configured
   if (webhookUrls.saveDraftUrl) {
-    const urlResult = await postToWebhookUrl(interpolateUrl(webhookUrls.saveDraftUrl, dashboard), dashboard);
-    if (urlResult.success) {
-      return urlResult;
-    }
-    // Fall through to handler if URL fails
+    return await postToWebhookUrl(interpolateUrl(webhookUrls.saveDraftUrl, dashboard), dashboard);
   }
-  
-  // Fall back to custom handler
-  try {
-    const result = await handlers.onSave(dashboard);
-    return result;
-  } catch (error) {
-    console.error('Save webhook error:', error);
-    return { success: false, error: error.message };
-  }
+  return { success: false, error: 'No save URL configured. Add a Save Draft URL in Settings.' };
 };
 
 /**
@@ -194,23 +181,10 @@ export const invokeSave = async (dashboard) => {
  * @returns {Promise<Object>} Result from the handler
  */
 export const invokePublish = async (dashboard) => {
-  // First try webhook URL if configured
   if (webhookUrls.publishUrl) {
-    const urlResult = await postToWebhookUrl(interpolateUrl(webhookUrls.publishUrl, dashboard), dashboard);
-    if (urlResult.success) {
-      return urlResult;
-    }
-    // Fall through to handler if URL fails
+    return await postToWebhookUrl(interpolateUrl(webhookUrls.publishUrl, dashboard), dashboard);
   }
-  
-  // Fall back to custom handler
-  try {
-    const result = await handlers.onPublish(dashboard);
-    return result;
-  } catch (error) {
-    console.error('Publish webhook error:', error);
-    return { success: false, error: error.message };
-  }
+  return { success: false, error: 'No publish URL configured. Add a Publish URL in Settings.' };
 };
 
 /**
@@ -259,22 +233,10 @@ export const invokeListDocuments = async (dashboardId) => {
     url = `${url}${separator}id=${encodeURIComponent(dashboardId)}`;
   }
   
-  // Try webhook URL if configured
   if (webhookUrls.listDocumentsUrl) {
-    const urlResult = await getFromWebhookUrl(url);
-    if (urlResult.success) {
-      return urlResult;
-    }
+    return await getFromWebhookUrl(url);
   }
-  
-  // Fall back to custom handler
-  try {
-    const result = await handlers.onListDocuments(dashboardId);
-    return result;
-  } catch (error) {
-    console.error('List documents webhook error:', error);
-    return { success: false, error: error.message };
-  }
+  return { success: false, error: 'No list URL configured.' };
 };
 
 /**

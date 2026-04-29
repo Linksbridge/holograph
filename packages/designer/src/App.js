@@ -16,10 +16,11 @@ import { FilterProvider, initializeGlobalFilterAPI, useFilters } from './hooks/u
 import { createInitialDashboard } from './types/schema';
 import { invokeSave, invokePublish, configureWebhookUrls, invokeListDocuments, invokeEditPublished, invokeDuplicate } from './services/webhookService';
 import { globalSettingsService } from './services/globalSettingsService';
-import { initializeDataService } from './services/dataService';
+import { initializeDataService, setDataQueryUrl } from './services/dataService';
 import './styles/dashboard.css';
 
 const STORAGE_KEY = 'holograph_dashboards';
+const SETTINGS_KEY = 'holograph_settings';
 
 const loadDashboards = () => {
   try {
@@ -36,6 +37,14 @@ const loadDashboards = () => {
   }];
 };
 
+const loadSettings = () => {
+  try {
+    const saved = localStorage.getItem(SETTINGS_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch (_) {}
+  return null;
+};
+
 // Inner component that uses filter context
 const AppContent = () => {
   // Dashboard management state
@@ -44,13 +53,18 @@ const AppContent = () => {
   const [currentDashboard, setCurrentDashboard] = useState(null);
   const [showNewModal, setShowNewModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [settings, setSettings] = useState(null);
+  const [settings, setSettings] = useState(loadSettings);
   const [showPreview, setShowPreview] = useState(false);
 
-  // Persist dashboards (including datasource config) across sessions
+  // Persist dashboards across sessions
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(dashboards)); } catch (_) {}
   }, [dashboards]);
+
+  // Persist settings (including webhook URLs) across sessions
+  useEffect(() => {
+    try { if (settings) localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (_) {}
+  }, [settings]);
 
   // On startup: load global settings, apply webhooks, and fetch schema — all in one pass
   useEffect(() => {
@@ -71,6 +85,7 @@ const AppContent = () => {
               saveDraftUrl: prevSave.saveDraftUrl || wh.saveDraftUrl || '',
               publishUrl: prevSave.publishUrl || wh.publishUrl || '',
               listDocumentsUrl: prevSave.listDocumentsUrl || wh.listDocumentsUrl || '',
+              dataQueryUrl: prevSave.dataQueryUrl || wh.dataQueryUrl || '',
             },
           };
         });
@@ -89,6 +104,9 @@ const AppContent = () => {
         publishUrl: settings.saveLocations.publishUrl || '',
         listDocumentsUrl: settings.saveLocations.listDocumentsUrl || '',
       });
+      if (settings.saveLocations.dataQueryUrl) {
+        setDataQueryUrl(settings.saveLocations.dataQueryUrl);
+      }
     }
   }, [settings]);
 

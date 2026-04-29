@@ -17,6 +17,7 @@ const TableComponent = ({ config, width, height, filters = null }) => {
   const [dimensions, setDimensions] = useState({ width: 300, height: 200 });
   const [sortColumn, setSortColumn] = useState(null);
   const [sortDirection, setSortDirection] = useState('asc');
+  const [currentPage, setCurrentPage] = useState(1);
   const containerRef = useRef(null);
 
   const { title, dataSource, theme } = config;
@@ -120,6 +121,11 @@ const TableComponent = ({ config, width, height, filters = null }) => {
       isMounted = false;
     };
   }, [dataSource?.tableName, dataSource?.labelColumn, dataSource?.valueColumn, dataSource?.columns, JSON.stringify(filters)]);
+
+  // Reset to page 1 when data changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [tableData.length]);
 
   // Common container styles
   const containerBaseStyle = {
@@ -227,8 +233,6 @@ const TableComponent = ({ config, width, height, filters = null }) => {
     displayColumns = tableColumns;
   }
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
 
   // Get sorted data
@@ -238,11 +242,6 @@ const TableComponent = ({ config, width, height, filters = null }) => {
   const totalPages = Math.ceil(sortedData.length / rowsPerPage);
   const startIndex = (currentPage - 1) * rowsPerPage;
   const paginatedData = sortedData.slice(startIndex, startIndex + rowsPerPage);
-
-  // Reset to page 1 when data changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [tableData.length]);
 
   return (
     <div ref={containerRef} style={containerBaseStyle}>
