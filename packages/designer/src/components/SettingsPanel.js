@@ -19,9 +19,6 @@ const defaults = {
     databaseName: '',
   },
   saveLocations: {
-    draftsContainer: 'drafts',
-    publishedContainer: 'published',
-    storageAccount: '',
     saveDraftUrl: '',
     publishUrl: '',
     listDocumentsUrl: '',
@@ -338,42 +335,6 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
               </div>
             )}
 
-            <div className="settings-section-title" style={{ marginTop: '24px' }}>Azure Blob Storage</div>
-
-            <div className="property-field-group">
-              <label className="property-label">Storage Account Name</label>
-              <input
-                type="text"
-                className="property-input"
-                value={localSettings.saveLocations.storageAccount}
-                onChange={(e) => updateSettings('saveLocations', 'storageAccount', e.target.value)}
-                placeholder="mystorageaccount"
-              />
-            </div>
-
-            <div className="property-field-group">
-              <label className="property-label">Drafts Container</label>
-              <input
-                type="text"
-                className="property-input"
-                value={localSettings.saveLocations.draftsContainer}
-                onChange={(e) => updateSettings('saveLocations', 'draftsContainer', e.target.value)}
-                placeholder="drafts"
-              />
-              <p className="property-help-text">Container for saving draft dashboards</p>
-            </div>
-
-            <div className="property-field-group">
-              <label className="property-label">Published Container</label>
-              <input
-                type="text"
-                className="property-input"
-                value={localSettings.saveLocations.publishedContainer}
-                onChange={(e) => updateSettings('saveLocations', 'publishedContainer', e.target.value)}
-                placeholder="published"
-              />
-              <p className="property-help-text">Container for publishing live dashboards</p>
-            </div>
           </>
         )}
 
