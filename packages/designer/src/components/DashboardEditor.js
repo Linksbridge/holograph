@@ -20,7 +20,7 @@ import ChartPalette from './ChartPalette';
 import FilterBar from './FilterBar';
 import { CHART_LIBRARIES, COMPONENT_TYPES, createZoneConfig } from '../types/schema';
 import { useFilters } from '../hooks/useFilters';
-import { getTableColumns, initializeDataService } from '../services/dataService';
+import { getTableColumns } from '../services/dataService';
 
 const DashboardEditor = ({ dashboard, onDashboardUpdate, settings }) => {
   const [selectedZone, setSelectedZone] = useState(null);
@@ -31,19 +31,9 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate, settings }) => {
   const gridRef = useRef(null);
   const draggedChartRef = useRef(null);
   const deleteContextRef = useRef(null);
-  
+
   // Get filter context
   const { filters, configureFilters } = useFilters();
-  
-  // Initialize data service only when settings change, not on every zone update
-  useEffect(() => {
-    initializeDataService(
-      settings?.dataSource?.connectionString,
-      settings?.dataSource?.schemaUrl,
-      settings?.dataSource?.databaseName,
-      settings?.saveLocations?.dataQueryUrl || null
-    );
-  }, [settings]);
 
   // Configure filters separately — runs when zones change (e.g. new chart added)
   useEffect(() => {
