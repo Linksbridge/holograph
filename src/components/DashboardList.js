@@ -58,6 +58,9 @@ const DashboardList = ({ dashboards, onSelect, onCreateNew, onSettings, onDelete
           <button className="btn btn-secondary" onClick={onSecurity}>
             🔒 Security
           </button>
+          <a href="/#/help" className="btn btn-secondary" style={{ textDecoration: 'none' }}>
+            ❓ Help
+          </a>
         </div>
       </div>
       

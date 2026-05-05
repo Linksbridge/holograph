@@ -253,12 +253,15 @@ const AppContent = () => {
           <button className="btn btn-success btn-icon" onClick={handlePublish}>
             🚀 Publish
           </button>
-          <button 
-            className="btn btn-secondary btn-icon" 
+          <button
+            className="btn btn-secondary btn-icon"
             onClick={() => setShowSettings(true)}
           >
             ⚙️
           </button>
+          <a href="/#/help" className="btn btn-secondary btn-icon" style={{ textDecoration: 'none' }}>
+            ❓
+          </a>
         </div>
       </div>
     );
