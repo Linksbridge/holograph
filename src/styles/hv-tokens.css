@@ -540,7 +540,7 @@
     --hv-title-size: 20px;
     --hv-zone-title-size: 13px;
   }
-  
+
   .viewer-zone-header {
     flex-direction: column;
     align-items: flex-start;
@@ -555,7 +555,7 @@
     --hv-zone-bg: #ffffff;
     box-shadow: none;
   }
-  
+
   .viewer-zone-card {
     box-shadow: none;
     border: 1px solid var(--hv-border-color);
@@ -575,7 +575,7 @@
     --hv-border-strong: #000000;
     --hv-text-primary: #000000;
   }
-  
+
   .viewer-zone-card {
     border: 2px solid var(--hv-text-primary);
   }
@@ -587,11 +587,11 @@
   .viewer-spinner-large {
     animation: none;
   }
-  
+
   .viewer-zone-card {
     transition: none;
   }
-  
+
   .viewer-dashboard-grid .react-grid-item {
     transition: none;
   }

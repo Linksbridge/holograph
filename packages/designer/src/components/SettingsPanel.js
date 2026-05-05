@@ -23,7 +23,7 @@ const defaults = {
     publishUrl: '',
     listDocumentsUrl: '',
     dataQueryUrl: '',
-    globalSettingsUrl: '',
+    globalSettingsUrl: process.env.REACT_APP_DEFAULT_GLOBAL_SETTINGS_URL || '',
   },
   general: {
     autoSave: true,
@@ -34,7 +34,14 @@ const defaults = {
 const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
   const [localSettings, setLocalSettings] = useState(() => ({
     dataSource: { ...defaults.dataSource, ...settings?.dataSource },
-    saveLocations: { ...defaults.saveLocations, ...settings?.saveLocations },
+    saveLocations: {
+      ...defaults.saveLocations,
+      ...settings?.saveLocations,
+      globalSettingsUrl:
+        settings?.saveLocations?.globalSettingsUrl ||
+        process.env.REACT_APP_DEFAULT_GLOBAL_SETTINGS_URL ||
+        '',
+    },
     general: { ...defaults.general, ...settings?.general },
   }));
 
@@ -261,7 +268,21 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
 
         {activeTab === 'save' && (
           <>
-            <div className="settings-section-title">Webhook URLs</div>
+            <div className="settings-section-title">Global Settings</div>
+
+            <div className="property-field-group">
+              <label className="property-label">Global Settings URL</label>
+              <input
+                type="text"
+                className="property-input"
+                value={localSettings.saveLocations.globalSettingsUrl}
+                onChange={(e) => updateSettings('saveLocations', 'globalSettingsUrl', e.target.value)}
+                placeholder="https://api.example.com/api/global-settings"
+              />
+              <p className="property-help-text">GET endpoint returning shared database config and webhook URLs. When set, overrides individual fields below.</p>
+            </div>
+
+            <div className="settings-section-title" style={{ marginTop: '24px' }}>Webhook URLs</div>
 
             <div className="property-field-group">
               <label className="property-label">List Documents URL</label>

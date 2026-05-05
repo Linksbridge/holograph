@@ -72,6 +72,14 @@ const AppContent = () => {
 
   // On startup: load global settings, apply webhooks, fetch schema, and auto-load dashboards
   useEffect(() => {
+    const savedGlobalSettingsUrl =
+      loadSettings()?.saveLocations?.globalSettingsUrl ||
+      process.env.REACT_APP_DEFAULT_GLOBAL_SETTINGS_URL ||
+      '';
+    if (savedGlobalSettingsUrl) {
+      globalSettingsService.setGlobalSettingsUrl(savedGlobalSettingsUrl);
+    }
+
     globalSettingsService.getAllSettings().then(async (gs) => {
       const wh = gs?.webhooks;
       if (wh) {
@@ -312,29 +320,53 @@ const AppContent = () => {
 
   // Handle settings save
   const handleSettingsSave = useCallback(async (newSettings) => {
+    // If globalSettingsUrl changed, re-fetch global settings and merge into the new settings
+    const newGlobalUrl = newSettings?.saveLocations?.globalSettingsUrl;
+    if (newGlobalUrl) {
+      globalSettingsService.setGlobalSettingsUrl(newGlobalUrl);
+      const gs = await globalSettingsService.getAllSettings(true);
+      const wh = gs?.webhooks;
+      if (wh) {
+        // Global settings fill in any fields the user left blank
+        newSettings = {
+          ...newSettings,
+          saveLocations: {
+            ...newSettings.saveLocations,
+            saveDraftUrl: newSettings.saveLocations.saveDraftUrl || wh.saveDraftUrl || '',
+            publishUrl: newSettings.saveLocations.publishUrl || wh.publishUrl || '',
+            listDocumentsUrl: newSettings.saveLocations.listDocumentsUrl || wh.listDocumentsUrl || '',
+            dataQueryUrl: newSettings.saveLocations.dataQueryUrl || wh.dataQueryUrl || '',
+          },
+        };
+      }
+      initializeDataService(
+        null,
+        newSettings.dataSource?.schemaUrl || null,
+        newSettings.dataSource?.databaseName || gs?.database?.defaultDatabaseName || null,
+        newSettings.saveLocations.dataQueryUrl || null,
+      );
+    }
+
     setSettings(newSettings);
-    
+
     // Configure webhook URLs from settings
     if (newSettings?.saveLocations) {
       configureWebhookUrls({
         saveDraftUrl: newSettings.saveLocations.saveDraftUrl || '',
         publishUrl: newSettings.saveLocations.publishUrl || '',
         listDocumentsUrl: newSettings.saveLocations.listDocumentsUrl || '',
+        dataQueryUrl: newSettings.saveLocations.dataQueryUrl || '',
       });
-      
+
       // Auto-refresh documents if listDocumentsUrl is provided
       if (newSettings.saveLocations.listDocumentsUrl?.trim()) {
-        console.log('List Documents URL configured, loading complete dashboard objects...');
         try {
           await handleRefreshDashboards();
-          console.log('Complete dashboard objects successfully loaded from URL');
         } catch (error) {
           console.error('Failed to load dashboard objects after settings save:', error);
         }
       }
     }
-    
-    console.log('Settings saved:', newSettings);
   }, [handleRefreshDashboards]);
 
   // Memoize normalized schema so dashboard.zones stays stable between renders

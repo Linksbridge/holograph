@@ -1,12 +1,11 @@
 /**
  * CRACO (Create React App Configuration Override)
  *
- * Extends CRA's webpack config so that workspace packages under packages/
- * are processed by the same babel-loader (with JSX support) as files in src/.
+ * Extends the main babel-loader's `include` to cover:
+ *   - packages/          local workspace source (real path after junction resolution)
+ *   - node_modules/@holograph/   workspace packages as seen via Yarn junctions on Windows
  *
- * Without this, CRA uses a limited babel preset for node_modules that lacks
- * the React JSX transform, causing errors when consuming raw JSX source from
- * local workspace packages like @holograph/dashboard-viewer.
+ * Also removes ModuleScopePlugin so imports from workspace packages aren't blocked.
  */
 
 const path = require('path');
@@ -15,6 +14,12 @@ module.exports = {
   webpack: {
     configure: (webpackConfig) => {
       const packagesDir = path.resolve(__dirname, 'packages');
+      const holographDir = path.resolve(__dirname, 'node_modules', '@holograph');
+
+      // Remove ModuleScopePlugin so imports from workspace packages aren't blocked.
+      webpackConfig.resolve.plugins = (webpackConfig.resolve.plugins || []).filter(
+        (plugin) => plugin.constructor.name !== 'ModuleScopePlugin'
+      );
 
       // CRA puts all loader rules inside a single { oneOf: [...] } rule.
       const oneOfRule = webpackConfig.module.rules.find((r) => Array.isArray(r.oneOf));
@@ -27,12 +32,11 @@ module.exports = {
             r.loader &&
             typeof r.loader === 'string' &&
             r.loader.includes('babel-loader') &&
-            !Array.isArray(r.include) // the node_modules rule has no include
+            !Array.isArray(r.include)
         );
 
         if (babelSourceRule) {
-          // Extend include to also cover the local packages/ directory
-          babelSourceRule.include = [babelSourceRule.include, packagesDir];
+          babelSourceRule.include = [babelSourceRule.include, packagesDir, holographDir];
         }
       }
 
