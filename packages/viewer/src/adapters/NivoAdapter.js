@@ -136,8 +136,10 @@ const NivoAdapter = ({
   legend,
   tooltip,
   zoneConfig = {},
+  resolvedStyles = {},
 }) => {
   const colors = THEMES[theme] || THEMES.default;
+  const fontFamily = resolvedStyles.fontFamily || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
   const legendEnabled = legend?.enabled !== false;
   const showLegend = legendEnabled && width > 180 && height > 140;
 
@@ -237,7 +239,7 @@ const nivoData = useMemo(() => {
   // Common theme for nivo
   const nivoTheme = useMemo(() => ({
     fontSize,
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    fontFamily,
     textColor: colors.text,
     axis: {
       domain: {
@@ -291,7 +293,7 @@ const nivoData = useMemo(() => {
         fill: colors.text,
       },
     },
-  }), [colors, fontSize, title]);
+  }), [colors, fontSize, fontFamily]);
   
   // Line chart specific config
   const lineConfig = useMemo(() => ({
@@ -642,7 +644,7 @@ switch (nivoChartType) {
           fontWeight: 'bold',
           textAlign: 'center',
           marginBottom: '4px',
-          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          fontFamily,
         }}>
           {title}
         </div>

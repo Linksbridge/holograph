@@ -171,9 +171,10 @@ const CHART_COMPONENTS = {
   [CHART_TYPES.CHARTJS_POLAR]: PolarArea,
 };
 
-const ChartJsAdapter = ({ data, theme = 'default', width = 400, height = 300, title, chartType = CHART_TYPES.CHARTJS_LINE, legend, tooltip, zoneConfig }) => {
+const ChartJsAdapter = ({ data, theme = 'default', width = 400, height = 300, title, chartType = CHART_TYPES.CHARTJS_LINE, legend, tooltip, zoneConfig, resolvedStyles = {} }) => {
   const chartRef = useRef(null);
   const colors = THEMES[theme] || THEMES.default;
+  const fontFamily = resolvedStyles.fontFamily || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 
   if (chartType === CHART_TYPES.CHARTJS_BUBBLEMAP) {
     return (
@@ -263,7 +264,7 @@ const ChartJsAdapter = ({ data, theme = 'default', width = 400, height = 300, ti
             color: colors.text,
             font: {
               size: Math.max(9, Math.min(12, width / 30)),
-              family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              family: fontFamily,
             },
             padding: showLegend ? 10 : 0,
             usePointStyle: true,
@@ -277,7 +278,7 @@ const ChartJsAdapter = ({ data, theme = 'default', width = 400, height = 300, ti
           font: {
             size: Math.max(10, Math.min(14, width / 25)),
             weight: 'bold',
-            family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            family: fontFamily,
           },
           padding: {
             bottom: showLegend ? 8 : 10,
@@ -392,7 +393,7 @@ const ChartJsAdapter = ({ data, theme = 'default', width = 400, height = 300, ti
     }
 
     return baseOptions;
-  }, [showLegend, legendPosition, colors, title, width, height, needsScales, chartType, tooltip]);
+  }, [showLegend, legendPosition, colors, title, width, height, needsScales, chartType, tooltip, fontFamily]);
 
   // Cleanup chart instance on unmount
   useEffect(() => {

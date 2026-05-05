@@ -11,9 +11,10 @@ import React, { useRef, useEffect } from 'react';
 import * as d3 from 'd3';
 import { THEMES, CHART_TYPES } from '@holograph/dashboard-schema';
 
-const D3Adapter = ({ data, theme = 'default', width = 400, height = 300, title, chartType = CHART_TYPES.D3_BAR, legend }) => {
+const D3Adapter = ({ data, theme = 'default', width = 400, height = 300, title, chartType = CHART_TYPES.D3_BAR, legend, resolvedStyles = {} }) => {
   const svgRef = useRef(null);
   const colors = THEMES[theme] || THEMES.default;
+  const fontFamily = resolvedStyles.fontFamily || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 
   // Determine if we should show legend - from props or default based on size
   const legendEnabled = legend?.enabled !== false;
@@ -42,7 +43,8 @@ const D3Adapter = ({ data, theme = 'default', width = 400, height = 300, title, 
     // Create SVG container with viewBox for responsive scaling
     svg
       .attr('viewBox', `0 0 ${width} ${height}`)
-      .attr('preserveAspectRatio', 'xMidYMid meet');
+      .attr('preserveAspectRatio', 'xMidYMid meet')
+      .style('font-family', fontFamily);
 
     // Render based on chart type
     switch (chartType) {
@@ -71,7 +73,7 @@ const D3Adapter = ({ data, theme = 'default', width = 400, height = 300, title, 
     return () => {
       svg.selectAll('*').remove();
     };
-  }, [data, theme, width, height, title, chartType, colors, showLegend, legendHeight, colorPalette]);
+  }, [data, theme, width, height, title, chartType, colors, showLegend, legendHeight, colorPalette, fontFamily]);
 
   // Bar Chart Renderer
   const renderBarChart = (svg, chartData) => {
@@ -485,7 +487,7 @@ const D3Adapter = ({ data, theme = 'default', width = 400, height = 300, title, 
         .attr('fill', colors.text)
         .style('font-size', `${Math.max(9, Math.min(12, width / 30))}px`)
         .style('font-weight', 'bold')
-        .style('font-family', 'inherit')
+        .style('font-family', fontFamily)
         .text(title);
     }
 

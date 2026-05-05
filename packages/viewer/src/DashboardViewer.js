@@ -40,7 +40,7 @@ import './styles/viewer.css';
  * @param {Function} props.onFilterChange - Callback for filter changes
  * @param {Array} props.zoneData - Optional data passed directly via props (bypasses data service)
  */
-const ZoneContent = ({ zone, filters, onFilterChange, zoneData }) => {
+const ZoneContent = ({ zone, filters, onFilterChange, zoneData, resolvedStyles = {} }) => {
   const [chartData, setChartData] = useState([]);
   const [tableData, setTableData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -248,6 +248,7 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData }) => {
             title={title}
             chartType={effectiveChartType}
             legend={legend}
+            resolvedStyles={resolvedStyles}
           />
         </Suspense>
       )}
@@ -277,6 +278,7 @@ const DashboardViewer = ({
   const [isInitialized, setIsInitialized] = useState(false);
   const [currentFilters, setCurrentFilters] = useState(filters);
   const [gridWidth, setGridWidth] = useState(1200);
+  const [resolvedStyles, setResolvedStyles] = useState({});
   const containerRef = useRef(null);
 
   // Initialize data service on mount
@@ -286,6 +288,16 @@ const DashboardViewer = ({
       setIsInitialized(true);
     };
     init();
+  }, []);
+
+  // Read CSS custom properties from container so chart internals can use host-app theme values
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const computed = getComputedStyle(containerRef.current);
+    const fontFamily = computed.getPropertyValue('--hv-font-family').trim();
+    setResolvedStyles({
+      fontFamily: fontFamily || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    });
   }, []);
 
   // Sync external filters
@@ -405,6 +417,7 @@ const DashboardViewer = ({
                   filters={currentFilters}
                   onFilterChange={handleFilterChange}
                   zoneData={data[zone.id]}
+                  resolvedStyles={resolvedStyles}
                 />
               </div>
             </div>
