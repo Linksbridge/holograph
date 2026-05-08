@@ -40,6 +40,11 @@ let webhookUrls = {
   listDocumentsUrl: '',
 };
 
+let securityWebhookUrls = {
+  securitySaveUrl: '',
+  listSecurityUrl: '',
+};
+
 /**
  * Configure webhook handlers
  * @param {Object} newHandlers - Object with onSave and/or onPublish callbacks
@@ -257,6 +262,18 @@ export const invokeEditPublished = async (id) => {
  * @param {string} newName - Name for the copy
  * @returns {Promise<Object>} Result
  */
+export const configureSecurityWebhookUrls = (urls) => {
+  securityWebhookUrls = { ...securityWebhookUrls, ...urls };
+};
+
+export const invokeListSecurityRules = async () => {
+  return await getFromWebhookUrl(securityWebhookUrls.listSecurityUrl);
+};
+
+export const invokeSaveSecurityRules = async (rules) => {
+  return await postToWebhookUrl(securityWebhookUrls.securitySaveUrl, { rules });
+};
+
 export const invokeDuplicate = async (dashboard, newId, newName) => {
   const copy = {
     ...dashboard,
@@ -280,4 +297,7 @@ export default {
   invokeListDocuments,
   invokeEditPublished,
   invokeDuplicate,
+  configureSecurityWebhookUrls,
+  invokeListSecurityRules,
+  invokeSaveSecurityRules,
 };

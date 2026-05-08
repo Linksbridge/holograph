@@ -1,7 +1,7 @@
 import React from 'react';
 import BigLogo from '../big logo.png';
 
-const DashboardList = ({ dashboards, onSelect, onCreateNew, onSettings, onDelete, onRefresh, onEditPublished, onDuplicate }) => {
+const DashboardList = ({ dashboards, onSelect, onCreateNew, onSettings, onDelete, onRefresh, onEditPublished, onDuplicate, onSecurity }) => {
   return (
     <div className="dashboard-list-container">
       <div className="dashboard-list-logo">
@@ -24,6 +24,11 @@ const DashboardList = ({ dashboards, onSelect, onCreateNew, onSettings, onDelete
           <button className="btn btn-secondary" onClick={onSettings}>
             ⚙️ Settings
           </button>
+          {onSecurity && (
+            <button className="btn btn-secondary" onClick={onSecurity}>
+              🔒 Security
+            </button>
+          )}
         </div>
       </div>
 

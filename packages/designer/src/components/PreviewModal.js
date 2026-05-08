@@ -10,10 +10,18 @@ import GridLayout from 'react-grid-layout';
 import UniversalChart from './UniversalChart';
 import TableComponent from './TableComponent';
 import { COMPONENT_TYPES } from '../types/schema';
+import { canRoleAccessZone, getAllRoles } from '../utils/securityUtils';
 
-const PreviewModal = ({ isOpen, onClose, dashboard }) => {
+const PreviewModal = ({ isOpen, onClose, dashboard, securityRules = [], settings = null }) => {
   const [gridWidth, setGridWidth] = useState(1100);
+  const [previewRole, setPreviewRole] = useState('');
   const contentRef = useRef(null);
+
+  const allRoles = useMemo(() => getAllRoles(securityRules), [securityRules]);
+
+  useEffect(() => {
+    if (!isOpen) setPreviewRole('');
+  }, [isOpen]);
 
   // Calculate grid dimensions for preview - use responsive width
   useEffect(() => {
@@ -66,6 +74,8 @@ const PreviewModal = ({ isOpen, onClose, dashboard }) => {
 
   if (!isOpen || !dashboard) return null;
 
+  const securityActive = !!previewRole;
+
   return (
     <div className="preview-modal-backdrop" onClick={handleBackdropClick}>
       <div className="preview-modal">
@@ -85,7 +95,39 @@ const PreviewModal = ({ isOpen, onClose, dashboard }) => {
             {dashboard.description}
           </div>
         )}
-        
+
+        {allRoles.length > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '10px',
+            padding: '8px 16px', borderBottom: '1px solid #e5e7eb',
+            background: securityActive ? '#fefce8' : '#f9fafb',
+            fontSize: '13px',
+          }}>
+            <span style={{ color: '#6b7280', fontWeight: 500 }}>🔒 View as:</span>
+            <select
+              value={previewRole}
+              onChange={(e) => setPreviewRole(e.target.value)}
+              style={{
+                padding: '4px 8px', borderRadius: '5px', border: '1px solid #d1d5db',
+                fontSize: '13px', background: '#fff', cursor: 'pointer',
+              }}
+            >
+              <option value="">— all access —</option>
+              {allRoles.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
+            {securityActive && (
+              <span style={{
+                padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 600,
+                background: '#fef9c3', color: '#854d0e', border: '1px solid #fde68a',
+              }}>
+                Simulating: {previewRole}
+              </span>
+            )}
+          </div>
+        )}
+
         <div className="preview-modal-content" ref={contentRef}>
           {!dashboard.zones || dashboard.zones.length === 0 ? (
             <div className="preview-empty-state">
@@ -107,33 +149,47 @@ const PreviewModal = ({ isOpen, onClose, dashboard }) => {
               useCSSTransforms={true}
               containerPadding={[10, 10]}
             >
-              {dashboard.zones.map((zone) => (
-                <div
-                  key={zone.id}
-                  className="preview-zone-card"
-                >
-                  {(zone.showHeader !== false) && (
-                    <div className="preview-zone-header">
-                      <h3 className="preview-zone-title">{zone.title}</h3>
-                    </div>
-                  )}
-                  <div className="preview-zone-chart-container">
-                    {zone.componentType === COMPONENT_TYPES.TABLE ? (
-                      <TableComponent
-                        config={zone}
-                        width={null}
-                        height={null}
-                      />
-                    ) : (
-                      <UniversalChart
-                        config={zone}
-                        width={null}
-                        height={null}
-                      />
+              {dashboard.zones.map((zone) => {
+                const restricted = securityActive &&
+                  !canRoleAccessZone(zone, securityRules, settings, previewRole);
+                return (
+                  <div
+                    key={zone.id}
+                    className="preview-zone-card"
+                    style={restricted ? {
+                      opacity: 0.45, filter: 'grayscale(80%)', border: '2px dashed #94a3b8',
+                    } : {}}
+                  >
+                    {(zone.showHeader !== false) && (
+                      <div className="preview-zone-header">
+                        <h3 className="preview-zone-title">
+                          {zone.title}
+                          {restricted && <span style={{ marginLeft: '6px', fontSize: '12px' }}>🔒</span>}
+                        </h3>
+                      </div>
                     )}
+                    <div className="preview-zone-chart-container">
+                      {restricted ? (
+                        <div style={{
+                          display: 'flex', flexDirection: 'column',
+                          alignItems: 'center', justifyContent: 'center',
+                          height: '100%', minHeight: '80px', gap: '6px', color: '#64748b',
+                        }}>
+                          <span style={{ fontSize: '24px' }}>🔒</span>
+                          <span style={{ fontSize: '13px', fontWeight: 600 }}>Access Restricted</span>
+                          <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                            Not visible to role: "{previewRole}"
+                          </span>
+                        </div>
+                      ) : zone.componentType === COMPONENT_TYPES.TABLE ? (
+                        <TableComponent config={zone} width={null} height={null} />
+                      ) : (
+                        <UniversalChart config={zone} width={null} height={null} />
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </GridLayout>
           )}
         </div>

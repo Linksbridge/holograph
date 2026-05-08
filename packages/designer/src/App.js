@@ -14,7 +14,8 @@ import SettingsPanel from './components/SettingsPanel';
 import PreviewModal from './components/PreviewModal';
 import { FilterProvider, initializeGlobalFilterAPI, useFilters } from './hooks/useFilters';
 import { createInitialDashboard } from './types/schema';
-import { invokeSave, invokePublish, configureWebhookUrls, invokeListDocuments, invokeEditPublished, invokeDuplicate } from './services/webhookService';
+import { invokeSave, invokePublish, configureWebhookUrls, invokeListDocuments, invokeEditPublished, invokeDuplicate, configureSecurityWebhookUrls, invokeListSecurityRules, invokeSaveSecurityRules } from './services/webhookService';
+import SecurityPanel from './components/SecurityPanel';
 import { globalSettingsService } from './services/globalSettingsService';
 import { initializeDataService, setDataQueryUrl } from './services/dataService';
 import './styles/dashboard.css';
@@ -59,6 +60,13 @@ const AppContent = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState(loadSettings);
   const [showPreview, setShowPreview] = useState(false);
+  const [showSecurity, setShowSecurity] = useState(false);
+  const [securityRules, setSecurityRules] = useState([]);
+  const defaultSecurityUrl = process.env.REACT_APP_SECURITY_RULES_URL || '';
+  const [securityWebhookUrls, setSecurityWebhookUrls] = useState({
+    securitySaveUrl: defaultSecurityUrl,
+    listSecurityUrl: defaultSecurityUrl,
+  });
 
   // Persist dashboards across sessions
   useEffect(() => {
@@ -69,6 +77,14 @@ const AppContent = () => {
   useEffect(() => {
     try { if (settings) localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (_) {}
   }, [settings]);
+
+  // Configure security webhook URLs from env var on mount
+  useEffect(() => {
+    if (defaultSecurityUrl) {
+      configureSecurityWebhookUrls({ securitySaveUrl: defaultSecurityUrl, listSecurityUrl: defaultSecurityUrl });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // On startup: load global settings, apply webhooks, fetch schema, and auto-load dashboards
   useEffect(() => {
@@ -376,6 +392,16 @@ const AppContent = () => {
     return { zones: [], ...base };
   }, [currentDashboard]);
 
+  const handleSaveSecurityRules = useCallback(async (rules, urls) => {
+    if (urls) configureSecurityWebhookUrls(urls);
+    return await invokeSaveSecurityRules(rules);
+  }, []);
+
+  const handleRefreshSecurityRules = useCallback(async (urls) => {
+    if (urls) configureSecurityWebhookUrls(urls);
+    return await invokeListSecurityRules();
+  }, []);
+
   // Get badge class based on status
   const getStatusBadgeClass = (status) => {
     return status === 'published' ? 'top-bar-badge published' : 'top-bar-badge draft';
@@ -400,6 +426,9 @@ const AppContent = () => {
         <div className="top-bar-right">
           <button className="btn btn-secondary btn-icon" onClick={() => setShowPreview(true)}>
             👁️ Preview
+          </button>
+          <button className="btn btn-secondary btn-icon" onClick={() => setShowSecurity(true)}>
+            🔒 Security
           </button>
           <button className="btn btn-secondary btn-icon" onClick={handleSaveDraft}>
             💾 Save Draft
@@ -441,6 +470,7 @@ const AppContent = () => {
           onRefresh={handleRefreshDashboards}
           onEditPublished={handleEditPublished}
           onDuplicate={handleDuplicate}
+          onSecurity={() => setShowSecurity(true)}
         />
       )}
 
@@ -464,6 +494,20 @@ const AppContent = () => {
         isOpen={showPreview}
         onClose={() => setShowPreview(false)}
         dashboard={normalizedDashboardSchema}
+        securityRules={securityRules}
+        settings={settings}
+      />
+
+      {/* Security Panel */}
+      <SecurityPanel
+        isOpen={showSecurity}
+        onClose={() => setShowSecurity(false)}
+        rules={securityRules}
+        onRulesChange={setSecurityRules}
+        webhookUrls={securityWebhookUrls}
+        onWebhookUrlsChange={setSecurityWebhookUrls}
+        onSave={handleSaveSecurityRules}
+        onRefresh={handleRefreshSecurityRules}
       />
     </>
   );
