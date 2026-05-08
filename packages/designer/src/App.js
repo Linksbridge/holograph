@@ -16,6 +16,7 @@ import { FilterProvider, initializeGlobalFilterAPI, useFilters } from './hooks/u
 import { createInitialDashboard } from './types/schema';
 import { invokeSave, invokePublish, configureWebhookUrls, invokeListDocuments, invokeEditPublished, invokeDuplicate, configureSecurityWebhookUrls, invokeListSecurityRules, invokeSaveSecurityRules } from './services/webhookService';
 import SecurityPanel from './components/SecurityPanel';
+import HelpPage from './components/HelpPage';
 import { globalSettingsService } from './services/globalSettingsService';
 import { initializeDataService, setDataQueryUrl } from './services/dataService';
 import './styles/dashboard.css';
@@ -60,6 +61,7 @@ const AppContent = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState(loadSettings);
   const [showPreview, setShowPreview] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [showSecurity, setShowSecurity] = useState(false);
   const [securityRules, setSecurityRules] = useState([]);
   const defaultSecurityUrl = process.env.REACT_APP_SECURITY_RULES_URL || '';
@@ -446,6 +448,10 @@ const AppContent = () => {
     );
   };
 
+  if (showHelp) {
+    return <HelpPage onBack={() => setShowHelp(false)} />;
+  }
+
   return (
     <>
       {currentDashboard ? (
@@ -470,6 +476,7 @@ const AppContent = () => {
           onEditPublished={handleEditPublished}
           onDuplicate={handleDuplicate}
           onSecurity={() => setShowSecurity(true)}
+          onHelp={() => setShowHelp(true)}
         />
       )}
 
