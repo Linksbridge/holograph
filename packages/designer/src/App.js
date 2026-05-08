@@ -83,7 +83,6 @@ const AppContent = () => {
     if (defaultSecurityUrl) {
       configureSecurityWebhookUrls({ securitySaveUrl: defaultSecurityUrl, listSecurityUrl: defaultSecurityUrl });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // On startup: load global settings, apply webhooks, fetch schema, and auto-load dashboards
