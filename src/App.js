@@ -42,7 +42,19 @@ const AppContent = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [showSecurity, setShowSecurity] = useState(false);
   const [securityRules, setSecurityRules] = useState([]);
-  const [securityWebhookUrls, setSecurityWebhookUrls] = useState({ securitySaveUrl: '', listSecurityUrl: '' });
+  const defaultSecurityUrl = process.env.REACT_APP_SECURITY_RULES_URL || '';
+  const [securityWebhookUrls, setSecurityWebhookUrls] = useState({
+    securitySaveUrl: defaultSecurityUrl,
+    listSecurityUrl: defaultSecurityUrl,
+  });
+
+  // Configure security webhook URLs from env var on mount
+  useEffect(() => {
+    if (defaultSecurityUrl) {
+      configureSecurityWebhookUrls({ securitySaveUrl: defaultSecurityUrl, listSecurityUrl: defaultSecurityUrl });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Initialize webhook URLs from settings when settings change
   useEffect(() => {
