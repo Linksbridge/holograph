@@ -235,9 +235,34 @@ const HelpPage = ({ onBack }) => {
 
           <Section id="security" icon="🔒" title="Security Rules & Roles">
             <p>
-              Security rules let you control which parts of a dashboard different users can see.
-              You define <strong>roles</strong> (e.g. <em>admin</em>, <em>sales</em>, <em>finance</em>)
-              and then restrict specific charts or data to only those roles.
+              Dashboards often contain information that shouldn't be visible to everyone.
+              A sales dashboard might have revenue figures that only managers should see,
+              or HR data that only certain teams should access — even though the dashboard
+              itself is shared broadly.
+            </p>
+            <p>
+              Holograph handles this through <strong>security rules</strong>. A rule says:
+              "this data can only be seen by people with this role." When someone views
+              the dashboard, the system checks their role and hides any charts they're
+              not allowed to see — replacing them with a locked placeholder.
+            </p>
+            <p>
+              A <strong>role</strong> is just a label that represents a group of people —
+              for example <em>admin</em>, <em>sales-manager</em>, or <em>finance</em>.
+              Your technical team assigns roles to users in whatever authentication system
+              you use. Holograph's job is simply to enforce them on the dashboard side.
+            </p>
+            <p>
+              Rules are tied to <strong>data</strong>, not to individual charts. You write a rule
+              against a datasource, a table, or even a specific column — and it automatically
+              applies to every chart on every dashboard that pulls from that data.
+              This means you define access once and it's enforced everywhere, without
+              having to configure each chart individually.
+            </p>
+            <p>
+              Rules are additive: a chart is visible if <em>any</em> matching rule includes
+              the viewer's role. If no rules match a chart's data at all, the chart is
+              visible to everyone.
             </p>
 
             <p style={{ marginTop: '16px' }}><strong>Opening Security Rules:</strong></p>
