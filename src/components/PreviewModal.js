@@ -18,27 +18,16 @@ import { canRoleAccessZone, getAllRoles } from '../utils/securityUtils';
 
 const PreviewModal = ({ isOpen, onClose, dashboard, securityRules = [], settings = null }) => {
   const [gridWidth, setGridWidth] = useState(1100);
-  const [securityOn, setSecurityOn] = useState(false);
   const [previewRole, setPreviewRole] = useState('');
   const contentRef = useRef(null);
 
   // Derive all unique roles from the security rules
   const allRoles = useMemo(() => getAllRoles(securityRules), [securityRules]);
 
-  // Reset security state when modal closes
+  // Reset role when modal closes
   useEffect(() => {
-    if (!isOpen) {
-      setSecurityOn(false);
-      setPreviewRole('');
-    }
+    if (!isOpen) setPreviewRole('');
   }, [isOpen]);
-
-  // Auto-select first role when toggling security on
-  useEffect(() => {
-    if (securityOn && !previewRole && allRoles.length > 0) {
-      setPreviewRole(allRoles[0]);
-    }
-  }, [securityOn, previewRole, allRoles]);
 
   // Calculate grid dimensions for preview - use responsive width
   useEffect(() => {
@@ -83,7 +72,7 @@ const PreviewModal = ({ isOpen, onClose, dashboard, securityRules = [], settings
 
   if (!isOpen || !dashboard) return null;
 
-  const securityActive = securityOn && !!previewRole;
+  const securityActive = !!previewRole;
 
   return (
     <div className="preview-modal-backdrop" onClick={handleBackdropClick}>
@@ -103,60 +92,38 @@ const PreviewModal = ({ isOpen, onClose, dashboard, securityRules = [], settings
           <div className="preview-modal-subtitle">{dashboard.description}</div>
         )}
 
-        {/* Security Preview toolbar */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '12px',
-          padding: '8px 16px', borderBottom: '1px solid #e5e7eb',
-          background: securityActive ? '#fefce8' : '#f9fafb',
-          fontSize: '13px',
-        }}>
-          <span style={{ color: '#6b7280', fontWeight: 500 }}>🔒 Security Preview</span>
-
-          {/* Toggle */}
-          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={securityOn}
-              onChange={(e) => setSecurityOn(e.target.checked)}
-              style={{ cursor: 'pointer' }}
-            />
-            <span style={{ color: securityOn ? '#0f172a' : '#9ca3af' }}>
-              {securityOn ? 'ON' : 'OFF'}
-            </span>
-          </label>
-
-          {/* Role selector */}
-          {securityOn && (
-            <>
-              <span style={{ color: '#6b7280' }}>Preview as role:</span>
-              {allRoles.length === 0 ? (
-                <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>No roles defined in security rules</span>
-              ) : (
-                <select
-                  value={previewRole}
-                  onChange={(e) => setPreviewRole(e.target.value)}
-                  style={{
-                    padding: '4px 8px', borderRadius: '5px', border: '1px solid #d1d5db',
-                    fontSize: '13px', background: '#fff', cursor: 'pointer',
-                  }}
-                >
-                  <option value="">— select role —</option>
-                  {allRoles.map((r) => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
-              )}
-              {securityActive && (
-                <span style={{
-                  padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 600,
-                  background: '#fef9c3', color: '#854d0e', border: '1px solid #fde68a',
-                }}>
-                  Simulating: {previewRole}
-                </span>
-              )}
-            </>
-          )}
-        </div>
+        {/* View As toolbar */}
+        {allRoles.length > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '10px',
+            padding: '8px 16px', borderBottom: '1px solid #e5e7eb',
+            background: securityActive ? '#fefce8' : '#f9fafb',
+            fontSize: '13px',
+          }}>
+            <span style={{ color: '#6b7280', fontWeight: 500 }}>🔒 View as:</span>
+            <select
+              value={previewRole}
+              onChange={(e) => setPreviewRole(e.target.value)}
+              style={{
+                padding: '4px 8px', borderRadius: '5px', border: '1px solid #d1d5db',
+                fontSize: '13px', background: '#fff', cursor: 'pointer',
+              }}
+            >
+              <option value="">— all access —</option>
+              {allRoles.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
+            {securityActive && (
+              <span style={{
+                padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 600,
+                background: '#fef9c3', color: '#854d0e', border: '1px solid #fde68a',
+              }}>
+                Simulating: {previewRole}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Grid */}
         <div className="preview-modal-content" ref={contentRef}>
