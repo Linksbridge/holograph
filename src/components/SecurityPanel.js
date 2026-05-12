@@ -11,7 +11,7 @@
  *   datasource + tableName + columnName → specific column
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import RoleTagInput from './RoleTagInput';
 import { getAllRoles } from '../utils/securityUtils';
@@ -57,6 +57,13 @@ const SecurityPanel = ({
 }) => {
   const [localRules, setLocalRules] = useState(rules || []);
   const [localAvailableRoles, setLocalAvailableRoles] = useState(availableRoles);
+
+  useEffect(() => {
+    if (isOpen) {
+      setLocalRules(rules || []);
+      setLocalAvailableRoles(availableRoles);
+    }
+  }, [isOpen, rules, availableRoles]);
   const [localUrls, setLocalUrls] = useState(webhookUrls || { securitySaveUrl: '', listSecurityUrl: '' });
   const [addingNew, setAddingNew] = useState(false);
   const [newForm, setNewForm] = useState(BLANK_FORM);
