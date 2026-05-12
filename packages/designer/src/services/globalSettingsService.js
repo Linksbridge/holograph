@@ -19,8 +19,6 @@ import React, { useState, useEffect } from 'react';
 class GlobalSettingsService {
   constructor() {
     this.cache = new Map();
-    this.lastFetch = 0;
-    this.fetchInterval = 30000; // 30 seconds cache
     this.globalSettingsUrl = process.env.REACT_APP_DEFAULT_GLOBAL_SETTINGS_URL || '';
     
     // Auto-load settings if URL is configured in environment
@@ -57,9 +55,7 @@ class GlobalSettingsService {
    * Get all global settings with caching
    */
   async getAllSettings(forceRefresh = false) {
-    const now = Date.now();
-    
-    if (!forceRefresh && (now - this.lastFetch) < this.fetchInterval && this.cache.size > 0) {
+    if (!forceRefresh && this.cache.size > 0) {
       return Object.fromEntries(this.cache);
     }
 
@@ -92,7 +88,6 @@ class GlobalSettingsService {
             this.cache.set(key, setting.value || setting);
           }
         });
-        this.lastFetch = now;
         return Object.fromEntries(this.cache);
       }
       
@@ -169,13 +164,8 @@ export const useGlobalSettings = (settingsConfig = {}) => {
         setLoading(true);
         setError(null);
 
-        if (globalSettingsService.cache.size > 0 &&
-            (Date.now() - globalSettingsService.lastFetch) < globalSettingsService.fetchInterval) {
-          setSettings(Object.fromEntries(globalSettingsService.cache));
-        } else {
-          const allSettings = await globalSettingsService.getAllSettings();
-          setSettings(allSettings);
-        }
+        const allSettings = await globalSettingsService.getAllSettings();
+        setSettings(allSettings);
       } catch (err) {
         setError(err.message);
         console.error('Failed to load global settings:', err);
@@ -185,9 +175,6 @@ export const useGlobalSettings = (settingsConfig = {}) => {
     };
 
     loadSettings();
-
-    const interval = setInterval(loadSettings, 60000);
-    return () => clearInterval(interval);
   }, [settingsConfig.saveLocations?.globalSettingsUrl, currentUrl]);
 
   const refreshSettings = async () => {
