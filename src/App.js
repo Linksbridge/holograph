@@ -42,16 +42,23 @@ const AppContent = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [showSecurity, setShowSecurity] = useState(false);
   const [securityRules, setSecurityRules] = useState([]);
+  const [availableRoles, setAvailableRoles] = useState([]);
   const defaultSecurityUrl = process.env.REACT_APP_SECURITY_RULES_URL || '';
   const [securityWebhookUrls, setSecurityWebhookUrls] = useState({
     securitySaveUrl: defaultSecurityUrl,
     listSecurityUrl: defaultSecurityUrl,
   });
 
-  // Configure security webhook URLs from env var on mount
+  // Configure security webhook URLs and load initial data on mount
   useEffect(() => {
     if (defaultSecurityUrl) {
       configureSecurityWebhookUrls({ securitySaveUrl: defaultSecurityUrl, listSecurityUrl: defaultSecurityUrl });
+      invokeListSecurityRules().then((result) => {
+        if (result?.success) {
+          if (Array.isArray(result.result?.rules)) setSecurityRules(result.result.rules);
+          if (Array.isArray(result.result?.availableRoles)) setAvailableRoles(result.result.availableRoles);
+        }
+      });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -212,15 +219,19 @@ const AppContent = () => {
   }, []);
 
   // Save security rules via webhook
-  const handleSaveSecurityRules = useCallback(async (rules, urls) => {
+  const handleSaveSecurityRules = useCallback(async (rules, urls, newAvailableRoles) => {
     if (urls) configureSecurityWebhookUrls(urls);
-    return await invokeSaveSecurityRules(rules);
+    return await invokeSaveSecurityRules(rules, newAvailableRoles);
   }, []);
 
   // Refresh security rules from webhook
   const handleRefreshSecurityRules = useCallback(async (urls) => {
     if (urls) configureSecurityWebhookUrls(urls);
-    return await invokeListSecurityRules();
+    const result = await invokeListSecurityRules();
+    if (result?.success && Array.isArray(result.result?.availableRoles)) {
+      setAvailableRoles(result.result.availableRoles);
+    }
+    return result;
   }, []);
 
   // Open the current dashboard in the standalone viewer
@@ -327,6 +338,7 @@ const AppContent = () => {
         onClose={() => setShowPreview(false)}
         dashboard={currentDashboard?.schema}
         securityRules={securityRules}
+        availableRoles={availableRoles}
         settings={settings}
       />
 
@@ -336,6 +348,8 @@ const AppContent = () => {
         onClose={() => setShowSecurity(false)}
         rules={securityRules}
         onRulesChange={setSecurityRules}
+        availableRoles={availableRoles}
+        onAvailableRolesChange={setAvailableRoles}
         webhookUrls={securityWebhookUrls}
         onWebhookUrlsChange={setSecurityWebhookUrls}
         onSave={handleSaveSecurityRules}

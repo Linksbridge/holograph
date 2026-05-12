@@ -16,13 +16,15 @@ import TableComponent from './TableComponent';
 import { COMPONENT_TYPES } from '../types/schema';
 import { canRoleAccessZone, getAllRoles } from '../utils/securityUtils';
 
-const PreviewModal = ({ isOpen, onClose, dashboard, securityRules = [], settings = null }) => {
+const PreviewModal = ({ isOpen, onClose, dashboard, securityRules = [], availableRoles = [], settings = null }) => {
   const [gridWidth, setGridWidth] = useState(1100);
   const [previewRole, setPreviewRole] = useState('');
   const contentRef = useRef(null);
 
-  // Derive all unique roles from the security rules
-  const allRoles = useMemo(() => getAllRoles(securityRules), [securityRules]);
+  const allRoles = useMemo(
+    () => [...new Set([...availableRoles, ...getAllRoles(securityRules)])].sort(),
+    [availableRoles, securityRules]
+  );
 
   // Reset role when modal closes
   useEffect(() => {

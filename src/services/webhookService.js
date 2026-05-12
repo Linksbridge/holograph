@@ -260,10 +260,11 @@ export const configureSecurityWebhookUrls = (urls) => {
 /**
  * Invoke the save security rules webhook
  * @param {Array} rules - Array of security rule objects
+ * @param {Array} availableRoles - Array of role name strings
  * @returns {Promise<Object>} Result
  */
-export const invokeSaveSecurityRules = async (rules) => {
-  const payload = { version: '1.0', rules };
+export const invokeSaveSecurityRules = async (rules, availableRoles) => {
+  const payload = { version: '1.0', availableRoles: availableRoles || [], rules };
   if (webhookUrls.securitySaveUrl) {
     const result = await postToWebhookUrl(webhookUrls.securitySaveUrl, payload);
     if (result.success) return result;

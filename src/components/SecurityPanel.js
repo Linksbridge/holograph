@@ -48,12 +48,15 @@ const SecurityPanel = ({
   onClose,
   rules,
   onRulesChange,
+  availableRoles = [],
+  onAvailableRolesChange,
   webhookUrls,
   onWebhookUrlsChange,
   onSave,
   onRefresh,
 }) => {
   const [localRules, setLocalRules] = useState(rules || []);
+  const [localAvailableRoles, setLocalAvailableRoles] = useState(availableRoles);
   const [localUrls, setLocalUrls] = useState(webhookUrls || { securitySaveUrl: '', listSecurityUrl: '' });
   const [addingNew, setAddingNew] = useState(false);
   const [newForm, setNewForm] = useState(BLANK_FORM);
@@ -63,7 +66,10 @@ const SecurityPanel = ({
   const [refreshing, setRefreshing] = useState(false);
   const [statusMsg, setStatusMsg] = useState(null);
 
-  const allRoles = useMemo(() => getAllRoles(localRules), [localRules]);
+  const allRoles = useMemo(
+    () => [...new Set([...localAvailableRoles, ...getAllRoles(localRules)])].sort(),
+    [localAvailableRoles, localRules]
+  );
 
   if (!isOpen) return null;
 
@@ -75,10 +81,11 @@ const SecurityPanel = ({
   const handleSaveAll = async () => {
     setSaving(true);
     onWebhookUrlsChange(localUrls);
-    const result = await onSave(localRules, localUrls);
+    const result = await onSave(localRules, localUrls, localAvailableRoles);
     setSaving(false);
     if (result?.success) {
       onRulesChange(localRules);
+      onAvailableRolesChange?.(localAvailableRoles);
       showStatus('Security rules saved.');
     } else {
       showStatus(result?.error || 'Save failed.', true);
@@ -92,6 +99,10 @@ const SecurityPanel = ({
     if (result?.success && Array.isArray(result.result?.rules)) {
       setLocalRules(result.result.rules);
       onRulesChange(result.result.rules);
+      if (Array.isArray(result.result?.availableRoles)) {
+        setLocalAvailableRoles(result.result.availableRoles);
+        onAvailableRolesChange?.(result.result.availableRoles);
+      }
       showStatus('Rules refreshed.');
     } else {
       showStatus(result?.error || 'Refresh failed.', true);
@@ -311,7 +322,7 @@ const SecurityPanel = ({
                 onChange={(e) => setLocalUrls((u) => ({ ...u, listSecurityUrl: e.target.value }))}
                 placeholder="https://api.example.com/security-rules"
               />
-              <div style={s.helpText}>GET — returns {`{ version, rules: [...] }`}</div>
+              <div style={s.helpText}>GET — returns {`{ version, availableRoles: [...], rules: [...] }`}</div>
             </div>
             <div style={s.urlRow}>
               <div style={s.urlLabel}>Save Security Rules URL</div>
@@ -322,8 +333,22 @@ const SecurityPanel = ({
                 onChange={(e) => setLocalUrls((u) => ({ ...u, securitySaveUrl: e.target.value }))}
                 placeholder="https://api.example.com/security-rules/save"
               />
-              <div style={s.helpText}>POST — receives {`{ version, rules: [...] }`}</div>
+              <div style={s.helpText}>POST — receives {`{ version, availableRoles: [...], rules: [...] }`}</div>
             </div>
+          </div>
+
+          {/* Available Roles */}
+          <div style={s.section}>
+            <div style={s.sectionTitle}>Available Roles</div>
+            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>
+              Roles selectable when creating rules. Loaded from and saved to the security config.
+            </div>
+            <RoleTagInput
+              value={localAvailableRoles}
+              onChange={setLocalAvailableRoles}
+              allRoles={localAvailableRoles}
+              placeholder="Add role…"
+            />
           </div>
 
           {/* Rules Table */}
