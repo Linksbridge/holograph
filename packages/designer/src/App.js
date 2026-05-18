@@ -64,6 +64,7 @@ const AppContent = () => {
   const [showHelp, setShowHelp] = useState(false);
   const [showSecurity, setShowSecurity] = useState(false);
   const [securityRules, setSecurityRules] = useState([]);
+  const [availableRoles, setAvailableRoles] = useState([]);
   const defaultSecurityUrl = process.env.REACT_APP_SECURITY_RULES_URL || '';
   const [securityWebhookUrls, setSecurityWebhookUrls] = useState({
     securitySaveUrl: defaultSecurityUrl,
@@ -80,11 +81,18 @@ const AppContent = () => {
     try { if (settings) localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (_) {}
   }, [settings]);
 
-  // Configure security webhook URLs from env var on mount
+  // Configure security webhook URLs and load initial data on mount
   useEffect(() => {
     if (defaultSecurityUrl) {
       configureSecurityWebhookUrls({ securitySaveUrl: defaultSecurityUrl, listSecurityUrl: defaultSecurityUrl });
+      invokeListSecurityRules().then((result) => {
+        if (result?.success) {
+          if (Array.isArray(result.result?.rules)) setSecurityRules(result.result.rules);
+          if (Array.isArray(result.result?.availableRoles)) setAvailableRoles(result.result.availableRoles);
+        }
+      });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // On startup: load global settings, apply webhooks, fetch schema, and auto-load dashboards
@@ -393,14 +401,18 @@ const AppContent = () => {
     return { zones: [], ...base };
   }, [currentDashboard]);
 
-  const handleSaveSecurityRules = useCallback(async (rules, urls) => {
+  const handleSaveSecurityRules = useCallback(async (rules, urls, newAvailableRoles) => {
     if (urls) configureSecurityWebhookUrls(urls);
-    return await invokeSaveSecurityRules(rules);
+    return await invokeSaveSecurityRules(rules, newAvailableRoles);
   }, []);
 
   const handleRefreshSecurityRules = useCallback(async (urls) => {
     if (urls) configureSecurityWebhookUrls(urls);
-    return await invokeListSecurityRules();
+    const result = await invokeListSecurityRules();
+    if (result?.success && Array.isArray(result.result?.availableRoles)) {
+      setAvailableRoles(result.result.availableRoles);
+    }
+    return result;
   }, []);
 
   // Get badge class based on status
@@ -501,6 +513,7 @@ const AppContent = () => {
         onClose={() => setShowPreview(false)}
         dashboard={normalizedDashboardSchema}
         securityRules={securityRules}
+        availableRoles={availableRoles}
         settings={settings}
       />
 
@@ -510,6 +523,8 @@ const AppContent = () => {
         onClose={() => setShowSecurity(false)}
         rules={securityRules}
         onRulesChange={setSecurityRules}
+        availableRoles={availableRoles}
+        onAvailableRolesChange={setAvailableRoles}
         webhookUrls={securityWebhookUrls}
         onWebhookUrlsChange={setSecurityWebhookUrls}
         onSave={handleSaveSecurityRules}

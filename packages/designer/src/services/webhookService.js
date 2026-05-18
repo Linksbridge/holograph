@@ -270,8 +270,10 @@ export const invokeListSecurityRules = async () => {
   return await getFromWebhookUrl(securityWebhookUrls.listSecurityUrl);
 };
 
-export const invokeSaveSecurityRules = async (rules) => {
-  return await postToWebhookUrl(securityWebhookUrls.securitySaveUrl, { rules });
+export const invokeSaveSecurityRules = async (rules, availableRoles) => {
+  return await postToWebhookUrl(securityWebhookUrls.securitySaveUrl, {
+    version: '1.0', availableRoles: availableRoles || [], rules,
+  });
 };
 
 export const invokeDuplicate = async (dashboard, newId, newName) => {
