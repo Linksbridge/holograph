@@ -66,6 +66,10 @@ export const MOCK_DATA_TABLES = {
 let tablesCache = null;
 let columnsCache = {};
 let uniqueValuesCache = {};
+let queryDataCache = {}; // tableName -> rows[], populated by fetchQueryData
+
+// Named join data sources registered from dashboard config
+let joinDefinitions = {}; // name -> { id, name, baseTable, joins: [] }
 
 // Track whether we're using real schema or mock data
 let usingRealSchema = false;
@@ -82,6 +86,10 @@ let datasourceName = null;
  */
 export const initializeDataService = async (connectionString = null, schemaUrl = null, databaseName = null, explicitDataQueryUrl = null) => {
   console.log('Initializing data service...');
+
+  // Reset caches on re-init
+  queryDataCache = {};
+  uniqueValuesCache = {};
 
   const resolvedSchemaUrl = schemaUrl || process.env.REACT_APP_DATABASE_SCHEMA_URL;
 
@@ -159,6 +167,86 @@ export const setDataQueryUrl = (url) => {
 };
 
 /**
+ * Register named join data sources from a dashboard document.
+ * Call this whenever the dashboard loads or its dataSources array changes.
+ */
+export const setDashboardDataSources = (dataSources = []) => {
+  joinDefinitions = {};
+  dataSources.forEach((ds) => {
+    joinDefinitions[ds.name] = ds;
+    // Evict stale cached results so they re-resolve with current definition
+    delete queryDataCache[ds.name];
+    delete columnsCache[ds.name];
+  });
+  uniqueValuesCache = {};
+};
+
+// --- Client-side join engine ---
+
+const parseKey = (keyStr) => (keyStr.includes('.') ? keyStr.split('.').pop() : keyStr);
+
+const performJoin = (leftRows, rightRows, rightTable, joinType, on) => {
+  const leftKey = parseKey(on.left);
+  const rightKey = parseKey(on.right);
+
+  const rightMap = new Map();
+  rightRows.forEach((row) => {
+    const k = String(row[rightKey] ?? '');
+    if (!rightMap.has(k)) rightMap.set(k, []);
+    rightMap.get(k).push(row);
+  });
+
+  const prefixRight = (row) => {
+    const out = {};
+    Object.entries(row).forEach(([k, v]) => { out[`${rightTable}.${k}`] = v; });
+    return out;
+  };
+
+  const nullRight = rightRows.length > 0
+    ? prefixRight(Object.fromEntries(Object.keys(rightRows[0]).map((k) => [k, null])))
+    : {};
+
+  const results = [];
+  const matchedKeys = new Set();
+
+  leftRows.forEach((leftRow) => {
+    const k = String(leftRow[leftKey] ?? '');
+    const matches = rightMap.get(k);
+    if (matches?.length) {
+      matches.forEach((rightRow) => {
+        results.push({ ...leftRow, ...prefixRight(rightRow) });
+      });
+      matchedKeys.add(k);
+    } else if (joinType === 'LEFT' || joinType === 'FULL') {
+      results.push({ ...leftRow, ...nullRight });
+    }
+  });
+
+  if (joinType === 'RIGHT' || joinType === 'FULL') {
+    const nullLeft = leftRows.length > 0
+      ? Object.fromEntries(Object.keys(leftRows[0]).map((k) => [k, null]))
+      : {};
+    rightRows.forEach((rightRow) => {
+      const k = String(rightRow[rightKey] ?? '');
+      if (!matchedKeys.has(k)) {
+        results.push({ ...nullLeft, ...prefixRight(rightRow) });
+      }
+    });
+  }
+
+  return results;
+};
+
+const executeJoin = async (def) => {
+  let rows = await fetchQueryData(def.baseTable);
+  for (const join of (def.joins || [])) {
+    const rightRows = await fetchQueryData(join.table);
+    rows = performJoin(rows, rightRows, join.table, join.type, join.on);
+  }
+  return rows;
+};
+
+/**
  * Check if using real database schema
  * @returns {boolean} True if using real schema, false if using mock data
  */
@@ -183,7 +271,8 @@ export const getSchemaInfo = () => {
  * @returns {string[]} List of available table names
  */
 export const getCachedTables = () => {
-  return tablesCache || Object.keys(MOCK_DATA_TABLES);
+  const real = tablesCache || Object.keys(MOCK_DATA_TABLES);
+  return [...real, ...Object.keys(joinDefinitions)];
 };
 
 /**
@@ -192,11 +281,21 @@ export const getCachedTables = () => {
  * @returns {string[]} List of column names
  */
 export const getCachedColumns = (tableName) => {
-  if (columnsCache[tableName]) {
-    return columnsCache[tableName];
+  if (columnsCache[tableName]) return columnsCache[tableName];
+
+  // Join definition: derive columns from constituent tables
+  if (joinDefinitions[tableName]) {
+    const def = joinDefinitions[tableName];
+    const baseCols = getCachedColumns(def.baseTable);
+    const joinCols = (def.joins || []).flatMap((j) =>
+      getCachedColumns(j.table).map((c) => `${j.table}.${c}`)
+    );
+    const cols = [...baseCols, ...joinCols];
+    columnsCache[tableName] = cols;
+    return cols;
   }
-  
-  // Fallback to calculating from data
+
+  // Fallback to mock data
   const tableData = MOCK_DATA_TABLES[tableName];
   if (tableData?.length > 0) {
     const cols = Object.keys(tableData[0]);
@@ -215,22 +314,26 @@ export const getUniqueValuesForColumn = (columnName) => {
   if (uniqueValuesCache[columnName]) {
     return uniqueValuesCache[columnName];
   }
-  
+
   const values = new Set();
-  const tables = getCachedTables();
-  
-  tables.forEach((tableName) => {
-    const cols = getCachedColumns(tableName);
-    if (cols.includes(columnName)) {
-      const tableData = MOCK_DATA_TABLES[tableName];
-      tableData.forEach((row) => {
-        if (row[columnName] !== undefined) {
-          values.add(row[columnName]);
-        }
+
+  if (usingRealSchema) {
+    Object.values(queryDataCache).forEach((rows) => {
+      rows.forEach((row) => {
+        if (row[columnName] !== undefined) values.add(row[columnName]);
       });
-    }
-  });
-  
+    });
+  } else {
+    getCachedTables().forEach((tableName) => {
+      const tableData = MOCK_DATA_TABLES[tableName];
+      if (tableData) {
+        tableData.forEach((row) => {
+          if (row[columnName] !== undefined) values.add(row[columnName]);
+        });
+      }
+    });
+  }
+
   const result = Array.from(values).sort();
   uniqueValuesCache[columnName] = result;
   return result;
@@ -251,6 +354,17 @@ const applyFilterToRow = (row, filters) => {
 };
 
 const fetchQueryData = async (tableName) => {
+  if (queryDataCache[tableName]) return queryDataCache[tableName];
+
+  // Resolve named join data source
+  if (joinDefinitions[tableName]) {
+    const rows = await executeJoin(joinDefinitions[tableName]);
+    queryDataCache[tableName] = rows;
+    if (rows.length > 0) columnsCache[tableName] = Object.keys(rows[0]);
+    uniqueValuesCache = {};
+    return rows;
+  }
+
   const context = { datasource: datasourceName || '', table: tableName };
   const base = /\{(datasource|table)\}/.test(dataQueryUrl)
     ? interpolateDataUrl(dataQueryUrl, context)
@@ -259,7 +373,10 @@ const fetchQueryData = async (tableName) => {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Data query failed: ${response.status} ${response.statusText}`);
   const result = await response.json();
-  return result.rows || [];
+  const rows = result.rows || [];
+  queryDataCache[tableName] = rows;
+  uniqueValuesCache = {}; // invalidate so next call re-derives from fresh data
+  return rows;
 };
 
 /**
@@ -421,6 +538,7 @@ export default {
   getTableColumns,
   initializeDataService,
   setDataQueryUrl,
+  setDashboardDataSources,
   getCachedTables,
   getCachedColumns,
   getUniqueValuesForColumn,

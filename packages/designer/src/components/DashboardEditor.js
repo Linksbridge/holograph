@@ -18,14 +18,16 @@ import RichTextComponent from './RichTextComponent';
 import PropertyPanel from './PropertyPanel';
 import ChartPalette from './ChartPalette';
 import FilterBar from './FilterBar';
+import DataSourcePanel from './DataSourcePanel';
 import { CHART_LIBRARIES, COMPONENT_TYPES, createZoneConfig } from '../types/schema';
 import { useFilters } from '../hooks/useFilters';
-import { getTableColumns } from '../services/dataService';
+import { getTableColumns, setDashboardDataSources } from '../services/dataService';
 
 const DashboardEditor = ({ dashboard, onDashboardUpdate, settings }) => {
   const [selectedZone, setSelectedZone] = useState(null);
   const [activeZoneId, setActiveZoneId] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [showDataSources, setShowDataSources] = useState(false);
   const [gridWidth, setGridWidth] = useState(1200);
   const [currentBreakpoint, setCurrentBreakpoint] = useState({ breakpoint: 'lg', cols: 12, rowHeight: 30 });
   const gridRef = useRef(null);
@@ -34,6 +36,11 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate, settings }) => {
 
   // Get filter context
   const { filters, configureFilters } = useFilters();
+
+  // Register named join data sources so they appear in the table picker
+  useEffect(() => {
+    setDashboardDataSources(dashboard.dataSources || []);
+  }, [dashboard.dataSources]);
 
   // Configure filters separately — runs when zones change (e.g. new chart added)
   useEffect(() => {
@@ -369,6 +376,17 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate, settings }) => {
           </div>
         )}
 
+        {/* Editor toolbar */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '4px 10px 0' }}>
+          <button
+            className="btn btn-secondary btn-icon"
+            style={{ fontSize: '12px', padding: '4px 10px' }}
+            onClick={() => setShowDataSources(true)}
+          >
+            🔗 Data Sources
+          </button>
+        </div>
+
         {/* Filter Bar */}
         <FilterBar settings={settings} />
 
@@ -483,6 +501,16 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate, settings }) => {
           />
         )}
       </div>
+
+      {/* Data Source Panel */}
+      <DataSourcePanel
+        isOpen={showDataSources}
+        onClose={() => setShowDataSources(false)}
+        dataSources={dashboard.dataSources || []}
+        onDataSourcesChange={(updated) =>
+          onDashboardUpdate({ ...dashboard, dataSources: updated })
+        }
+      />
     </>
   );
 };

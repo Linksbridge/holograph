@@ -11,7 +11,7 @@ import { CHART_LIBRARIES, CHART_TYPES, CHART_TYPE_LIBRARY, DEFAULT_CHART_TYPE, C
 import { getAvailableTables, getTableColumns } from '../services/dataService';
 
 const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
-  const { id, componentType, library, theme, title, dataSource, chartType, showHeader, legend } = zoneConfig;
+  const { id, componentType, library, theme, title, dataSource, chartType, showHeader, legend, dataSort } = zoneConfig;
   const availableTables = getAvailableTables();
   const tableColumns = dataSource?.tableName ? getTableColumns(dataSource.tableName) : [];
 
@@ -450,6 +450,24 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
                   {col}
                 </option>
               ))}
+            </select>
+          </div>
+        )}
+
+        {/* Sort Order - for charts only */}
+        {componentType === COMPONENT_TYPES.CHART && (
+          <div className="property-field-group">
+            <label className="property-label">Sort Order</label>
+            <select
+              className="property-select"
+              value={dataSort || 'none'}
+              onChange={(e) => onUpdate({ ...zoneConfig, dataSort: e.target.value })}
+            >
+              <option value="none">None (data order)</option>
+              <option value="value-asc">Value ↑ ascending</option>
+              <option value="value-desc">Value ↓ descending</option>
+              <option value="label-asc">Label A → Z</option>
+              <option value="label-desc">Label Z → A</option>
             </select>
           </div>
         )}

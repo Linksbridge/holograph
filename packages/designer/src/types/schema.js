@@ -145,6 +145,7 @@ export const createZoneConfig = (id) => ({
     enabled: true,
     position: LEGEND_POSITIONS.BOTTOM,
   },
+  dataSort: 'none',
   dataSource: {
     tableName: 'sales_data',
     labelColumn: 'month',
@@ -168,6 +169,7 @@ export const createInitialDashboard = () => ({
   description: 'A zero-VM dashboard with pluggable chart adapters',
   showTitle: true,
   showSubtitle: true,
+  dataSources: [],
   zones: [
     {
       ...createZoneConfig('zone-1'),

@@ -7,7 +7,7 @@
  * Supports external filters passed from consuming systems.
  */
 
-import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useLayoutEffect, useMemo } from 'react';
 import D3Adapter from '../adapters/D3Adapter';
 import ChartJsAdapter from '../adapters/ChartJsAdapter';
 import { fetchChartData } from '../services/dataService';
@@ -20,7 +20,7 @@ const UniversalChart = ({ config, width, height, filters = null }) => {
   const [dimensions, setDimensions] = useState({ width: 300, height: 200 });
   const containerRef = useRef(null);
 
-  const { library, theme, title, dataSource, chartType, legend } = config;
+  const { library, theme, title, dataSource, chartType, legend, dataSort } = config;
 
   // Get the effective chart type - use config or default based on library
   const effectiveChartType = chartType || DEFAULT_CHART_TYPE[library] || CHART_TYPES.CHARTJS_LINE;
@@ -105,6 +105,18 @@ const UniversalChart = ({ config, width, height, filters = null }) => {
     };
   }, [dataSource?.tableName, dataSource?.labelColumn, dataSource?.valueColumn, JSON.stringify(filters)]);
 
+  const sortedChartData = useMemo(() => {
+    if (!dataSort || dataSort === 'none') return chartData;
+    const copy = [...chartData];
+    switch (dataSort) {
+      case 'value-asc':  return copy.sort((a, b) => a.value - b.value);
+      case 'value-desc': return copy.sort((a, b) => b.value - a.value);
+      case 'label-asc':  return copy.sort((a, b) => String(a.label).localeCompare(String(b.label)));
+      case 'label-desc': return copy.sort((a, b) => String(b.label).localeCompare(String(a.label)));
+      default:           return copy;
+    }
+  }, [chartData, dataSort]);
+
   // Memoize the adapter selection based on library type
   const ChartAdapter = useCallback(() => {
     switch (library) {
@@ -179,7 +191,7 @@ const UniversalChart = ({ config, width, height, filters = null }) => {
   return (
     <div ref={containerRef} style={containerBaseStyle}>
       <Adapter
-        data={chartData}
+        data={sortedChartData}
         theme={theme}
         width={dimensions.width}
         height={dimensions.height}

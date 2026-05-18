@@ -34,6 +34,7 @@ const HelpPage = ({ onBack }) => {
     { id: 'create',        label: 'Creating a Dashboard' },
     { id: 'add-content',   label: 'Adding Charts & Content' },
     { id: 'connect-data',  label: 'Connecting Your Data' },
+    { id: 'join-sources',  label: 'Joining Multiple Tables' },
     { id: 'filters',       label: 'Using Filters' },
     { id: 'save-publish',  label: 'Saving & Publishing' },
     { id: 'share',         label: 'Sharing a Dashboard' },
@@ -165,6 +166,81 @@ const HelpPage = ({ onBack }) => {
             <Tip>
               Not sure what URL to use? Ask whoever manages your data or IT team.
               They can provide the right address for each data set you want to display.
+            </Tip>
+          </Section>
+
+          <Section id="join-sources" icon="🔗" title="Joining Multiple Tables">
+            <p>
+              Sometimes the data you need for a chart lives across more than one table.
+              For example, order totals might be in an <em>orders</em> table while customer
+              names are in a <em>customers</em> table. <strong>Data Sources</strong> let you
+              combine tables with a join, then use the result just like any other table
+              when building charts.
+            </p>
+
+            <p style={{ marginTop: '16px' }}><strong>Creating a joined data source:</strong></p>
+            <Step number="1">
+              Click <strong>🔗 Data Sources</strong> in the editor toolbar to open the Data Sources panel.
+            </Step>
+            <Step number="2">
+              Click <strong>＋ Add Data Source</strong> and give it a descriptive name —
+              for example, <em>Orders with Customers</em>.
+            </Step>
+            <Step number="3">
+              Choose your <strong>base table</strong>. This is the starting table — all other
+              tables will be joined onto it.
+            </Step>
+            <Step number="4">
+              Click <strong>＋ Add Join</strong> to attach another table. For each join, choose:
+              the table to join, how to join it (see join types below), and which column in each
+              table links them together.
+            </Step>
+            <Step number="5">
+              Repeat step 4 for each additional table you need.
+              Click <strong>Save</strong> when done.
+            </Step>
+
+            <p style={{ marginTop: '16px' }}><strong>Using a joined data source in a chart:</strong></p>
+            <Step number="1">
+              Click a chart on the canvas to select it and open the properties panel.
+            </Step>
+            <Step number="2">
+              In the <strong>Table</strong> dropdown, your named data source appears alongside
+              all regular tables. Select it.
+            </Step>
+            <Step number="3">
+              Choose your label and value columns from the combined column list — columns from
+              all joined tables are available.
+            </Step>
+            <Tip>
+              One joined data source can power as many charts as you like — define it once,
+              reuse it everywhere on the dashboard.
+            </Tip>
+
+            <p style={{ marginTop: '16px' }}><strong>Join types:</strong></p>
+            <div className="help-content-types">
+              <div className="help-content-type">
+                <strong>Inner Join</strong>
+                <span>Only rows that have a match in both tables. Unmatched rows are dropped.</span>
+              </div>
+              <div className="help-content-type">
+                <strong>Left Join</strong>
+                <span>All rows from the base table, with matching data from the joined table where available. Unmatched joined rows are blank.</span>
+              </div>
+              <div className="help-content-type">
+                <strong>Right Join</strong>
+                <span>All rows from the joined table, with matching data from the base table where available.</span>
+              </div>
+              <div className="help-content-type">
+                <strong>Full Join</strong>
+                <span>All rows from both tables. Where there is no match, the missing side is blank.</span>
+              </div>
+            </div>
+
+            <Tip>
+              If two tables have a column with the same name (like <em>id</em>), Holograph
+              prefixes them automatically — e.g. <em>orders.id</em> and <em>customers.id</em> —
+              so they stay distinct in the column picker.
             </Tip>
           </Section>
 
@@ -317,8 +393,9 @@ const HelpPage = ({ onBack }) => {
             </Step>
 
             <Tip>
-              Roles are defined by adding them to rules — there is no separate roles list.
-              The first time you type a role name into a rule, that role is created.
+              Available roles are loaded from your security config and appear as suggestions
+              when adding roles to a rule. You can manage the list of available roles directly
+              in the Security Rules panel under <strong>Available Roles</strong>.
             </Tip>
             <Tip>
               Rules are stored centrally and apply across all dashboards that share the same datasource.
