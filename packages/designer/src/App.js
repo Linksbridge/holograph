@@ -92,8 +92,7 @@ const AppContent = () => {
         }
       });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // mount-only: intentionally runs once to seed roles from backend
 
   // On startup: load global settings, apply webhooks, fetch schema, and auto-load dashboards
   useEffect(() => {
