@@ -44,11 +44,13 @@ const SecurityPanel = ({
 }) => {
   const [localRules, setLocalRules] = useState(rules || []);
   const [localAvailableRoles, setLocalAvailableRoles] = useState(availableRoles);
+  const [serverRoles, setServerRoles] = useState(availableRoles);
 
   useEffect(() => {
     if (isOpen) {
       setLocalRules(rules || []);
       setLocalAvailableRoles(availableRoles);
+      setServerRoles(availableRoles);
     }
   }, [isOpen, rules, availableRoles]);
   const [localUrls, setLocalUrls] = useState(webhookUrls || { securitySaveUrl: '', listSecurityUrl: '' });
@@ -95,6 +97,7 @@ const SecurityPanel = ({
       onRulesChange(result.result.rules);
       if (Array.isArray(result.result?.availableRoles)) {
         setLocalAvailableRoles(result.result.availableRoles);
+        setServerRoles(result.result.availableRoles);
         onAvailableRolesChange?.(result.result.availableRoles);
       }
       showStatus('Rules refreshed.');
@@ -337,6 +340,7 @@ const SecurityPanel = ({
               value={localAvailableRoles}
               onChange={setLocalAvailableRoles}
               allRoles={localAvailableRoles}
+              lockedRoles={serverRoles}
               placeholder="Add role…"
             />
           </div>

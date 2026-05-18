@@ -16,6 +16,7 @@ const RoleTagInput = ({
   value = [],
   onChange,
   allRoles = [],
+  lockedRoles = [],
   placeholder = 'Add role…',
 }) => {
   const [text, setText] = useState('');
@@ -60,6 +61,7 @@ const RoleTagInput = ({
   };
 
   const removeRole = (role) => {
+    if (lockedRoles.includes(role)) return;
     onChange(value.filter((r) => r !== role));
   };
 
@@ -77,7 +79,8 @@ const RoleTagInput = ({
       e.preventDefault();
       if (trimmed) commit(trimmed);
     } else if (e.key === 'Backspace' && text === '' && value.length > 0) {
-      onChange(value.slice(0, -1));
+      const last = value[value.length - 1];
+      if (!lockedRoles.includes(last)) onChange(value.slice(0, -1));
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
       setHighlighted((h) => Math.min(h + 1, dropdownItems.length - 1));
@@ -193,12 +196,14 @@ const RoleTagInput = ({
         {value.map((role) => (
           <span key={role} style={s.chip}>
             {role}
-            <button
-              style={s.chipRemove}
-              onMouseDown={(e) => { e.preventDefault(); removeRole(role); }}
-              tabIndex={-1}
-              title={`Remove ${role}`}
-            >×</button>
+            {!lockedRoles.includes(role) && (
+              <button
+                style={s.chipRemove}
+                onMouseDown={(e) => { e.preventDefault(); removeRole(role); }}
+                tabIndex={-1}
+                title={`Remove ${role}`}
+              >×</button>
+            )}
           </span>
         ))}
         <input
