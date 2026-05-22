@@ -155,16 +155,31 @@ Charts additionally require:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `library` | string | Rendering engine. `"chartjs"` or `"d3"`. |
+| `library` | string | Rendering engine. `"chartjs"`, `"d3"`, or `"nivo"`. |
 | `chartType` | string | Chart shape. Must be valid for the chosen `library`. See table below. |
 | `dataSort` | string | Sort applied to chart data before rendering. `"none"`, `"value-asc"`, `"value-desc"`, `"label-asc"`, `"label-desc"`. |
 
 **Valid `library` + `chartType` combinations:**
 
-| `library` | `chartType` values |
-|-----------|--------------------|
-| `"chartjs"` | `"line"`, `"bar"`, `"pie"`, `"doughnut"`, `"radar"`, `"polarArea"` |
-| `"d3"` | `"bar"`, `"line"`, `"area"`, `"pie"`, `"donut"`, `"scatter"` |
+| `library` | `chartType` value | Display name | Notes |
+|-----------|-------------------|--------------|-------|
+| `"chartjs"` | `"line"` | Line Chart | |
+| `"chartjs"` | `"bar"` | Bar Chart | |
+| `"chartjs"` | `"pie"` | Pie Chart | |
+| `"chartjs"` | `"doughnut"` | Doughnut Chart | |
+| `"chartjs"` | `"radar"` | Radar Chart | |
+| `"chartjs"` | `"polarArea"` | Polar Area | |
+| `"chartjs"` | `"chartjs_bubblemap"` | Point Map | Geographic bubble map. Requires lat/lon columns. |
+| `"d3"` | `"bar"` | D3 Bar | Animated |
+| `"d3"` | `"line"` | D3 Line | Animated |
+| `"d3"` | `"area"` | D3 Area | Filled area |
+| `"d3"` | `"pie"` | D3 Pie | |
+| `"d3"` | `"donut"` | D3 Donut | |
+| `"d3"` | `"scatter"` | D3 Scatter | |
+| `"nivo"` | `"nivo_line"` | Nivo Line | Animated, interactive |
+| `"nivo"` | `"nivo_bar"` | Nivo Bar | Animated, interactive |
+| `"nivo"` | `"nivo_pie"` | Nivo Pie | Animated, interactive |
+| `"nivo"` | `"nivo_choropleth"` | Nivo Choropleth | Geographic heat map. Values mapped to geographic regions by ID. |
 
 ---
 
@@ -521,8 +536,11 @@ schema.showTitle    true | false
 schema.showSubtitle true | false
 
 zone.componentType  "chart" | "table" | "image" | "richtext"
-zone.library        "chartjs" | "d3" | null
+zone.library        "chartjs" | "d3" | "nivo" | null
 zone.chartType      see chart type table above, or null
+                    chartjs:  line | bar | pie | doughnut | radar | polarArea | chartjs_bubblemap
+                    d3:       bar | line | area | pie | donut | scatter
+                    nivo:     nivo_line | nivo_bar | nivo_pie | nivo_choropleth
 zone.theme          "default" | "ocean" | "sunset" | "forest" | "monochrome"
 zone.dataSort       "none" | "value-asc" | "value-desc" | "label-asc" | "label-desc"
 zone.showHeader     true | false
