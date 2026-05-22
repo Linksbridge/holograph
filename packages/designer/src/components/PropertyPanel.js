@@ -117,12 +117,31 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
     const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
     onUpdate({
       ...zoneConfig,
-      dataSource: {
-        ...dataSource,
-        columns: selectedOptions,
-      },
+      dataSource: { ...dataSource, columns: selectedOptions },
     });
   };
+
+  const selectedColumns = dataSource?.columns || [];
+
+  const addColumn = (col) => {
+    if (selectedColumns.includes(col)) return;
+    onUpdate({ ...zoneConfig, dataSource: { ...dataSource, columns: [...selectedColumns, col] } });
+  };
+
+  const removeColumn = (index) => {
+    const updated = selectedColumns.filter((_, i) => i !== index);
+    onUpdate({ ...zoneConfig, dataSource: { ...dataSource, columns: updated } });
+  };
+
+  const moveColumn = (index, dir) => {
+    const updated = [...selectedColumns];
+    const target = index + dir;
+    if (target < 0 || target >= updated.length) return;
+    [updated[index], updated[target]] = [updated[target], updated[index]];
+    onUpdate({ ...zoneConfig, dataSource: { ...dataSource, columns: updated } });
+  };
+
+  const unselectedColumns = tableColumns.filter((c) => !selectedColumns.includes(c));
 
   const handleThemeClick = (themeKey) => {
     onUpdate({
@@ -464,26 +483,61 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
           </div>
         )}
 
-        {/* Table Columns - Multi-select for tables */}
+        {/* Table Columns - ordered list with up/down/remove + add picker */}
         {dataSource?.tableName && componentType === COMPONENT_TYPES.TABLE && (
           <div className="property-field-group">
             <label className="property-label">Table Columns</label>
-            <select
-              className="property-select"
-              multiple
-              value={dataSource?.columns || []}
-              onChange={handleColumnsChange}
-              style={{ height: '100px' }}
-            >
-              {tableColumns.map((col) => (
-                <option key={col} value={col}>
-                  {col}
-                </option>
-              ))}
-            </select>
-            <p className="property-help-text">
-              Hold Ctrl/Cmd to select multiple columns
-            </p>
+
+            {/* Ordered selected columns */}
+            {selectedColumns.length > 0 && (
+              <div style={{ marginBottom: '8px', border: '1px solid #e5e7eb', borderRadius: '6px', overflow: 'hidden' }}>
+                {selectedColumns.map((col, i) => (
+                  <div key={col} style={{
+                    display: 'flex', alignItems: 'center', gap: '4px',
+                    padding: '5px 8px', background: i % 2 === 0 ? '#f9fafb' : '#fff',
+                    borderBottom: i < selectedColumns.length - 1 ? '1px solid #f3f4f6' : 'none',
+                    fontSize: '12px',
+                  }}>
+                    <span style={{ flex: 1, color: '#1e293b', fontFamily: 'monospace' }}>{col}</span>
+                    <button
+                      onClick={() => moveColumn(i, -1)}
+                      disabled={i === 0}
+                      style={{ background: 'none', border: 'none', cursor: i === 0 ? 'default' : 'pointer', padding: '0 3px', color: i === 0 ? '#d1d5db' : '#6b7280', fontSize: '13px', lineHeight: 1 }}
+                      title="Move up"
+                    >↑</button>
+                    <button
+                      onClick={() => moveColumn(i, 1)}
+                      disabled={i === selectedColumns.length - 1}
+                      style={{ background: 'none', border: 'none', cursor: i === selectedColumns.length - 1 ? 'default' : 'pointer', padding: '0 3px', color: i === selectedColumns.length - 1 ? '#d1d5db' : '#6b7280', fontSize: '13px', lineHeight: 1 }}
+                      title="Move down"
+                    >↓</button>
+                    <button
+                      onClick={() => removeColumn(i)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 3px', color: '#ef4444', fontSize: '14px', lineHeight: 1 }}
+                      title="Remove column"
+                    >×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add column picker */}
+            {unselectedColumns.length > 0 && (
+              <select
+                className="property-select"
+                value=""
+                onChange={(e) => { if (e.target.value) addColumn(e.target.value); }}
+              >
+                <option value="">＋ Add column…</option>
+                {unselectedColumns.map((col) => (
+                  <option key={col} value={col}>{col}</option>
+                ))}
+              </select>
+            )}
+
+            {selectedColumns.length === 0 && (
+              <p className="property-help-text">All columns shown. Add specific columns above to control order.</p>
+            )}
           </div>
         )}
 
