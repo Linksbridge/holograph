@@ -15,45 +15,56 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
   const availableTables = getAvailableTables();
   const tableColumns = dataSource?.tableName ? getTableColumns(dataSource.tableName) : [];
 
-  // Get available chart types for the current library
-  const availableChartTypes = Object.values(CHART_TYPES).filter(
-    (type) => CHART_TYPE_LIBRARY[type] === library
-  );
+  // All chart options grouped by library — mirrors the palette
+  const CHART_OPTIONS_BY_LIBRARY = [
+    {
+      library: CHART_LIBRARIES.CHARTJS,
+      label: 'Chart.js',
+      types: [
+        { value: CHART_TYPES.CHARTJS_LINE,      label: 'Line Chart' },
+        { value: CHART_TYPES.CHARTJS_BAR,       label: 'Bar Chart' },
+        { value: CHART_TYPES.CHARTJS_PIE,       label: 'Pie Chart' },
+        { value: CHART_TYPES.CHARTJS_DOUGHNUT,  label: 'Doughnut Chart' },
+        { value: CHART_TYPES.CHARTJS_RADAR,     label: 'Radar Chart' },
+        { value: CHART_TYPES.CHARTJS_POLAR,     label: 'Polar Area Chart' },
+        { value: CHART_TYPES.CHARTJS_BUBBLEMAP, label: 'Point Map' },
+      ],
+    },
+    {
+      library: CHART_LIBRARIES.D3,
+      label: 'D3.js',
+      types: [
+        { value: CHART_TYPES.D3_BAR,     label: 'Bar Chart' },
+        { value: CHART_TYPES.D3_LINE,    label: 'Line Chart' },
+        { value: CHART_TYPES.D3_AREA,    label: 'Area Chart' },
+        { value: CHART_TYPES.D3_PIE,     label: 'Pie Chart' },
+        { value: CHART_TYPES.D3_DONUT,   label: 'Donut Chart' },
+        { value: CHART_TYPES.D3_SCATTER, label: 'Scatter Chart' },
+      ],
+    },
+    {
+      library: CHART_LIBRARIES.NIVO,
+      label: 'Nivo',
+      types: [
+        { value: CHART_TYPES.NIVO_LINE,        label: 'Line Chart' },
+        { value: CHART_TYPES.NIVO_BAR,         label: 'Bar Chart' },
+        { value: CHART_TYPES.NIVO_PIE,         label: 'Pie Chart' },
+        { value: CHART_TYPES.NIVO_CHOROPLETH,  label: 'Choropleth Map' },
+      ],
+    },
+  ];
 
-  // Get chart type display name
-  const getChartTypeName = (type) => {
-    const names = {
-      [CHART_TYPES.D3_BAR]: 'Bar Chart',
-      [CHART_TYPES.D3_LINE]: 'Line Chart',
-      [CHART_TYPES.D3_AREA]: 'Area Chart',
-      [CHART_TYPES.D3_PIE]: 'Pie Chart',
-      [CHART_TYPES.D3_DONUT]: 'Donut Chart',
-      [CHART_TYPES.D3_SCATTER]: 'Scatter Chart',
-      [CHART_TYPES.CHARTJS_LINE]: 'Line Chart',
-      [CHART_TYPES.CHARTJS_BAR]: 'Bar Chart',
-      [CHART_TYPES.CHARTJS_PIE]: 'Pie Chart',
-      [CHART_TYPES.CHARTJS_DOUGHNUT]: 'Doughnut Chart',
-      [CHART_TYPES.CHARTJS_RADAR]: 'Radar Chart',
-      [CHART_TYPES.CHARTJS_POLAR]: 'Polar Area Chart',
-    };
-    return names[type] || type;
+  // Encode library+chartType together for the single select value
+  const encodeChartOption = (lib, type) => `${lib}||${type}`;
+  const decodeChartOption = (encoded) => {
+    const [lib, type] = encoded.split('||');
+    return { library: lib, chartType: type };
   };
-
-  const handleLibraryChange = (e) => {
-    const newLibrary = e.target.value;
-    const defaultType = DEFAULT_CHART_TYPE[newLibrary];
-    onUpdate({
-      ...zoneConfig,
-      library: newLibrary,
-      chartType: defaultType,
-    });
-  };
+  const currentChartValue = library && chartType ? encodeChartOption(library, chartType) : '';
 
   const handleChartTypeChange = (e) => {
-    onUpdate({
-      ...zoneConfig,
-      chartType: e.target.value,
-    });
+    const { library: newLibrary, chartType: newChartType } = decodeChartOption(e.target.value);
+    onUpdate({ ...zoneConfig, library: newLibrary, chartType: newChartType });
   };
 
   const handleThemeChange = (e) => {
@@ -286,46 +297,27 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
           </select>
         </div>
 
-        {/* Library Selection - Only show for charts */}
+        {/* Chart Type Selection - all libraries grouped, only show for charts */}
         {componentType === COMPONENT_TYPES.CHART && (
-        <div className="property-field-group">
-          <label className="property-label">Rendering Library</label>
-          <select
-            className="property-select"
-            value={library}
-            onChange={handleLibraryChange}
-          >
-            <option value={CHART_LIBRARIES.CHARTJS}>
-              Chart.js
-            </option>
-            <option value={CHART_LIBRARIES.D3}>
-              D3.js
-            </option>
-          </select>
-        </div>
-        )}
-
-        {/* Chart Type Selection - Only show for charts */}
-        {componentType === COMPONENT_TYPES.CHART && (
-        <div className="property-field-group">
-          <label className="property-label">Chart Type</label>
-          <select
-            className="property-select"
-            value={chartType || DEFAULT_CHART_TYPE[library]}
-            onChange={handleChartTypeChange}
-          >
-            {availableChartTypes.map((type) => (
-              <option key={type} value={type}>
-                {getChartTypeName(type)}
-              </option>
-            ))}
-          </select>
-          <p className="property-help-text">
-            {library === CHART_LIBRARIES.CHARTJS
-              ? 'Select a chart type from Chart.js library'
-              : 'Select a chart type from D3.js library'}
-          </p>
-        </div>
+          <div className="property-field-group">
+            <label className="property-label">Chart Type</label>
+            <select
+              className="property-select"
+              value={currentChartValue}
+              onChange={handleChartTypeChange}
+            >
+              <option value="">Select chart type…</option>
+              {CHART_OPTIONS_BY_LIBRARY.map(({ library: lib, label: groupLabel, types }) => (
+                <optgroup key={lib} label={groupLabel}>
+                  {types.map(({ value, label }) => (
+                    <option key={value} value={encodeChartOption(lib, value)}>
+                      {label}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </div>
         )}
 
         {/* Theme Selection - Only show for charts and tables */}

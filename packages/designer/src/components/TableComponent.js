@@ -9,8 +9,10 @@
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { fetchChartData, fetchTableData } from '../services/dataService';
 import { THEMES } from '../types/schema';
+import { useFilters } from '../hooks/useFilters';
 
-const TableComponent = ({ config, width, height, filters = null }) => {
+const TableComponent = ({ config, width, height }) => {
+  const { filters } = useFilters();
   const [tableData, setTableData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

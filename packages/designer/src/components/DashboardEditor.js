@@ -34,8 +34,8 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate, settings }) => {
   const draggedChartRef = useRef(null);
   const deleteContextRef = useRef(null);
 
-  // Get filter context
-  const { filters, configureFilters } = useFilters();
+  // Get filter context — only need configureFilters here; charts consume filters directly
+  const { configureFilters } = useFilters();
 
   // Register named join data sources so they appear in the table picker
   useEffect(() => {
@@ -323,16 +323,19 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate, settings }) => {
     };
   }, []);
 
-  // Generate layout items for react-grid-layout
-  const layout = dashboard.zones.map((zone) => ({
-    i: zone.id,
-    x: zone.gridPosition.x,
-    y: zone.gridPosition.y,
-    w: zone.gridPosition.w,
-    h: zone.gridPosition.h,
-    minW: 2,
-    minH: 2,
-  }));
+  // Memoize layout so GridLayout doesn't get a new array reference on every render
+  const layout = useMemo(
+    () => dashboard.zones.map((zone) => ({
+      i: zone.id,
+      x: zone.gridPosition.x,
+      y: zone.gridPosition.y,
+      w: zone.gridPosition.w,
+      h: zone.gridPosition.h,
+      minW: 2,
+      minH: 2,
+    })),
+    [dashboard.zones]
+  );
 
   const getZoneBadgeClass = (zone) => {
     if (zone.componentType === COMPONENT_TYPES.TABLE) {
@@ -475,14 +478,12 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate, settings }) => {
                         config={zone}
                         width={null}
                         height={null}
-                        filters={filters}
                       />
                     ) : (
                       <UniversalChart
                         config={zone}
                         width={null}
                         height={null}
-                        filters={filters}
                       />
                     )}
                   </div>

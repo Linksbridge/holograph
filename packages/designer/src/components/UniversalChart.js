@@ -12,8 +12,10 @@ import D3Adapter from '../adapters/D3Adapter';
 import ChartJsAdapter from '../adapters/ChartJsAdapter';
 import { fetchChartData } from '../services/dataService';
 import { CHART_LIBRARIES, CHART_TYPES, DEFAULT_CHART_TYPE } from '../types/schema';
+import { useFilters } from '../hooks/useFilters';
 
-const UniversalChart = ({ config, width, height, filters = null }) => {
+const UniversalChart = ({ config, width, height }) => {
+  const { filters } = useFilters();
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
