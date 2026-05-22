@@ -22,6 +22,7 @@ export const COMPONENT_TYPES = {
 export const CHART_LIBRARIES = {
   D3: 'd3',
   CHARTJS: 'chartjs',
+  NIVO: 'nivo',
 };
 
 // Chart types available in each library
@@ -40,6 +41,12 @@ export const CHART_TYPES = {
   CHARTJS_DOUGHNUT: 'doughnut',
   CHARTJS_RADAR: 'radar',
   CHARTJS_POLAR: 'polarArea',
+  CHARTJS_BUBBLEMAP: 'chartjs_bubblemap',
+  // Nivo chart types
+  NIVO_LINE: 'nivo_line',
+  NIVO_BAR: 'nivo_bar',
+  NIVO_PIE: 'nivo_pie',
+  NIVO_CHOROPLETH: 'nivo_choropleth',
 };
 
 // Map chart types to their libraries
@@ -56,12 +63,18 @@ export const CHART_TYPE_LIBRARY = {
   [CHART_TYPES.CHARTJS_DOUGHNUT]: CHART_LIBRARIES.CHARTJS,
   [CHART_TYPES.CHARTJS_RADAR]: CHART_LIBRARIES.CHARTJS,
   [CHART_TYPES.CHARTJS_POLAR]: CHART_LIBRARIES.CHARTJS,
+  [CHART_TYPES.CHARTJS_BUBBLEMAP]: CHART_LIBRARIES.CHARTJS,
+  [CHART_TYPES.NIVO_LINE]: CHART_LIBRARIES.NIVO,
+  [CHART_TYPES.NIVO_BAR]: CHART_LIBRARIES.NIVO,
+  [CHART_TYPES.NIVO_PIE]: CHART_LIBRARIES.NIVO,
+  [CHART_TYPES.NIVO_CHOROPLETH]: CHART_LIBRARIES.NIVO,
 };
 
 // Default chart types per library
 export const DEFAULT_CHART_TYPE = {
   [CHART_LIBRARIES.D3]: CHART_TYPES.D3_BAR,
   [CHART_LIBRARIES.CHARTJS]: CHART_TYPES.CHARTJS_LINE,
+  [CHART_LIBRARIES.NIVO]: CHART_TYPES.NIVO_LINE,
 };
 
 // Responsive sizing modes
