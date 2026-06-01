@@ -22,6 +22,7 @@ A zero-VM dashboard application with pluggable chart adapters (D3.js and Chart.j
   - [Publish](#publish)
 - [List Documents](#list-documents)
 - [Custom Handlers](#custom-handlers)
+- [File Data Sources](#file-data-sources)
 - [Choropleth Map Configuration](#choropleth-map-configuration)
 - [Dashboard Schema](#dashboard-schema)
 - [API Reference](#api-reference)
@@ -633,6 +634,108 @@ configureWebhooks({
   }
 });
 ```
+
+---
+
+## File Data Sources
+
+Holograph supports uploading CSV or Excel files as data sources. Files are parsed in the browser and stored on your backend, then referenced by name in any chart or table — identical to a database table.
+
+### How It Works
+
+1. User selects a file in the designer (**Settings → 📂 Files** tab)
+2. Browser parses the file (CSV via Papa Parse, Excel via SheetJS)
+3. Parsed rows are POSTed as JSON to your upload endpoint
+4. Backend stores the file and returns a file ID
+5. Designer registers the file as a named table in the data service
+6. Charts and tables reference the file by the original filename (minus extension)
+
+### Backend Endpoints Required
+
+Three endpoints are needed. Reference implementation is in `1000MonkeysAPI/src/functions/holographFiles.js`.
+
+| Method | Route | Purpose |
+|--------|-------|---------|
+| `POST` | `/api/holograph/files` | Upload parsed rows; returns `{ id, name, columns, rowCount }` |
+| `GET` | `/api/holograph/files` | List uploaded files (metadata only, no rows); returns `{ files: [...] }` |
+| `GET` | `/api/holograph/files/{id}` | Fetch rows for a specific file; returns `{ rows: [...] }` |
+
+#### Upload request body
+
+```json
+{
+  "name": "Q1 Sales",
+  "columns": ["month", "revenue", "units"],
+  "rows": [
+    { "month": "Jan", "revenue": 12500, "units": 450 },
+    { "month": "Feb", "revenue": 15200, "units": 520 }
+  ]
+}
+```
+
+#### Upload response
+
+```json
+{
+  "success": true,
+  "id": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+  "name": "Q1 Sales",
+  "columns": ["month", "revenue", "units"],
+  "rowCount": 2
+}
+```
+
+#### File data response
+
+```json
+{
+  "rows": [
+    { "month": "Jan", "revenue": 12500, "units": 450 },
+    { "month": "Feb", "revenue": 15200, "units": 520 }
+  ]
+}
+```
+
+### Configuring in Settings
+
+In the designer, go to **⚙️ Settings → 📂 Files** and fill in:
+
+| Field | Description |
+|-------|-------------|
+| Upload File URL | `POST` endpoint — receives parsed rows, returns file ID |
+| File Data URL | Base URL for fetching rows — file ID appended as `/{id}` |
+| List Files URL | `GET` endpoint — returns metadata for all uploaded files |
+
+After entering the URLs, use the **Choose File** button to upload a CSV or Excel file. Click **Save Settings** to register the file with the data service.
+
+### Supported File Formats
+
+| Format | Extensions | Notes |
+|--------|------------|-------|
+| CSV | `.csv` | First row must be column headers |
+| Excel | `.xlsx`, `.xls` | First sheet used; first row must be headers |
+
+### Programmatic Registration
+
+To register file sources without going through the settings UI:
+
+```javascript
+import { setDashboardFileSources } from './services/dataService';
+
+setDashboardFileSources(
+  [
+    {
+      id: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
+      name: 'Q1 Sales',
+      columns: ['month', 'revenue', 'units'],
+      rowCount: 12,
+    },
+  ],
+  'https://api.example.com/api/holograph/files'
+);
+```
+
+After calling this, `'Q1 Sales'` is available as a `tableName` in any chart or table component, and column names appear in the column picker.
 
 ---
 
@@ -1256,6 +1359,8 @@ import {
   getAvailableTables,            // List available tables
   getTableColumns,               // Get columns for a table
   initializeDataService,         // Initialize the service
+  setDashboardDataSources,       // Register named join data sources
+  setDashboardFileSources,       // Register uploaded file sources (CSV/Excel)
   getUniqueValuesForColumn,      // Get unique values for a column across all tables
   getUniqueValuesForTableColumn, // Get unique values for a column within one table
 } from './services/dataService';

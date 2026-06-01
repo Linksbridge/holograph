@@ -8,6 +8,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 import { initializeDataService, getCachedTables, getSchemaInfo, isUsingRealSchema } from '../services/dataService';
 import { useGlobalSettings } from '../services/globalSettingsService';
 
@@ -24,6 +26,9 @@ const defaults = {
     listDocumentsUrl: '',
     dataQueryUrl: '',
     globalSettingsUrl: process.env.REACT_APP_DEFAULT_GLOBAL_SETTINGS_URL || '',
+    uploadFileUrl: '',
+    fileDataUrl: '',
+    listFilesUrl: '',
   },
   general: {
     autoSave: true,
@@ -43,12 +48,15 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
         '',
     },
     general: { ...defaults.general, ...settings?.general },
+    fileSources: settings?.fileSources || [],
   }));
 
   const [activeTab, setActiveTab] = useState('datasource');
   const [isLoadingTables, setIsLoadingTables] = useState(false);
   const [tablesLoadStatus, setTablesLoadStatus] = useState('');
   const [documentsLoadStatus, setDocumentsLoadStatus] = useState('');
+  const [fileUploadStatus, setFileUploadStatus] = useState('');
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
   
   // Global settings
   const { settings: globalSettings, loading: globalLoading, error: globalError, refreshSettings } = useGlobalSettings(localSettings);
@@ -79,6 +87,82 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
       },
     }));
   }, [globalSettings?.webhooks]);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+
+    const uploadUrl = localSettings.saveLocations.uploadFileUrl;
+    if (!uploadUrl) return;
+
+    setIsUploadingFile(true);
+    setFileUploadStatus('Parsing file...');
+
+    try {
+      let name, columns, rows;
+      const ext = file.name.split('.').pop().toLowerCase();
+
+      if (ext === 'csv') {
+        const result = await new Promise((resolve, reject) => {
+          Papa.parse(file, { header: true, skipEmptyLines: true, complete: resolve, error: reject });
+        });
+        rows = result.data;
+        columns = result.meta.fields || [];
+        name = file.name.replace(/\.csv$/i, '');
+      } else {
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer);
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        rows = XLSX.utils.sheet_to_json(sheet, { defval: null });
+        columns = rows.length > 0 ? Object.keys(rows[0]) : [];
+        name = file.name.replace(/\.(xlsx?|xls)$/i, '');
+      }
+
+      setFileUploadStatus(`Uploading ${rows.length} rows...`);
+
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, columns, rows }),
+      });
+
+      if (!response.ok) {
+        const err = await response.text();
+        throw new Error(`Upload failed (${response.status}): ${err}`);
+      }
+
+      const result = await response.json();
+      const newFileSource = {
+        id: result.id,
+        name: result.name,
+        columns: result.columns || columns,
+        rowCount: result.rowCount ?? rows.length,
+        uploadedAt: new Date().toISOString(),
+      };
+
+      setLocalSettings((prev) => ({
+        ...prev,
+        fileSources: [
+          ...(prev.fileSources || []).filter((f) => f.id !== result.id),
+          newFileSource,
+        ],
+      }));
+
+      setFileUploadStatus(`Uploaded "${result.name}" — ${result.rowCount} rows, ${(result.columns || columns).length} columns`);
+    } catch (err) {
+      setFileUploadStatus(`Error: ${err.message}`);
+    } finally {
+      setIsUploadingFile(false);
+    }
+  };
+
+  const removeFileSource = (id) => {
+    setLocalSettings((prev) => ({
+      ...prev,
+      fileSources: (prev.fileSources || []).filter((f) => f.id !== id),
+    }));
+  };
 
   if (!isOpen) return null;
 
@@ -181,6 +265,13 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
           title="Site-wide settings (read-only)"
         >
           🌐 Global
+        </button>
+        <button
+          className={`settings-tab ${activeTab === 'files' ? 'active' : ''}`}
+          onClick={() => setActiveTab('files')}
+          title="Upload CSV or Excel files as data sources"
+        >
+          📂 Files
         </button>
       </div>
 
@@ -680,6 +771,134 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
             )}
           </>
         )}
+        {activeTab === 'files' && (
+          <>
+            <div className="settings-section-title">File Source URLs</div>
+
+            <div className="property-field-group">
+              <label className="property-label">Upload File URL</label>
+              <input
+                type="text"
+                className="property-input"
+                value={localSettings.saveLocations.uploadFileUrl}
+                onChange={(e) => updateSettings('saveLocations', 'uploadFileUrl', e.target.value)}
+                placeholder="https://api.example.com/api/file-upload"
+              />
+              <p className="property-help-text">POST endpoint — receives parsed file data and returns a file ID</p>
+            </div>
+
+            <div className="property-field-group">
+              <label className="property-label">File Data URL</label>
+              <input
+                type="text"
+                className="property-input"
+                value={localSettings.saveLocations.fileDataUrl}
+                onChange={(e) => updateSettings('saveLocations', 'fileDataUrl', e.target.value)}
+                placeholder="https://api.example.com/api/file-data"
+              />
+              <p className="property-help-text">GET endpoint — fetches rows by file ID (appends ?id=...)</p>
+            </div>
+
+            <div className="property-field-group">
+              <label className="property-label">List Files URL</label>
+              <input
+                type="text"
+                className="property-input"
+                value={localSettings.saveLocations.listFilesUrl}
+                onChange={(e) => updateSettings('saveLocations', 'listFilesUrl', e.target.value)}
+                placeholder="https://api.example.com/api/file-list"
+              />
+              <p className="property-help-text">GET endpoint — returns metadata for all uploaded files</p>
+            </div>
+
+            <div className="settings-section-title" style={{ marginTop: '24px' }}>Upload a File</div>
+
+            <div className="property-field-group">
+              <label className="property-label">Choose File</label>
+              <input
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={handleFileUpload}
+                disabled={!localSettings.saveLocations.uploadFileUrl || isUploadingFile}
+                style={{ display: 'block', marginTop: '4px' }}
+              />
+              <p className="property-help-text">Supported: CSV, Excel (.xlsx, .xls) — parsed in browser, rows stored on backend</p>
+              {!localSettings.saveLocations.uploadFileUrl && (
+                <p style={{ color: '#d97706', fontSize: '0.8rem', marginTop: '4px' }}>
+                  Set Upload File URL above to enable uploading
+                </p>
+              )}
+            </div>
+
+            {fileUploadStatus && (
+              <div style={{
+                padding: '10px',
+                borderRadius: '4px',
+                backgroundColor: fileUploadStatus.startsWith('Error') ? '#fee2e2' : '#dcfce7',
+                border: `1px solid ${fileUploadStatus.startsWith('Error') ? '#dc2626' : '#16a34a'}`,
+                color: fileUploadStatus.startsWith('Error') ? '#dc2626' : '#16a34a',
+                fontSize: '0.875rem',
+                marginBottom: '16px',
+              }}>
+                {fileUploadStatus}
+              </div>
+            )}
+
+            <div className="settings-section-title" style={{ marginTop: '8px' }}>Uploaded Files</div>
+            <p className="property-help-text" style={{ marginBottom: '8px' }}>
+              Files listed here can be used as a table name in any chart or table. Click Save Settings to register them.
+            </p>
+
+            {(localSettings.fileSources || []).length === 0 ? (
+              <p style={{ color: '#9ca3af', fontSize: '0.875rem', padding: '8px 0' }}>
+                No files uploaded yet.
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {(localSettings.fileSources || []).map((file) => (
+                  <div
+                    key={file.id}
+                    style={{
+                      padding: '10px 12px',
+                      backgroundColor: '#f9fafb',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: '500', color: '#111827', marginBottom: '2px' }}>
+                        {file.name}
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                        {file.rowCount} rows · {(file.columns || []).join(', ')}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => removeFileSource(file.id)}
+                      style={{
+                        padding: '2px 8px',
+                        fontSize: '0.8rem',
+                        backgroundColor: 'white',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        color: '#6b7280',
+                        flexShrink: 0,
+                        marginLeft: '8px',
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
       </div>
 
       {/* Footer */}

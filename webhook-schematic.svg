@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1050" viewBox="0 0 1400 1050">
+<defs>
+  <style>
+    text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; }
+    .mono { font-family: 'Courier New', 'Consolas', 'SF Mono', monospace; }
+  </style>
+</defs>
+
+<!-- Background -->
+<rect width="1400" height="1050" fill="#F8FAFC"/>
+
+<!-- ===== TITLE BAND ===== -->
+<rect x="0" y="0" width="1400" height="80" fill="#1E293B"/>
+<text x="40" y="34" fill="white" font-size="22" font-weight="700">Holograph Webhook Schematic</text>
+<text x="40" y="60" fill="#94A3B8" font-size="13">All configurable API endpoints — Setting Key · HTTP Method · Route · Payload</text>
+<text x="1360" y="46" fill="#475569" font-size="11" text-anchor="end">holograph · 1000MonkeysAPI · v1</text>
+
+<!-- ===== LEGEND BAR ===== -->
+<rect x="0" y="80" width="1400" height="36" fill="#F1F5F9"/>
+<line x1="0" y1="116" x2="1400" y2="116" stroke="#CBD5E1" stroke-width="1"/>
+<rect x="40" y="91" width="12" height="12" rx="2" fill="#3B82F6"/>
+<text x="58" y="103" fill="#64748B" font-size="12">Dashboard Storage</text>
+<rect x="220" y="91" width="12" height="12" rx="2" fill="#059669"/>
+<text x="238" y="103" fill="#64748B" font-size="12">Data Source</text>
+<rect x="355" y="91" width="12" height="12" rx="2" fill="#D97706"/>
+<text x="373" y="103" fill="#64748B" font-size="12">Security</text>
+<rect x="456" y="91" width="12" height="12" rx="2" fill="#7C3AED"/>
+<text x="474" y="103" fill="#64748B" font-size="12">File Sources</text>
+<rect x="1204" y="89" width="12" height="16" rx="3" fill="#3B82F6"/>
+<text x="1222" y="103" fill="#64748B" font-size="12">POST → sends data</text>
+<rect x="1310" y="89" width="12" height="16" rx="3" fill="#059669"/>
+<text x="1328" y="103" fill="#64748B" font-size="12">GET ← reads data</text>
+
+<!-- ===== COLUMN HEADERS ===== -->
+<rect x="0" y="116" width="1400" height="44" fill="#E2E8F0"/>
+<line x1="0" y1="160" x2="1400" y2="160" stroke="#CBD5E1" stroke-width="1.5"/>
+<line x1="250" y1="116" x2="250" y2="160" stroke="#CBD5E1" stroke-width="1"/>
+<line x1="350" y1="116" x2="350" y2="160" stroke="#CBD5E1" stroke-width="1"/>
+<line x1="650" y1="116" x2="650" y2="160" stroke="#CBD5E1" stroke-width="1"/>
+<text x="52" y="143" fill="#374151" font-size="11" font-weight="700" letter-spacing="0.8">SETTING KEY</text>
+<text x="262" y="143" fill="#374151" font-size="11" font-weight="700" letter-spacing="0.8">METHOD</text>
+<text x="362" y="143" fill="#374151" font-size="11" font-weight="700" letter-spacing="0.8">ENDPOINT ROUTE</text>
+<text x="662" y="143" fill="#374151" font-size="11" font-weight="700" letter-spacing="0.8">DESCRIPTION / PAYLOAD</text>
+
+<!-- =============================== -->
+<!-- GROUP 1: DASHBOARD STORAGE      -->
+<!-- y=160 to y=521                  -->
+<!-- =============================== -->
+<rect x="0" y="160" width="1400" height="36" fill="#3B82F6"/>
+<rect x="0" y="160" width="6" height="36" fill="#1D4ED8"/>
+<text x="20" y="183" fill="white" font-size="13" font-weight="600">Dashboard Storage</text>
+<text x="204" y="183" fill="#BFDBFE" font-size="11">Configured in: Settings → Save Locations</text>
+
+<!-- ROW 1.1: saveDraftUrl  y=196 -->
+<rect x="0" y="196" width="1400" height="65" fill="white"/>
+<line x1="0" y1="261" x2="1400" y2="261" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="250" y1="196" x2="250" y2="261" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="350" y1="196" x2="350" y2="261" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="650" y1="196" x2="650" y2="261" stroke="#F1F5F9" stroke-width="1"/>
+<rect x="0" y="196" width="3" height="65" fill="#BFDBFE"/>
+<text x="12" y="218" fill="#1E40AF" font-size="13" font-weight="600" class="mono">saveDraftUrl</text>
+<text x="12" y="242" fill="#94A3B8" font-size="11">Save Locations</text>
+<rect x="262" y="217" width="52" height="22" rx="11" fill="#3B82F6"/>
+<text x="288" y="232" fill="white" font-size="11" font-weight="600" text-anchor="middle">POST</text>
+<text x="362" y="218" fill="#374151" font-size="12">/api/holograph/drafts/{id}</text>
+<text x="362" y="242" fill="#6366F1" font-size="11">→ outbound</text>
+<text x="662" y="216" fill="#374151" font-size="13" font-weight="500">Save or update a dashboard draft</text>
+<text x="662" y="238" fill="#6B7280" font-size="11">Sends: {config, title, lastModified} · Returns: {id, updatedAt}</text>
+
+<!-- ROW 1.2: publishUrl  y=261 -->
+<rect x="0" y="261" width="1400" height="65" fill="#FAFAFA"/>
+<line x1="0" y1="326" x2="1400" y2="326" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="250" y1="261" x2="250" y2="326" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="350" y1="261" x2="350" y2="326" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="650" y1="261" x2="650" y2="326" stroke="#F1F5F9" stroke-width="1"/>
+<rect x="0" y="261" width="3" height="65" fill="#BFDBFE"/>
+<text x="12" y="283" fill="#1E40AF" font-size="13" font-weight="600" class="mono">publishUrl</text>
+<text x="12" y="307" fill="#94A3B8" font-size="11">Save Locations</text>
+<rect x="262" y="282" width="52" height="22" rx="11" fill="#3B82F6"/>
+<text x="288" y="297" fill="white" font-size="11" font-weight="600" text-anchor="middle">POST</text>
+<text x="362" y="283" fill="#374151" font-size="12">/api/holograph/publish</text>
+<text x="362" y="307" fill="#6366F1" font-size="11">→ outbound</text>
+<text x="662" y="281" fill="#374151" font-size="13" font-weight="500">Publish draft to live viewer</text>
+<text x="662" y="303" fill="#6B7280" font-size="11">Sends: {draftId} · Returns: {success, publishedAt}</text>
+
+<!-- ROW 1.3: listDocumentsUrl  y=326 -->
+<rect x="0" y="326" width="1400" height="65" fill="white"/>
+<line x1="0" y1="391" x2="1400" y2="391" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="250" y1="326" x2="250" y2="391" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="350" y1="326" x2="350" y2="391" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="650" y1="326" x2="650" y2="391" stroke="#F1F5F9" stroke-width="1"/>
+<rect x="0" y="326" width="3" height="65" fill="#BFDBFE"/>
+<text x="12" y="348" fill="#1E40AF" font-size="13" font-weight="600" class="mono">listDocumentsUrl</text>
+<text x="12" y="372" fill="#94A3B8" font-size="11">Save Locations</text>
+<rect x="262" y="347" width="46" height="22" rx="11" fill="#059669"/>
+<text x="285" y="362" fill="white" font-size="11" font-weight="600" text-anchor="middle">GET</text>
+<text x="362" y="348" fill="#374151" font-size="12">/api/holograph/drafts</text>
+<text x="362" y="372" fill="#0EA5E9" font-size="11">← inbound</text>
+<text x="662" y="346" fill="#374151" font-size="13" font-weight="500">Fetch list of saved dashboards for the open dialog</text>
+<text x="662" y="368" fill="#6B7280" font-size="11">Returns: [{id, title, updatedAt, thumbnail}]</text>
+
+<!-- ROW 1.4: globalSettingsUrl  y=391 -->
+<rect x="0" y="391" width="1400" height="65" fill="#FAFAFA"/>
+<line x1="0" y1="456" x2="1400" y2="456" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="250" y1="391" x2="250" y2="456" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="350" y1="391" x2="350" y2="456" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="650" y1="391" x2="650" y2="456" stroke="#F1F5F9" stroke-width="1"/>
+<rect x="0" y="391" width="3" height="65" fill="#BFDBFE"/>
+<text x="12" y="413" fill="#1E40AF" font-size="13" font-weight="600" class="mono">globalSettingsUrl</text>
+<text x="12" y="437" fill="#94A3B8" font-size="11">Save Locations</text>
+<rect x="255" y="412" width="42" height="22" rx="11" fill="#059669"/>
+<text x="276" y="427" fill="white" font-size="11" font-weight="600" text-anchor="middle">GET</text>
+<rect x="301" y="412" width="46" height="22" rx="11" fill="#3B82F6"/>
+<text x="324" y="427" fill="white" font-size="11" font-weight="600" text-anchor="middle">POST</text>
+<text x="362" y="413" fill="#374151" font-size="12">/api/holograph/settings</text>
+<text x="362" y="437" fill="#8B5CF6" font-size="11">↔ bi-directional</text>
+<text x="662" y="411" fill="#374151" font-size="13" font-weight="500">Read or write global default settings shared across dashboards</text>
+<text x="662" y="433" fill="#6B7280" font-size="11">GET returns: {settings} · POST sends: {settings}, returns: {success}</text>
+
+<!-- ROW 1.5: dataQueryUrl  y=456 -->
+<rect x="0" y="456" width="1400" height="65" fill="white"/>
+<line x1="0" y1="521" x2="1400" y2="521" stroke="#E2E8F0" stroke-width="1"/>
+<line x1="250" y1="456" x2="250" y2="521" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="350" y1="456" x2="350" y2="521" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="650" y1="456" x2="650" y2="521" stroke="#F1F5F9" stroke-width="1"/>
+<rect x="0" y="456" width="3" height="65" fill="#BFDBFE"/>
+<text x="12" y="478" fill="#1E40AF" font-size="13" font-weight="600" class="mono">dataQueryUrl</text>
+<text x="12" y="502" fill="#94A3B8" font-size="11">Save Locations</text>
+<rect x="262" y="477" width="46" height="22" rx="11" fill="#059669"/>
+<text x="285" y="492" fill="white" font-size="11" font-weight="600" text-anchor="middle">GET</text>
+<text x="362" y="478" fill="#374151" font-size="12">/api/data/{tableName}</text>
+<text x="362" y="502" fill="#0EA5E9" font-size="11">← inbound</text>
+<text x="662" y="476" fill="#374151" font-size="13" font-weight="500">Query table rows for chart and table rendering</text>
+<text x="662" y="498" fill="#6B7280" font-size="11">Table name in URL path · Returns: {rows: [{col: value, ...}]}</text>
+
+<!-- ========================== -->
+<!-- GROUP 2: DATA SOURCE       -->
+<!-- y=521 to y=622             -->
+<!-- ========================== -->
+<rect x="0" y="521" width="1400" height="36" fill="#059669"/>
+<rect x="0" y="521" width="6" height="36" fill="#047857"/>
+<text x="20" y="544" fill="white" font-size="13" font-weight="600">Data Source</text>
+<text x="120" y="544" fill="#A7F3D0" font-size="11">Configured in: Settings → Data Source</text>
+
+<!-- ROW 2.1: schemaUrl  y=557 -->
+<rect x="0" y="557" width="1400" height="65" fill="white"/>
+<line x1="0" y1="622" x2="1400" y2="622" stroke="#E2E8F0" stroke-width="1"/>
+<line x1="250" y1="557" x2="250" y2="622" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="350" y1="557" x2="350" y2="622" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="650" y1="557" x2="650" y2="622" stroke="#F1F5F9" stroke-width="1"/>
+<rect x="0" y="557" width="3" height="65" fill="#A7F3D0"/>
+<text x="12" y="579" fill="#065F46" font-size="13" font-weight="600" class="mono">schemaUrl</text>
+<text x="12" y="603" fill="#94A3B8" font-size="11">Data Source</text>
+<rect x="262" y="578" width="46" height="22" rx="11" fill="#059669"/>
+<text x="285" y="593" fill="white" font-size="11" font-weight="600" text-anchor="middle">GET</text>
+<text x="362" y="579" fill="#374151" font-size="12">/api/holograph/schema</text>
+<text x="362" y="603" fill="#0EA5E9" font-size="11">← inbound</text>
+<text x="662" y="577" fill="#374151" font-size="13" font-weight="500">Fetch available tables and their column definitions</text>
+<text x="662" y="599" fill="#6B7280" font-size="11">Returns: {tables: [{name, columns: [{name, type}]}]}</text>
+
+<!-- ========================== -->
+<!-- GROUP 3: SECURITY          -->
+<!-- y=622 to y=788             -->
+<!-- ========================== -->
+<rect x="0" y="622" width="1400" height="36" fill="#D97706"/>
+<rect x="0" y="622" width="6" height="36" fill="#B45309"/>
+<text x="20" y="645" fill="white" font-size="13" font-weight="600">Security</text>
+<text x="96" y="645" fill="#FDE68A" font-size="11">Configured in: Settings → Security</text>
+
+<!-- ROW 3.1: securitySaveUrl  y=658 -->
+<rect x="0" y="658" width="1400" height="65" fill="white"/>
+<line x1="0" y1="723" x2="1400" y2="723" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="250" y1="658" x2="250" y2="723" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="350" y1="658" x2="350" y2="723" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="650" y1="658" x2="650" y2="723" stroke="#F1F5F9" stroke-width="1"/>
+<rect x="0" y="658" width="3" height="65" fill="#FDE68A"/>
+<text x="12" y="680" fill="#92400E" font-size="13" font-weight="600" class="mono">securitySaveUrl</text>
+<text x="12" y="704" fill="#94A3B8" font-size="11">Security</text>
+<rect x="262" y="679" width="52" height="22" rx="11" fill="#3B82F6"/>
+<text x="288" y="694" fill="white" font-size="11" font-weight="600" text-anchor="middle">POST</text>
+<text x="362" y="680" fill="#374151" font-size="12">/api/holograph/security</text>
+<text x="362" y="704" fill="#6366F1" font-size="11">→ outbound</text>
+<text x="662" y="678" fill="#374151" font-size="13" font-weight="500">Save viewer access rules and row-level security filters</text>
+<text x="662" y="700" fill="#6B7280" font-size="11">Sends: {rules: [{role, filters}]} · Returns: {success}</text>
+
+<!-- ROW 3.2: listSecurityUrl  y=723 -->
+<rect x="0" y="723" width="1400" height="65" fill="#FAFAFA"/>
+<line x1="0" y1="788" x2="1400" y2="788" stroke="#E2E8F0" stroke-width="1"/>
+<line x1="250" y1="723" x2="250" y2="788" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="350" y1="723" x2="350" y2="788" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="650" y1="723" x2="650" y2="788" stroke="#F1F5F9" stroke-width="1"/>
+<rect x="0" y="723" width="3" height="65" fill="#FDE68A"/>
+<text x="12" y="745" fill="#92400E" font-size="13" font-weight="600" class="mono">listSecurityUrl</text>
+<text x="12" y="769" fill="#94A3B8" font-size="11">Security</text>
+<rect x="262" y="744" width="46" height="22" rx="11" fill="#059669"/>
+<text x="285" y="759" fill="white" font-size="11" font-weight="600" text-anchor="middle">GET</text>
+<text x="362" y="745" fill="#374151" font-size="12">/api/holograph/security</text>
+<text x="362" y="769" fill="#0EA5E9" font-size="11">← inbound</text>
+<text x="662" y="743" fill="#374151" font-size="13" font-weight="500">Retrieve current security rules for all roles</text>
+<text x="662" y="765" fill="#6B7280" font-size="11">Returns: [{role, description, filters: [{column, operator, value}]}]</text>
+
+<!-- ============================ -->
+<!-- GROUP 4: FILE SOURCES        -->
+<!-- y=788 to y=1019              -->
+<!-- ============================ -->
+<rect x="0" y="788" width="1400" height="36" fill="#7C3AED"/>
+<rect x="0" y="788" width="6" height="36" fill="#6D28D9"/>
+<text x="20" y="811" fill="white" font-size="13" font-weight="600">File Sources</text>
+<text x="118" y="811" fill="#DDD6FE" font-size="11">Configured in: Settings → Files</text>
+
+<!-- ROW 4.1: uploadFileUrl  y=824 -->
+<rect x="0" y="824" width="1400" height="65" fill="white"/>
+<line x1="0" y1="889" x2="1400" y2="889" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="250" y1="824" x2="250" y2="889" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="350" y1="824" x2="350" y2="889" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="650" y1="824" x2="650" y2="889" stroke="#F1F5F9" stroke-width="1"/>
+<rect x="0" y="824" width="3" height="65" fill="#DDD6FE"/>
+<text x="12" y="846" fill="#5B21B6" font-size="13" font-weight="600" class="mono">uploadFileUrl</text>
+<text x="12" y="870" fill="#94A3B8" font-size="11">Files</text>
+<rect x="262" y="845" width="52" height="22" rx="11" fill="#3B82F6"/>
+<text x="288" y="860" fill="white" font-size="11" font-weight="600" text-anchor="middle">POST</text>
+<text x="362" y="846" fill="#374151" font-size="12">/api/holograph/files</text>
+<text x="362" y="870" fill="#6366F1" font-size="11">→ outbound</text>
+<text x="662" y="844" fill="#374151" font-size="13" font-weight="500">Upload parsed CSV or Excel data to blob storage</text>
+<text x="662" y="866" fill="#6B7280" font-size="11">Sends: {name, columns: [...], rows: [...]} · Returns: {id, name, columns, rowCount}</text>
+
+<!-- ROW 4.2: fileDataUrl  y=889 -->
+<rect x="0" y="889" width="1400" height="65" fill="#FAFAFA"/>
+<line x1="0" y1="954" x2="1400" y2="954" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="250" y1="889" x2="250" y2="954" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="350" y1="889" x2="350" y2="954" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="650" y1="889" x2="650" y2="954" stroke="#F1F5F9" stroke-width="1"/>
+<rect x="0" y="889" width="3" height="65" fill="#DDD6FE"/>
+<text x="12" y="911" fill="#5B21B6" font-size="13" font-weight="600" class="mono">fileDataUrl</text>
+<text x="12" y="935" fill="#94A3B8" font-size="11">Files</text>
+<rect x="262" y="910" width="46" height="22" rx="11" fill="#059669"/>
+<text x="285" y="925" fill="white" font-size="11" font-weight="600" text-anchor="middle">GET</text>
+<text x="362" y="911" fill="#374151" font-size="12">/api/holograph/files/{id}</text>
+<text x="362" y="935" fill="#0EA5E9" font-size="11">← inbound</text>
+<text x="662" y="909" fill="#374151" font-size="13" font-weight="500">Fetch all rows for a specific uploaded file source</text>
+<text x="662" y="931" fill="#6B7280" font-size="11">ID in URL path · Returns: {rows: [{col: value, ...}]}</text>
+
+<!-- ROW 4.3: listFilesUrl  y=954 -->
+<rect x="0" y="954" width="1400" height="65" fill="white"/>
+<line x1="0" y1="1019" x2="1400" y2="1019" stroke="#E2E8F0" stroke-width="1"/>
+<line x1="250" y1="954" x2="250" y2="1019" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="350" y1="954" x2="350" y2="1019" stroke="#F1F5F9" stroke-width="1"/>
+<line x1="650" y1="954" x2="650" y2="1019" stroke="#F1F5F9" stroke-width="1"/>
+<rect x="0" y="954" width="3" height="65" fill="#DDD6FE"/>
+<text x="12" y="976" fill="#5B21B6" font-size="13" font-weight="600" class="mono">listFilesUrl</text>
+<text x="12" y="1000" fill="#94A3B8" font-size="11">Files</text>
+<rect x="262" y="975" width="46" height="22" rx="11" fill="#059669"/>
+<text x="285" y="990" fill="white" font-size="11" font-weight="600" text-anchor="middle">GET</text>
+<text x="362" y="976" fill="#374151" font-size="12">/api/holograph/files</text>
+<text x="362" y="1000" fill="#0EA5E9" font-size="11">← inbound</text>
+<text x="662" y="974" fill="#374151" font-size="13" font-weight="500">List all uploaded file sources — metadata only, no rows</text>
+<text x="662" y="996" fill="#6B7280" font-size="11">Returns: [{id, name, columns, rowCount, uploadedAt}]</text>
+
+<!-- ===== FOOTER ===== -->
+<rect x="0" y="1019" width="1400" height="31" fill="#1E293B"/>
+<text x="40" y="1039" fill="#475569" font-size="11">All routes served from Azure Functions v4 · Managed Identity auth · CORS headers on all responses</text>
+<text x="1360" y="1039" fill="#475569" font-size="11" text-anchor="end">2026</text>
+
+</svg>

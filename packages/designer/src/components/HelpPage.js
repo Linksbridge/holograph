@@ -34,6 +34,7 @@ const HelpPage = ({ onBack }) => {
     { id: 'create',        label: 'Creating a Dashboard' },
     { id: 'add-content',   label: 'Adding Charts & Content' },
     { id: 'connect-data',  label: 'Connecting Your Data' },
+    { id: 'file-sources',  label: 'Uploading Files as Data Sources' },
     { id: 'join-sources',  label: 'Joining Multiple Tables' },
     { id: 'filters',       label: 'Using Filters' },
     { id: 'save-publish',  label: 'Saving & Publishing' },
@@ -166,6 +167,70 @@ const HelpPage = ({ onBack }) => {
             <Tip>
               Not sure what URL to use? Ask whoever manages your data or IT team.
               They can provide the right address for each data set you want to display.
+            </Tip>
+          </Section>
+
+          <Section id="file-sources" icon="📂" title="Uploading Files as Data Sources">
+            <p>
+              You can upload CSV or Excel files directly into Holograph and use them as data sources
+              for your charts and tables — just like a database table.
+              This is useful for one-off reports, data you receive by email, or anything you want
+              to visualize without connecting a full database.
+            </p>
+
+            <p style={{ marginTop: '16px' }}><strong>Setting up file uploads (first time only):</strong></p>
+            <Step number="1">
+              Click <strong>⚙️ Settings</strong> and open the <strong>📂 Files</strong> tab.
+            </Step>
+            <Step number="2">
+              Your technical team will provide three URLs — paste them into <strong>Upload File URL</strong>,
+              <strong>File Data URL</strong>, and <strong>List Files URL</strong>.
+            </Step>
+            <Step number="3">
+              Click <strong>Save Settings</strong> to store the URLs.
+            </Step>
+
+            <p style={{ marginTop: '16px' }}><strong>Uploading a file:</strong></p>
+            <Step number="1">
+              Go to <strong>⚙️ Settings → 📂 Files</strong>.
+            </Step>
+            <Step number="2">
+              Click <strong>Choose File</strong> and select a CSV or Excel file from your computer.
+            </Step>
+            <Step number="3">
+              The file is parsed in your browser and uploaded automatically.
+              You'll see a confirmation with the file name and row count.
+            </Step>
+            <Step number="4">
+              Click <strong>Save Settings</strong>. The file is now available as a table in all your dashboards.
+            </Step>
+
+            <p style={{ marginTop: '16px' }}><strong>Using an uploaded file in a chart:</strong></p>
+            <Step number="1">Click any chart or table on the canvas to select it.</Step>
+            <Step number="2">
+              In the properties panel on the right, open the <strong>Table</strong> dropdown.
+              Your uploaded file appears by name alongside any database tables.
+            </Step>
+            <Step number="3">Select it, then choose your label and value columns as usual.</Step>
+
+            <div className="help-content-types" style={{ marginTop: '16px' }}>
+              <div className="help-content-type">
+                <strong>CSV (.csv)</strong>
+                <span>Comma-separated values. First row must be column headers.</span>
+              </div>
+              <div className="help-content-type">
+                <strong>Excel (.xlsx, .xls)</strong>
+                <span>Excel workbooks. First sheet is used; first row must be headers.</span>
+              </div>
+            </div>
+
+            <Tip>
+              Uploaded files are stored on the server — they stay available across sessions
+              and can be used in any dashboard, not just the one you're currently editing.
+            </Tip>
+            <Tip>
+              To stop using a file, go to Settings → Files and click <strong>Remove</strong> next to it.
+              This removes it from your settings; it does not delete the file from the server.
             </Tip>
           </Section>
 

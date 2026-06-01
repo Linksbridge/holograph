@@ -107,10 +107,42 @@ export const MOCK_DATA_TABLES = {
   ],
 };
 
-// Cache for tables, columns, and unique values
+// Cache for tables, columns, unique values, and fetched file rows
 let tablesCache = null;
 let columnsCache = {};
 let uniqueValuesCache = {};
+let queryDataCache = {};
+
+// File sources uploaded to the backend: name -> { id, columns, fileDataUrl }
+let fileSourceRegistry = {};
+
+/**
+ * Register uploaded file sources so charts can reference them by name.
+ * @param {Array} fileSources - Array of { id, name, columns, rowCount }
+ * @param {string} fileDataUrl - Base URL for fetching rows: GET fileDataUrl?id={id}
+ */
+export const setDashboardFileSources = (fileSources = [], fileDataUrl = null) => {
+  fileSourceRegistry = {};
+  fileSources.forEach((fs) => {
+    fileSourceRegistry[fs.name] = { id: fs.id, columns: fs.columns || [], fileDataUrl };
+    delete queryDataCache[fs.name];
+    delete columnsCache[fs.name];
+  });
+  uniqueValuesCache = {};
+};
+
+const fetchFileSourceData = async (tableName) => {
+  if (queryDataCache[tableName]) return queryDataCache[tableName];
+  const { id, fileDataUrl } = fileSourceRegistry[tableName];
+  if (!fileDataUrl) throw new Error(`No fileDataUrl configured for file source "${tableName}"`);
+  const url = `${fileDataUrl}/${encodeURIComponent(id)}`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`File data fetch failed: ${response.status} ${response.statusText}`);
+  const result = await response.json();
+  const rows = result.rows || [];
+  queryDataCache[tableName] = rows;
+  return rows;
+};
 
 /**
  * Initialize the data service cache
@@ -140,7 +172,8 @@ export const initializeDataService = async () => {
  * @returns {string[]} List of available table names
  */
 export const getCachedTables = () => {
-  return tablesCache || Object.keys(MOCK_DATA_TABLES);
+  const base = tablesCache || Object.keys(MOCK_DATA_TABLES);
+  return [...base, ...Object.keys(fileSourceRegistry)];
 };
 
 /**
@@ -152,7 +185,13 @@ export const getCachedColumns = (tableName) => {
   if (columnsCache[tableName]) {
     return columnsCache[tableName];
   }
-  
+
+  if (fileSourceRegistry[tableName]) {
+    const cols = fileSourceRegistry[tableName].columns || [];
+    columnsCache[tableName] = cols;
+    return cols;
+  }
+
   // Fallback to calculating from data
   const tableData = MOCK_DATA_TABLES[tableName];
   if (tableData?.length > 0) {
@@ -279,11 +318,30 @@ const applyFilterToRow = (row, columnName, filterDef) => {
  * @returns {Promise<Array<{label: string, value: number}>>} Formatted chart data
  */
 export const fetchChartData = async (tableName, labelColumn, valueColumn, filters = null) => {
+  // File source — fetch from backend
+  if (fileSourceRegistry[tableName]) {
+    const rows = await fetchFileSourceData(tableName);
+    let filtered = rows;
+    if (filters && Object.keys(filters).length > 0) {
+      filtered = rows.filter((row) => {
+        for (const [col, filterDef] of Object.entries(filters)) {
+          if (!filterDef) continue;
+          if (!applyFilterToRow(row, col, filterDef)) return false;
+        }
+        return true;
+      });
+    }
+    return filtered.map((row) => ({
+      label: row[labelColumn] || row[Object.keys(row)[0]],
+      value: row[valueColumn] || row[Object.keys(row)[1]],
+    }));
+  }
+
   // Simulate network delay (Azure Function latency)
   await new Promise((resolve) => setTimeout(resolve, 200 + Math.random() * 300));
 
   const tableData = MOCK_DATA_TABLES[tableName];
-  
+
   if (!tableData) {
     console.warn(`Table "${tableName}" not found, returning empty data`);
     return [];
@@ -316,11 +374,34 @@ export const fetchChartData = async (tableName, labelColumn, valueColumn, filter
  * @returns {Promise<Array<Object>>} Raw table data with all columns
  */
 export const fetchTableData = async (tableName, columns = null, filters = null) => {
+  // File source — fetch from backend
+  if (fileSourceRegistry[tableName]) {
+    const rows = await fetchFileSourceData(tableName);
+    let filtered = rows;
+    if (filters && Object.keys(filters).length > 0) {
+      filtered = rows.filter((row) => {
+        for (const [col, filterDef] of Object.entries(filters)) {
+          if (!filterDef) continue;
+          if (!applyFilterToRow(row, col, filterDef)) return false;
+        }
+        return true;
+      });
+    }
+    if (columns && columns.length > 0) {
+      return filtered.map((row) => {
+        const out = {};
+        columns.forEach((c) => { out[c] = row[c]; });
+        return out;
+      });
+    }
+    return filtered;
+  }
+
   // Simulate network delay (Azure Function latency)
   await new Promise((resolve) => setTimeout(resolve, 200 + Math.random() * 300));
 
   const tableData = MOCK_DATA_TABLES[tableName];
-  
+
   if (!tableData) {
     console.warn(`Table "${tableName}" not found, returning empty data`);
     return [];
@@ -372,6 +453,7 @@ export default {
   getAvailableTables,
   getTableColumns,
   initializeDataService,
+  setDashboardFileSources,
   getCachedTables,
   getCachedColumns,
   getUniqueValuesForColumn,

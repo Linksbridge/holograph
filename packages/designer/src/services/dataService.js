@@ -71,6 +71,9 @@ let queryDataCache = {}; // tableName -> rows[], populated by fetchQueryData
 // Named join data sources registered from dashboard config
 let joinDefinitions = {}; // name -> { id, name, baseTable, joins: [] }
 
+// File sources uploaded to the backend: name -> { id, columns, fileDataUrl }
+let fileSourceRegistry = {};
+
 // Track whether we're using real schema or mock data
 let usingRealSchema = false;
 let realSchemaData = null;
@@ -164,6 +167,21 @@ const loadMockData = async () => {
  */
 export const setDataQueryUrl = (url) => {
   if (url) dataQueryUrl = url;
+};
+
+/**
+ * Register uploaded file sources so charts can reference them by name.
+ * @param {Array} fileSources - Array of { id, name, columns, rowCount } from settings
+ * @param {string} fileDataUrl - Base URL for fetching rows: GET fileDataUrl?id={id}
+ */
+export const setDashboardFileSources = (fileSources = [], fileDataUrl = null) => {
+  fileSourceRegistry = {};
+  fileSources.forEach((fs) => {
+    fileSourceRegistry[fs.name] = { id: fs.id, columns: fs.columns || [], fileDataUrl };
+    delete queryDataCache[fs.name];
+    delete columnsCache[fs.name];
+  });
+  uniqueValuesCache = {};
 };
 
 /**
@@ -272,7 +290,7 @@ export const getSchemaInfo = () => {
  */
 export const getCachedTables = () => {
   const real = tablesCache || Object.keys(MOCK_DATA_TABLES);
-  return [...real, ...Object.keys(joinDefinitions)];
+  return [...real, ...Object.keys(joinDefinitions), ...Object.keys(fileSourceRegistry)];
 };
 
 /**
@@ -282,6 +300,13 @@ export const getCachedTables = () => {
  */
 export const getCachedColumns = (tableName) => {
   if (columnsCache[tableName]) return columnsCache[tableName];
+
+  // File source: columns stored in registry, no network call needed
+  if (fileSourceRegistry[tableName]) {
+    const cols = fileSourceRegistry[tableName].columns || [];
+    columnsCache[tableName] = cols;
+    return cols;
+  }
 
   // Join definition: derive columns from constituent tables
   if (joinDefinitions[tableName]) {
@@ -356,6 +381,21 @@ const applyFilterToRow = (row, filters) => {
 const fetchQueryData = async (tableName) => {
   if (queryDataCache[tableName]) return queryDataCache[tableName];
 
+  // File source — fetch rows from backend by ID
+  if (fileSourceRegistry[tableName]) {
+    const { id, fileDataUrl: fsUrl } = fileSourceRegistry[tableName];
+    if (!fsUrl) throw new Error(`No fileDataUrl configured for file source "${tableName}"`);
+    const url = `${fsUrl}/${encodeURIComponent(id)}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`File data fetch failed: ${response.status} ${response.statusText}`);
+    const result = await response.json();
+    const rows = result.rows || [];
+    queryDataCache[tableName] = rows;
+    if (rows.length > 0) columnsCache[tableName] = Object.keys(rows[0]);
+    uniqueValuesCache = {};
+    return rows;
+  }
+
   // Resolve named join data source
   if (joinDefinitions[tableName]) {
     const rows = await executeJoin(joinDefinitions[tableName]);
@@ -388,7 +428,7 @@ const fetchQueryData = async (tableName) => {
  * @returns {Promise<Array<{label: string, value: number}>>} Formatted chart data
  */
 export const fetchChartData = async (tableName, labelColumn, valueColumn, filters = null) => {
-  if (usingRealSchema && dataQueryUrl) {
+  if (usingRealSchema && dataQueryUrl || fileSourceRegistry[tableName] || joinDefinitions[tableName]) {
     const rows = await fetchQueryData(tableName);
     let filtered = rows;
     if (filters && Object.keys(filters).length > 0) {
@@ -453,7 +493,7 @@ export const fetchChartData = async (tableName, labelColumn, valueColumn, filter
  * @returns {Promise<Array<Object>>} Raw table data with all columns
  */
 export const fetchTableData = async (tableName, columns = null, filters = null) => {
-  if (usingRealSchema && dataQueryUrl) {
+  if (usingRealSchema && dataQueryUrl || fileSourceRegistry[tableName] || joinDefinitions[tableName]) {
     const rows = await fetchQueryData(tableName);
     let filtered = rows;
     if (filters && Object.keys(filters).length > 0) {
@@ -539,6 +579,7 @@ export default {
   initializeDataService,
   setDataQueryUrl,
   setDashboardDataSources,
+  setDashboardFileSources,
   getCachedTables,
   getCachedColumns,
   getUniqueValuesForColumn,

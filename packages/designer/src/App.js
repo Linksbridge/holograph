@@ -18,7 +18,7 @@ import { invokeSave, invokePublish, configureWebhookUrls, invokeListDocuments, i
 import SecurityPanel from './components/SecurityPanel';
 import HelpPage from './components/HelpPage';
 import { globalSettingsService } from './services/globalSettingsService';
-import { initializeDataService, setDataQueryUrl } from './services/dataService';
+import { initializeDataService, setDataQueryUrl, setDashboardFileSources } from './services/dataService';
 import './styles/dashboard.css';
 
 const STORAGE_KEY = 'holograph_dashboards';
@@ -102,6 +102,12 @@ const AppContent = () => {
       '';
     if (savedGlobalSettingsUrl) {
       globalSettingsService.setGlobalSettingsUrl(savedGlobalSettingsUrl);
+    }
+
+    // Register file sources immediately from saved settings (before async global fetch)
+    const savedSettings = loadSettings();
+    if (savedSettings?.fileSources?.length > 0 && savedSettings?.saveLocations?.fileDataUrl) {
+      setDashboardFileSources(savedSettings.fileSources, savedSettings.saveLocations.fileDataUrl);
     }
 
     globalSettingsService.getAllSettings().then(async (gs) => {
@@ -372,6 +378,11 @@ const AppContent = () => {
     }
 
     setSettings(newSettings);
+
+    // Register file sources from updated settings
+    if (newSettings?.fileSources?.length > 0 && newSettings?.saveLocations?.fileDataUrl) {
+      setDashboardFileSources(newSettings.fileSources, newSettings.saveLocations.fileDataUrl);
+    }
 
     // Configure webhook URLs from settings
     if (newSettings?.saveLocations) {
