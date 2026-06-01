@@ -129,6 +129,9 @@ const AppContent = () => {
               publishUrl: wh.publishUrl || prevSave.publishUrl || '',
               listDocumentsUrl: wh.listDocumentsUrl || prevSave.listDocumentsUrl || '',
               dataQueryUrl: wh.dataQueryUrl || prevSave.dataQueryUrl || '',
+              uploadFileUrl: wh.uploadFileUrl || prevSave.uploadFileUrl || '',
+              fileDataUrl: wh.fileDataUrl || prevSave.fileDataUrl || '',
+              listFilesUrl: wh.listFilesUrl || prevSave.listFilesUrl || '',
             },
           };
         });
@@ -366,6 +369,9 @@ const AppContent = () => {
             publishUrl: newSettings.saveLocations.publishUrl || wh.publishUrl || '',
             listDocumentsUrl: newSettings.saveLocations.listDocumentsUrl || wh.listDocumentsUrl || '',
             dataQueryUrl: newSettings.saveLocations.dataQueryUrl || wh.dataQueryUrl || '',
+            uploadFileUrl: newSettings.saveLocations.uploadFileUrl || wh.uploadFileUrl || '',
+            fileDataUrl: newSettings.saveLocations.fileDataUrl || wh.fileDataUrl || '',
+            listFilesUrl: newSettings.saveLocations.listFilesUrl || wh.listFilesUrl || '',
           },
         };
       }
