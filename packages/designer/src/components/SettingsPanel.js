@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import Papa from 'papaparse';
+import Papa from 'papaparse/papaparse.js';
 import * as XLSX from 'xlsx';
 import { initializeDataService, getCachedTables, getSchemaInfo, isUsingRealSchema } from '../services/dataService';
 import { useGlobalSettings } from '../services/globalSettingsService';
