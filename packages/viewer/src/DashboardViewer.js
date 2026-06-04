@@ -23,7 +23,7 @@ const ChartJsAdapter = React.lazy(() => import('./adapters/ChartJsAdapter'));
 const NivoAdapter = React.lazy(() => import('./adapters/NivoAdapter'));
 
 // Import data service
-import { fetchChartData, fetchTableData, initializeDataService } from './services/dataService';
+import { fetchChartData, fetchTableData, initializeDataService, setDashboardFileSources } from './services/dataService';
 
 // Import schema types
 import { CHART_LIBRARIES, CHART_TYPES, COMPONENT_TYPES, DEFAULT_CHART_TYPE, THEMES } from '@holograph/dashboard-schema';
@@ -268,12 +268,14 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData, resolvedStyles =
  * @param {Function} props.onFilterChange - Optional callback when filters change internally
  * @param {string} props.className - Optional CSS class name
  */
-const DashboardViewer = ({ 
-  dashboard, 
+const DashboardViewer = ({
+  dashboard,
   data = {},
-  filters = {}, 
+  filters = {},
   onFilterChange,
-  className = '' 
+  className = '',
+  fileSources = [],
+  fileDataUrl = '',
 }) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [currentFilters, setCurrentFilters] = useState(filters);
@@ -289,6 +291,13 @@ const DashboardViewer = ({
     };
     init();
   }, []);
+
+  // Register file sources whenever they change
+  useEffect(() => {
+    if (fileSources?.length > 0 && fileDataUrl) {
+      setDashboardFileSources(fileSources, fileDataUrl);
+    }
+  }, [fileSources, fileDataUrl]);
 
   // Read CSS custom properties from container so chart internals can use host-app theme values
   useEffect(() => {
