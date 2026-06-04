@@ -16,6 +16,12 @@ module.exports = {
       const packagesDir = path.resolve(__dirname, 'packages');
       const holographDir = path.resolve(__dirname, 'node_modules', '@holograph');
 
+      // Alias @holograph/dashboard-viewer to viewer source so no dist build is needed.
+      webpackConfig.resolve.alias = {
+        ...webpackConfig.resolve.alias,
+        '@holograph/dashboard-viewer': path.resolve(__dirname, 'packages/viewer/src'),
+      };
+
       // Remove ModuleScopePlugin so imports from workspace packages aren't blocked.
       webpackConfig.resolve.plugins = (webpackConfig.resolve.plugins || []).filter(
         (plugin) => plugin.constructor.name !== 'ModuleScopePlugin'

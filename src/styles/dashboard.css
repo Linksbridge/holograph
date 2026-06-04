@@ -1,5 +1,5 @@
 /* Dashboard System Styles */
-@import '@holograph/dashboard-viewer/src/styles/viewer.css';
+@import '@holograph/dashboard-viewer/styles/viewer.css';
 
 /* ============================================
    CSS Custom Properties (Variables)
