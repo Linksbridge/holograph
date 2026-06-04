@@ -2,6 +2,13 @@ import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import babel from '@rollup/plugin-babel';
 
+const ignoreCss = {
+    name: 'ignore-css',
+    transform(_, id) {
+        if (id.endsWith('.css')) return { code: '', map: null };
+    }
+};
+
 const external = [
     'react',
     'react-dom',
@@ -21,6 +28,7 @@ export default {
         { file: 'dist/index.esm.js', format: 'esm', sourcemap: true }
     ],
     plugins: [
+        ignoreCss,
         resolve({ extensions: ['.js', '.jsx'] }),
         babel({
             babelHelpers: 'bundled',
