@@ -8,7 +8,35 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import Papa from 'papaparse/papaparse.js';
+// Minimal CSV parser — avoids papaparse webpack 5 polyfill issues
+const parseCSV = (text) => {
+  const parseRow = (line) => {
+    const fields = [];
+    let field = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = !inQuotes;
+      } else if (ch === ',' && !inQuotes) {
+        fields.push(field); field = '';
+      } else {
+        field += ch;
+      }
+    }
+    fields.push(field);
+    return fields;
+  };
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length === 0) return { data: [], fields: [] };
+  const fields = parseRow(lines[0]);
+  const data = lines.slice(1).map(line => {
+    const vals = parseRow(line);
+    return Object.fromEntries(fields.map((h, i) => [h, vals[i] ?? '']));
+  });
+  return { data, fields };
+};
 import * as XLSX from 'xlsx';
 import { initializeDataService, getCachedTables, getSchemaInfo, isUsingRealSchema } from '../services/dataService';
 import { useGlobalSettings } from '../services/globalSettingsService';
@@ -104,11 +132,10 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
       const ext = file.name.split('.').pop().toLowerCase();
 
       if (ext === 'csv') {
-        const result = await new Promise((resolve, reject) => {
-          Papa.parse(file, { header: true, skipEmptyLines: true, complete: resolve, error: reject });
-        });
+        const text = await file.text();
+        const result = parseCSV(text);
         rows = result.data;
-        columns = result.meta.fields || [];
+        columns = result.fields;
         name = file.name.replace(/\.csv$/i, '');
       } else {
         const buffer = await file.arrayBuffer();
