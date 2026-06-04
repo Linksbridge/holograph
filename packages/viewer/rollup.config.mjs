@@ -22,11 +22,11 @@ export default {
     ],
     plugins: [
         resolve({ extensions: ['.js', '.jsx'] }),
-        commonjs(),
         babel({
             babelHelpers: 'bundled',
             presets: ['@babel/preset-react'],
             extensions: ['.js', '.jsx']
-        })
+        }),
+        commonjs()
     ]
 };
