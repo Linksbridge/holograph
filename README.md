@@ -112,6 +112,8 @@ function App() {
 | `filters` | object | `{}` | Filter definitions to apply to all charts (see [Filter Types](#filter-types)) |
 | `onFilterChange` | function | — | Called with the current filter object whenever filters change |
 | `className` | string | `''` | Additional CSS class applied to the root element |
+| `fileSources` | array | `[]` | Metadata for uploaded CSV/Excel files: `[{ id, name, columns, rowCount }]`. Each entry registers the file as a named table available to charts. |
+| `fileDataUrl` | string | `''` | Base URL for fetching uploaded file rows. The viewer appends `/{id}` and expects `{ rows: [...] }` in response. Required when `fileSources` is non-empty. |
 
 ### With Filters
 

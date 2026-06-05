@@ -1,6 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import * as XLSX from 'xlsx';
 import { getCachedTables, getCachedColumns } from '../services/dataService';
+
+const parseCSV = (text) => {
+  const parseRow = (line) => {
+    const fields = [];
+    let field = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = !inQuotes;
+      } else if (ch === ',' && !inQuotes) {
+        fields.push(field); field = '';
+      } else {
+        field += ch;
+      }
+    }
+    fields.push(field);
+    return fields;
+  };
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length === 0) return { data: [], fields: [] };
+  const fields = parseRow(lines[0]);
+  const data = lines.slice(1).map(line => {
+    const vals = parseRow(line);
+    return Object.fromEntries(fields.map((h, i) => [h, vals[i] ?? '']));
+  });
+  return { data, fields };
+};
 
 const JOIN_TYPES = ['INNER', 'LEFT', 'RIGHT', 'FULL'];
 
@@ -258,14 +288,83 @@ const DataSourceForm = ({ initial, realTables, onSave, onCancel }) => {
   );
 };
 
-const DataSourcePanel = ({ isOpen, onClose, dataSources = [], onDataSourcesChange }) => {
+const DataSourcePanel = ({ isOpen, onClose, dataSources = [], onDataSourcesChange, uploadFileUrl = '', fileDataUrl = '', fileSources = [], onFileSourcesChange }) => {
   const [localSources, setLocalSources] = useState(dataSources);
   const [editingId, setEditingId] = useState(null); // null = list view, 'new' = new form, uuid = editing
+  const [fileUploadStatus, setFileUploadStatus] = useState('');
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
   const realTables = getCachedTables().filter((t) => !localSources.some((ds) => ds.name === t));
 
   useEffect(() => {
     if (isOpen) setLocalSources(dataSources);
   }, [isOpen, dataSources]);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+    if (!uploadFileUrl) return;
+
+    setIsUploadingFile(true);
+    setFileUploadStatus('Parsing file...');
+
+    try {
+      let name, columns, rows;
+      const ext = file.name.split('.').pop().toLowerCase();
+
+      if (ext === 'csv') {
+        const text = await file.text();
+        const result = parseCSV(text);
+        rows = result.data;
+        columns = result.fields;
+        name = file.name.replace(/\.csv$/i, '');
+      } else {
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer);
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        rows = XLSX.utils.sheet_to_json(sheet, { defval: null });
+        columns = rows.length > 0 ? Object.keys(rows[0]) : [];
+        name = file.name.replace(/\.(xlsx?|xls)$/i, '');
+      }
+
+      setFileUploadStatus(`Uploading ${rows.length} rows...`);
+
+      const response = await fetch(uploadFileUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, columns, rows }),
+      });
+
+      if (!response.ok) {
+        const err = await response.text();
+        throw new Error(`Upload failed (${response.status}): ${err}`);
+      }
+
+      const result = await response.json();
+      const newFileSource = {
+        id: result.id,
+        name: result.name,
+        columns: result.columns || columns,
+        rowCount: result.rowCount ?? rows.length,
+        uploadedAt: new Date().toISOString(),
+      };
+
+      const updated = [
+        ...(fileSources || []).filter((f) => f.id !== result.id),
+        newFileSource,
+      ];
+      onFileSourcesChange?.(updated);
+      setFileUploadStatus(`Uploaded "${result.name}" — ${result.rowCount} rows, ${(result.columns || columns).length} columns`);
+    } catch (err) {
+      setFileUploadStatus(`Error: ${err.message}`);
+    } finally {
+      setIsUploadingFile(false);
+    }
+  };
+
+  const removeFileSource = (id) => {
+    onFileSourcesChange?.((fileSources || []).filter((f) => f.id !== id));
+  };
 
   if (!isOpen) return null;
 
@@ -356,6 +455,58 @@ const DataSourcePanel = ({ isOpen, onClose, dataSources = [], onDataSourcesChang
               <button style={{ ...s.addBtn, marginTop: '8px' }} onClick={() => setEditingId('new')}>
                 ＋ Add Data Source
               </button>
+            )}
+          </div>
+
+          <div style={s.section}>
+            <div style={s.sectionTitle}>📂 Uploaded Files</div>
+            <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '12px', marginTop: 0 }}>
+              Upload CSV or Excel files as data sources. Uploaded files appear in the table picker like any other table.
+            </p>
+
+            <div style={s.fieldGroup}>
+              <input
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={handleFileUpload}
+                disabled={!uploadFileUrl || isUploadingFile}
+                style={{ display: 'block', marginBottom: '4px' }}
+              />
+              {!uploadFileUrl && (
+                <p style={{ fontSize: '12px', color: '#d97706', margin: '4px 0 0' }}>
+                  Configure Upload File URL in ⚙️ Settings → Files to enable uploads.
+                </p>
+              )}
+            </div>
+
+            {fileUploadStatus && (
+              <div style={{
+                padding: '8px 10px',
+                borderRadius: '4px',
+                backgroundColor: fileUploadStatus.startsWith('Error') ? '#fee2e2' : '#dcfce7',
+                border: `1px solid ${fileUploadStatus.startsWith('Error') ? '#dc2626' : '#16a34a'}`,
+                color: fileUploadStatus.startsWith('Error') ? '#dc2626' : '#16a34a',
+                fontSize: '12px',
+                marginBottom: '12px',
+              }}>
+                {fileUploadStatus}
+              </div>
+            )}
+
+            {(fileSources || []).length === 0 ? (
+              <p style={{ fontSize: '13px', color: '#9ca3af', padding: '4px 0' }}>No files uploaded yet.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {(fileSources || []).map((file) => (
+                  <div key={file.id} style={s.row}>
+                    <div>
+                      <div style={s.rowName}>{file.name}</div>
+                      <div style={s.rowMeta}>{file.rowCount} rows · {(file.columns || []).join(', ')}</div>
+                    </div>
+                    <button style={s.actionBtn('delete')} onClick={() => removeFileSource(file.id)}>Remove</button>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>

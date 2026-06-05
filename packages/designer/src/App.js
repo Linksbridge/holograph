@@ -410,6 +410,16 @@ const AppContent = () => {
     }
   }, [handleRefreshDashboards]);
 
+  const handleFileSourcesChange = useCallback((newFileSources) => {
+    setSettings((prev) => {
+      const updated = { ...prev, fileSources: newFileSources };
+      if (newFileSources?.length > 0 && prev?.saveLocations?.fileDataUrl) {
+        setDashboardFileSources(newFileSources, prev.saveLocations.fileDataUrl);
+      }
+      return updated;
+    });
+  }, []);
+
   // Memoize normalized schema so dashboard.zones stays stable between renders
   const normalizedDashboardSchema = useMemo(() => {
     if (!currentDashboard) return null;
@@ -490,6 +500,7 @@ const AppContent = () => {
               dashboard={normalizedDashboardSchema}
               onDashboardUpdate={handleDashboardUpdate}
               settings={settings}
+              onFileSourcesChange={handleFileSourcesChange}
             />
           </div>
         </>

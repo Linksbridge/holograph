@@ -260,7 +260,7 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
   };
 
   return (
-    <div className="property-panel">
+    <div className="property-panel settings-panel-wide">
       <div className="property-panel-header">
         <h2 className="property-panel-title">Dashboard Settings</h2>
         <button className="property-panel-close" onClick={onClose}>×</button>

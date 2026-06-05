@@ -23,7 +23,7 @@ import { CHART_LIBRARIES, COMPONENT_TYPES, createZoneConfig } from '../types/sch
 import { useFilters } from '../hooks/useFilters';
 import { getTableColumns, setDashboardDataSources } from '../services/dataService';
 
-const DashboardEditor = ({ dashboard, onDashboardUpdate, settings }) => {
+const DashboardEditor = ({ dashboard, onDashboardUpdate, settings, onFileSourcesChange }) => {
   const [selectedZone, setSelectedZone] = useState(null);
   const [activeZoneId, setActiveZoneId] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -511,6 +511,10 @@ const DashboardEditor = ({ dashboard, onDashboardUpdate, settings }) => {
         onDataSourcesChange={(updated) =>
           onDashboardUpdate({ ...dashboard, dataSources: updated })
         }
+        uploadFileUrl={settings?.saveLocations?.uploadFileUrl || ''}
+        fileDataUrl={settings?.saveLocations?.fileDataUrl || ''}
+        fileSources={settings?.fileSources || []}
+        onFileSourcesChange={onFileSourcesChange}
       />
     </>
   );

@@ -55,7 +55,7 @@ User uploads a file directly inside the designer. Browser parses it. Data is reg
 For CSV with small row counts (< 500 rows), embedding in the schema is workable. For Excel files or anything larger, backend storage is the right call.
 
 **Libraries:**
-- [Papa Parse](https://www.papaparse.com/) — CSV parsing, well-maintained, lightweight
+- CSV parsing — implemented as a zero-dependency inline parser (Papa Parse was evaluated but dropped due to webpack 5 polyfill incompatibility with CRA)
 - [SheetJS (xlsx)](https://sheetjs.com/) — Excel parsing, but adds significant bundle weight (~500kb)
 
 ---
