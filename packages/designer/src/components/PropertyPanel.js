@@ -8,11 +8,14 @@ import React from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { CHART_LIBRARIES, CHART_TYPES, CHART_TYPE_LIBRARY, DEFAULT_CHART_TYPE, COLOR_THEMES, THEMES, COMPONENT_TYPES, LEGEND_POSITIONS } from '../types/schema';
-import { getAvailableTables, getTableColumns } from '../services/dataService';
+import { getAvailableTables, getTableColumns, isUsingRealSchema, MOCK_DATA_TABLES } from '../services/dataService';
 
 const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
   const { id, componentType, library, theme, title, dataSource, chartType, showHeader, legend, dataSort } = zoneConfig;
-  const availableTables = getAvailableTables();
+  const _allTables = getAvailableTables();
+  const availableTables = isUsingRealSchema()
+    ? _allTables.filter(t => !Object.prototype.hasOwnProperty.call(MOCK_DATA_TABLES, t))
+    : _allTables;
   const tableColumns = dataSource?.tableName ? getTableColumns(dataSource.tableName) : [];
 
   // All chart options grouped by library — mirrors the palette
