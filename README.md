@@ -107,7 +107,7 @@ function App() {
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `dashboard` | object | — | The dashboard schema object (required) |
+| `dashboard` | object | `null` | The dashboard schema object. Optional — renders an idle state when absent or `null`. |
 | `data` | object | `{}` | Optional data keyed by zone ID; bypasses the data service when provided |
 | `filters` | object | `{}` | Filter definitions to apply to all charts (see [Filter Types](#filter-types)) |
 | `onFilterChange` | function | — | Called with the current filter object whenever filters change |
@@ -229,6 +229,62 @@ Operators are inferred from column type (numeric columns automatically use the n
 | `lte` | Less than or equal to |
 | `isBlank` | Value is null or undefined |
 | `isNotBlank` | Value is not null or undefined |
+
+### With AI-Generated Dashboards
+
+`DashboardViewer` accepts a `null` dashboard and renders an idle state until one arrives. Pass the AI response directly as the `dashboard` prop — the viewer normalizes the JSON, clears any stale data cache, and re-renders automatically.
+
+```jsx
+import { useState } from 'react';
+import { DashboardViewer } from '@holograph/dashboard-viewer';
+
+function App() {
+  const [dashboard, setDashboard] = useState(null);
+
+  const handleAiResponse = (aiJson) => {
+    // Pass the parsed AI response directly — viewer handles the rest
+    setDashboard(aiJson);
+  };
+
+  return (
+    <>
+      {/* Your textbox / AI trigger UI calls handleAiResponse */}
+      <DashboardViewer dashboard={dashboard} />
+    </>
+  );
+}
+```
+
+**Expected AI JSON shape:**
+
+```json
+{
+  "version": "1.0.0",
+  "name": "Revenue Overview",
+  "zones": [
+    {
+      "id": "zone-1",
+      "componentType": "chart",
+      "library": "chartjs",
+      "chartType": "chartjs-bar",
+      "title": "Revenue by Region",
+      "gridPosition": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "dataSource": {
+        "tableName": "regional_sales",
+        "labelColumn": "region",
+        "valueColumn": "sales"
+      }
+    }
+  ]
+}
+```
+
+Valid `tableName` values for the built-in mock data: `sales_data`, `product_trends`, `customer_growth`, `performance_metrics`, `regional_sales`. For live data, pass uploaded files via the `fileSources` / `fileDataUrl` props.
+
+**What happens on each new AI response:**
+- Stale query cache is cleared so data re-fetches even if table names are reused
+- Zones with missing or invalid `id` fields are silently dropped (prevents render crashes)
+- Layout and chart config update immediately without remounting the viewer
 
 ### With External Data Source
 

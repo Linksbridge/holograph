@@ -447,6 +447,11 @@ export const getAvailableTables = () => getCachedTables();
  */
 export const getTableColumns = (tableName) => getCachedColumns(tableName);
 
+export const clearQueryDataCache = () => {
+  queryDataCache = {};
+  uniqueValuesCache = {};
+};
+
 export default {
   fetchChartData,
   fetchTableData,
@@ -454,6 +459,7 @@ export default {
   getTableColumns,
   initializeDataService,
   setDashboardFileSources,
+  clearQueryDataCache,
   getCachedTables,
   getCachedColumns,
   getUniqueValuesForColumn,

@@ -23,7 +23,7 @@ const ChartJsAdapter = React.lazy(() => import('./adapters/ChartJsAdapter'));
 const NivoAdapter = React.lazy(() => import('./adapters/NivoAdapter'));
 
 // Import data service
-import { fetchChartData, fetchTableData, initializeDataService, setDashboardFileSources } from './services/dataService';
+import { fetchChartData, fetchTableData, initializeDataService, setDashboardFileSources, clearQueryDataCache } from './services/dataService';
 
 // Import schema types
 import { CHART_LIBRARIES, CHART_TYPES, COMPONENT_TYPES, DEFAULT_CHART_TYPE, THEMES } from '@holograph/dashboard-schema';
@@ -262,12 +262,20 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData, resolvedStyles =
  * Main export - an embeddable dashboard viewer that accepts schema and filters as props.
  * 
  * @param {Object} props - Component props
- * @param {Object} props.dashboard - Dashboard schema object
+ * @param {Object} props.dashboard - Dashboard schema object (optional — renders idle state when absent)
  * @param {Object} props.data - Optional data object keyed by zone ID (bypasses data service)
  * @param {Object} props.filters - Optional filter values to apply to all charts
  * @param {Function} props.onFilterChange - Optional callback when filters change internally
  * @param {string} props.className - Optional CSS class name
  */
+const normalizeDashboard = (raw) => {
+  if (!raw || typeof raw !== 'object') return null;
+  return {
+    ...raw,
+    zones: Array.isArray(raw.zones) ? raw.zones.filter((z) => z && z.id) : [],
+  };
+};
+
 const DashboardViewer = ({
   dashboard,
   data = {},
@@ -283,6 +291,8 @@ const DashboardViewer = ({
   const [resolvedStyles, setResolvedStyles] = useState({});
   const containerRef = useRef(null);
 
+  const normalizedDashboard = useMemo(() => normalizeDashboard(dashboard), [dashboard]);
+
   // Initialize data service on mount
   useEffect(() => {
     const init = async () => {
@@ -291,6 +301,11 @@ const DashboardViewer = ({
     };
     init();
   }, []);
+
+  // Clear stale query cache whenever a new dashboard arrives
+  useEffect(() => {
+    if (normalizedDashboard) clearQueryDataCache();
+  }, [normalizedDashboard]);
 
   // Register file sources whenever they change
   useEffect(() => {
@@ -342,8 +357,8 @@ const DashboardViewer = ({
 
   // Generate layout for react-grid-layout
   const layout = useMemo(() => {
-    if (!dashboard?.zones) return [];
-    return dashboard.zones.map((zone) => ({
+    if (!normalizedDashboard?.zones) return [];
+    return normalizedDashboard.zones.map((zone) => ({
       i: zone.id,
       x: zone.gridPosition?.x || 0,
       y: zone.gridPosition?.y || 0,
@@ -352,12 +367,12 @@ const DashboardViewer = ({
       minW: 2,
       minH: 2,
     }));
-  }, [dashboard?.zones]);
+  }, [normalizedDashboard?.zones]);
 
   // Default layout settings
-  const cols = dashboard?.layout?.cols || 12;
-  const rowHeight = dashboard?.layout?.rowHeight || 30;
-  const margin = dashboard?.layout?.margin || [10, 10];
+  const cols = normalizedDashboard?.layout?.cols || 12;
+  const rowHeight = normalizedDashboard?.layout?.rowHeight || 30;
+  const margin = normalizedDashboard?.layout?.margin || [10, 10];
 
   // Helper to get library attribute value
   const getLibraryAttr = (lib) => {
@@ -367,10 +382,12 @@ const DashboardViewer = ({
     return 'chartjs';
   };
 
-  if (!dashboard) {
+  if (!normalizedDashboard) {
     return (
-      <div className={`dashboard-viewer ${className}`}>
-        <div className="viewer-error">No dashboard schema provided</div>
+      <div className={`dashboard-viewer ${className}`} ref={containerRef}>
+        <div className="viewer-empty-state">
+          <p>Waiting for dashboard…</p>
+        </div>
       </div>
     );
   }
@@ -388,7 +405,7 @@ const DashboardViewer = ({
 
   return (
     <div className={`dashboard-viewer ${className}`} ref={containerRef}>
-      {dashboard.zones?.length === 0 ? (
+      {normalizedDashboard.zones?.length === 0 ? (
         <div className="viewer-empty-state">
           <p>No charts to display</p>
         </div>
@@ -407,7 +424,7 @@ const DashboardViewer = ({
           useCSSTransforms={true}
           containerPadding={[10, 10]}
         >
-          {dashboard.zones?.map((zone) => (
+          {normalizedDashboard.zones?.map((zone) => (
             <div
               key={zone.id}
               className="viewer-zone-card"
