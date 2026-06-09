@@ -247,6 +247,7 @@ const AppContent = () => {
       ...currentDashboard,
       status: 'published',
       lastModified: new Date().toISOString(),
+      dataQueryUrl: settings?.saveLocations?.dataQueryUrl || currentDashboard.dataQueryUrl || '',
     };
 
     // Invoke webhook handler

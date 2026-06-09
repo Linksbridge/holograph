@@ -115,6 +115,23 @@ function App() {
 | `fileSources` | array | `[]` | Metadata for uploaded CSV/Excel files: `[{ id, name, columns, rowCount }]`. Each entry registers the file as a named table available to charts. |
 | `fileDataUrl` | string | `''` | Base URL for fetching uploaded file rows. The viewer appends `/{id}` and expects `{ rows: [...] }` in response. Required when `fileSources` is non-empty. |
 
+### Live Data via `dataQueryUrl`
+
+Add `dataQueryUrl` to the dashboard JSON and the viewer fetches live data from holograph-data-server automatically — no extra props needed.
+
+```json
+{
+  "version": "1.0.0",
+  "name": "My Dashboard",
+  "dataQueryUrl": "https://your-api.azurewebsites.net/api/data",
+  "zones": [...]
+}
+```
+
+The viewer calls `GET {dataQueryUrl}?table={tableName}&dashboardId={id}` for each chart and expects `{ data: [...rows] }` in the response. Filters are applied client-side after fetching. Falls back to mock data when `dataQueryUrl` is absent.
+
+The designer embeds the configured `dataQueryUrl` automatically on publish (Settings → Save Locations → Data Query URL).
+
 ### With Filters
 
 Pass a `filters` object to the viewer. Keys are column names; values are filter definitions. The viewer keeps its internal state in sync whenever the prop changes, so you can drive it from your own state.

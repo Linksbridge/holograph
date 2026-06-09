@@ -182,6 +182,7 @@ export const createInitialDashboard = () => ({
   description: 'A zero-VM dashboard with pluggable chart adapters',
   showTitle: true,
   showSubtitle: true,
+  dataQueryUrl: '',
   dataSources: [],
   zones: [
     {

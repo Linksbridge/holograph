@@ -23,7 +23,7 @@ const ChartJsAdapter = React.lazy(() => import('./adapters/ChartJsAdapter'));
 const NivoAdapter = React.lazy(() => import('./adapters/NivoAdapter'));
 
 // Import data service
-import { fetchChartData, fetchTableData, initializeDataService, setDashboardFileSources, clearQueryDataCache } from './services/dataService';
+import { fetchChartData, fetchTableData, initializeDataService, setDashboardFileSources, setDataQueryUrl, clearQueryDataCache } from './services/dataService';
 
 // Import schema types
 import { CHART_LIBRARIES, CHART_TYPES, COMPONENT_TYPES, DEFAULT_CHART_TYPE, THEMES } from '@holograph/dashboard-schema';
@@ -302,9 +302,15 @@ const DashboardViewer = ({
     init();
   }, []);
 
-  // Clear stale query cache whenever a new dashboard arrives
+  // Wire live data endpoint and clear stale cache whenever a new dashboard arrives
   useEffect(() => {
-    if (normalizedDashboard) clearQueryDataCache();
+    if (!normalizedDashboard) return;
+    clearQueryDataCache();
+    if (normalizedDashboard.dataQueryUrl) {
+      setDataQueryUrl(normalizedDashboard.dataQueryUrl, normalizedDashboard.id || null);
+    } else {
+      setDataQueryUrl(null);
+    }
   }, [normalizedDashboard]);
 
   // Register file sources whenever they change

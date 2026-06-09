@@ -113,6 +113,10 @@ let columnsCache = {};
 let uniqueValuesCache = {};
 let queryDataCache = {};
 
+// Live data endpoint from dashboard JSON
+let dataQueryUrl = null;
+let dashboardId = null;
+
 // File sources uploaded to the backend: name -> { id, columns, fileDataUrl }
 let fileSourceRegistry = {};
 
@@ -144,26 +148,55 @@ const fetchFileSourceData = async (tableName) => {
   return rows;
 };
 
+export const setDataQueryUrl = (url, id = null) => {
+  dataQueryUrl = url || null;
+  dashboardId = id || null;
+  queryDataCache = {};
+  uniqueValuesCache = {};
+};
+
+const fetchLiveData = async (tableName) => {
+  if (queryDataCache[tableName]) return queryDataCache[tableName];
+  const params = new URLSearchParams({ table: tableName });
+  if (dashboardId) params.set('dashboardId', dashboardId);
+  const response = await fetch(`${dataQueryUrl}?${params}`);
+  if (!response.ok) throw new Error(`Data fetch failed: ${response.status} ${response.statusText}`);
+  const result = await response.json();
+  const rows = result.data || result.rows || [];
+  queryDataCache[tableName] = rows;
+  if (rows.length > 0) columnsCache[tableName] = Object.keys(rows[0]);
+  return rows;
+};
+
 /**
- * Initialize the data service cache
- * In production, this would fetch schema info from the SQL database
+ * Initialize the data service cache.
+ * Pass dataQueryUrl + dashboardId to enable live data from holograph-data-server.
  */
-export const initializeDataService = async () => {
-  // Simulate fetching table list from SQL
+export const initializeDataService = async (url = null, id = null) => {
+  if (url) {
+    dataQueryUrl = url;
+    dashboardId = id;
+    tablesCache = null;
+    columnsCache = {};
+    uniqueValuesCache = {};
+    queryDataCache = {};
+    return;
+  }
+
+  // Fall back to mock data when no live endpoint configured
   await new Promise((resolve) => setTimeout(resolve, 100));
-  
+  dataQueryUrl = null;
+  dashboardId = null;
   tablesCache = Object.keys(MOCK_DATA_TABLES);
   columnsCache = {};
   uniqueValuesCache = {};
-  
-  // Pre-populate columns cache for each table
+
   tablesCache.forEach((tableName) => {
     if (MOCK_DATA_TABLES[tableName]?.length > 0) {
       columnsCache[tableName] = Object.keys(MOCK_DATA_TABLES[tableName][0]);
     }
   });
-  
-  console.log('Data service initialized with tables:', tablesCache);
+
   return tablesCache;
 };
 
@@ -337,6 +370,25 @@ export const fetchChartData = async (tableName, labelColumn, valueColumn, filter
     }));
   }
 
+  // Live data — fetch from holograph-data-server
+  if (dataQueryUrl) {
+    const rows = await fetchLiveData(tableName);
+    let filtered = rows;
+    if (filters && Object.keys(filters).length > 0) {
+      filtered = rows.filter((row) => {
+        for (const [col, filterDef] of Object.entries(filters)) {
+          if (!filterDef) continue;
+          if (!applyFilterToRow(row, col, filterDef)) return false;
+        }
+        return true;
+      });
+    }
+    return filtered.map((row) => ({
+      label: row[labelColumn] ?? row[Object.keys(row)[0]],
+      value: row[valueColumn] ?? row[Object.keys(row)[1]],
+    }));
+  }
+
   // Simulate network delay (Azure Function latency)
   await new Promise((resolve) => setTimeout(resolve, 200 + Math.random() * 300));
 
@@ -374,6 +426,29 @@ export const fetchChartData = async (tableName, labelColumn, valueColumn, filter
  * @returns {Promise<Array<Object>>} Raw table data with all columns
  */
 export const fetchTableData = async (tableName, columns = null, filters = null) => {
+  // Live data — fetch from holograph-data-server
+  if (dataQueryUrl && !fileSourceRegistry[tableName]) {
+    const rows = await fetchLiveData(tableName);
+    let filtered = rows;
+    if (filters && Object.keys(filters).length > 0) {
+      filtered = rows.filter((row) => {
+        for (const [col, filterDef] of Object.entries(filters)) {
+          if (!filterDef) continue;
+          if (!applyFilterToRow(row, col, filterDef)) return false;
+        }
+        return true;
+      });
+    }
+    if (columns && columns.length > 0) {
+      return filtered.map((row) => {
+        const out = {};
+        columns.forEach((c) => { out[c] = row[c]; });
+        return out;
+      });
+    }
+    return filtered;
+  }
+
   // File source — fetch from backend
   if (fileSourceRegistry[tableName]) {
     const rows = await fetchFileSourceData(tableName);
@@ -458,6 +533,7 @@ export default {
   getAvailableTables,
   getTableColumns,
   initializeDataService,
+  setDataQueryUrl,
   setDashboardFileSources,
   clearQueryDataCache,
   getCachedTables,
