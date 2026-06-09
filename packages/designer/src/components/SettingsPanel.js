@@ -112,6 +112,9 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
         publishUrl: wh.publishUrl || prev.saveLocations.publishUrl || '',
         listDocumentsUrl: wh.listDocumentsUrl || prev.saveLocations.listDocumentsUrl || '',
         dataQueryUrl: wh.dataQueryUrl || prev.saveLocations.dataQueryUrl || '',
+        uploadFileUrl: wh.uploadFileUrl || prev.saveLocations.uploadFileUrl || '',
+        fileDataUrl: wh.fileDataUrl || prev.saveLocations.fileDataUrl || '',
+        listFilesUrl: wh.listFilesUrl || prev.saveLocations.listFilesUrl || '',
       },
     }));
   }, [globalSettings?.webhooks]);

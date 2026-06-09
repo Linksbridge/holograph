@@ -296,7 +296,7 @@ function App() {
 }
 ```
 
-Valid `tableName` values for the built-in mock data: `sales_data`, `product_trends`, `customer_growth`, `performance_metrics`, `regional_sales`. For live data, pass uploaded files via the `fileSources` / `fileDataUrl` props.
+For live data, set `dataQueryUrl` in the dashboard JSON or pass uploaded files via the `fileSources` / `fileDataUrl` props. Charts with no configured data source render empty.
 
 **What happens on each new AI response:**
 - Stale query cache is cleared so data re-fetches even if table names are reused
