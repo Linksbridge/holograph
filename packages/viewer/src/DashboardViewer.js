@@ -330,10 +330,12 @@ const DashboardViewer = ({
     });
   }, []);
 
-  // Sync external filters
+  // Sync external filters — use serialized comparison to avoid re-firing on every render
+  // when the parent passes a new object reference with the same contents (e.g. default `{}`)
   useEffect(() => {
     setCurrentFilters(filters);
-  }, [filters]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(filters)]);
 
   // Handle filter change from internal components
   const handleFilterChange = (newFilters) => {
