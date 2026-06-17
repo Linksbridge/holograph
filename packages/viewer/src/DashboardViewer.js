@@ -302,16 +302,14 @@ const DashboardViewer = ({
     init();
   }, []);
 
-  // Wire live data endpoint and clear stale cache whenever a new dashboard arrives
+  // Wire live data endpoint and clear stale cache whenever a new dashboard arrives.
+  // Falls back to fileDataUrl when the dashboard schema has no dataQueryUrl of its own.
   useEffect(() => {
     if (!normalizedDashboard) return;
     clearQueryDataCache();
-    if (normalizedDashboard.dataQueryUrl) {
-      setDataQueryUrl(normalizedDashboard.dataQueryUrl, normalizedDashboard.id || null);
-    } else {
-      setDataQueryUrl(null);
-    }
-  }, [normalizedDashboard]);
+    const queryUrl = normalizedDashboard.dataQueryUrl || fileDataUrl || null;
+    setDataQueryUrl(queryUrl, normalizedDashboard.id || null);
+  }, [normalizedDashboard, fileDataUrl]);
 
   // Register file sources whenever they change
   useEffect(() => {
