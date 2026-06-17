@@ -14,6 +14,11 @@ let queryDataCache = {};
 // Live data endpoint from dashboard JSON
 let dataQueryUrl = null;
 let dashboardId = null;
+let authToken = null;
+
+export const setAuthToken = (token) => {
+  authToken = token || null;
+};
 
 // File sources uploaded to the backend: name -> { id, columns, fileDataUrl }
 let fileSourceRegistry = {};
@@ -54,7 +59,8 @@ const fetchLiveData = async (tableName) => {
   if (queryDataCache[tableName]) return queryDataCache[tableName];
   const params = new URLSearchParams({ table: tableName });
   if (dashboardId) params.set('dashboardId', dashboardId);
-  const response = await fetch(`${dataQueryUrl}?${params}`);
+  const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
+  const response = await fetch(`${dataQueryUrl}?${params}`, { headers });
   if (!response.ok) throw new Error(`Data fetch failed: ${response.status} ${response.statusText}`);
   const result = await response.json();
   const rows = result.data || result.rows || [];

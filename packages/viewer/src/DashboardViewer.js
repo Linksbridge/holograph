@@ -23,7 +23,7 @@ const ChartJsAdapter = React.lazy(() => import('./adapters/ChartJsAdapter'));
 const NivoAdapter = React.lazy(() => import('./adapters/NivoAdapter'));
 
 // Import data service
-import { fetchChartData, fetchTableData, initializeDataService, setDashboardFileSources, setDataQueryUrl, clearQueryDataCache } from './services/dataService';
+import { fetchChartData, fetchTableData, initializeDataService, setDashboardFileSources, setDataQueryUrl, setAuthToken, clearQueryDataCache } from './services/dataService';
 
 // Import schema types
 import { CHART_LIBRARIES, CHART_TYPES, COMPONENT_TYPES, DEFAULT_CHART_TYPE, THEMES } from '@holograph/dashboard-schema';
@@ -284,6 +284,7 @@ const DashboardViewer = ({
   className = '',
   fileSources = [],
   fileDataUrl = '',
+  authToken = null,
 }) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [currentFilters, setCurrentFilters] = useState(filters);
@@ -317,6 +318,11 @@ const DashboardViewer = ({
       setDashboardFileSources(fileSources, fileDataUrl);
     }
   }, [fileSources, fileDataUrl]);
+
+  // Forward auth token to data service whenever it changes
+  useEffect(() => {
+    setAuthToken(authToken);
+  }, [authToken]);
 
   // Read CSS custom properties from container so chart internals can use host-app theme values
   useEffect(() => {

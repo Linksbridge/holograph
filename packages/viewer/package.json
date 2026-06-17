@@ -1,6 +1,6 @@
 {
   "name": "@linksbridge/dashboard-viewer",
-  "version": "1.1.7",
+  "version": "1.1.8",
   "description": "Embeddable React dashboard viewer component for displaying dashboards with filters",
   "main": "dist/index.cjs.js",
   "module": "dist/index.esm.js",
