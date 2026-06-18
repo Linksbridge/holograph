@@ -319,9 +319,10 @@ const DashboardViewer = ({
     }
   }, [fileSources, fileDataUrl]);
 
-  // Forward auth token to data service whenever it changes
+  // Forward auth token to data service; clear cache so charts re-fetch with new credentials
   useEffect(() => {
     setAuthToken(authToken);
+    clearQueryDataCache();
   }, [authToken]);
 
   // Read CSS custom properties from container so chart internals can use host-app theme values
