@@ -128,6 +128,7 @@ const getNivoChartType = (chartType) => {
 
 const NivoAdapter = ({
   data,
+  valueColumns = [],
   theme = 'default',
   width = 400,
   height = 300,
@@ -191,50 +192,61 @@ const NivoAdapter = ({
 
   // Convert data to nivo format
 const nivoData = useMemo(() => {
-  // For choropleth, use demo data if no data is provided
-  const chartData = (getNivoChartType(chartType) === NIVO_CHART_TYPES.CHOROPLETH && (!data || data.length === 0))
+  const nivoType = getNivoChartType(chartType);
+  const chartData = (nivoType === NIVO_CHART_TYPES.CHOROPLETH && (!data || data.length === 0))
     ? DEMO_CHOROPLETH_DATA
     : data;
 
   if (!chartData || chartData.length === 0) return [];
 
   const palette = [...DEFAULT_PALETTE];
-  
-  // For pie chart - nivo pie expects { id, value, label }
-  if (getNivoChartType(chartType) === NIVO_CHART_TYPES.PIE) {
+  const cols = valueColumns.length > 0 ? valueColumns : null;
+
+  if (nivoType === NIVO_CHART_TYPES.PIE) {
+    const col0 = cols?.[0];
     return chartData.map((item, index) => ({
       id: item.label || `item-${index}`,
       label: item.label || `Item ${index + 1}`,
-      value: item.value,
+      value: col0 ? (item[col0] ?? 0) : (item.value ?? 0),
       color: palette[index % palette.length],
     }));
   }
-  
-  // For choropleth - nivo expects { id, label, value, color? }
-  // Note: Choropleth charts require additional props: features (geo data) and match function
-  // These should be provided via chart configuration or data source
-  if (getNivoChartType(chartType) === NIVO_CHART_TYPES.CHOROPLETH) {
+
+  if (nivoType === NIVO_CHART_TYPES.CHOROPLETH) {
+    const col0 = cols?.[0];
     return chartData.map((item, index) => ({
       id: item.id || item.label || `region-${index}`,
       label: item.label || item.id || `Region ${index + 1}`,
-      value: item.value,
+      value: col0 ? (item[col0] ?? 0) : (item.value ?? 0),
       color: item.color || palette[index % palette.length],
     }));
   }
-  
-  // For line and bar - nivo expects array of series
-  // Each series has id and data array of { x, y }
-  return [
-    {
-      id: title || 'Series 1',
-      data: chartData.map(item => ({
-        x: item.label,
-        y: item.value,
-      })),
-      color: colors.primary,
-    },
-  ];
-}, [data, chartType, title, colors]);
+
+  if (nivoType === NIVO_CHART_TYPES.BAR) {
+    // Nivo bar expects flat rows: [{label, col1, col2}] — pass through as-is
+    // keys are set in barConfig via valueColumns
+    return chartData;
+  }
+
+  // Line chart — array of series, each with {id, data:[{x,y}]}
+  if (cols && cols.length > 1) {
+    return cols.map((col, i) => ({
+      id: col,
+      color: palette[i % palette.length],
+      data: chartData.map(item => ({ x: item.label, y: item[col] ?? 0 })),
+    }));
+  }
+
+  const col0 = cols?.[0];
+  return [{
+    id: col0 || title || 'Series 1',
+    color: colors.primary,
+    data: chartData.map(item => ({
+      x: item.label,
+      y: col0 ? (item[col0] ?? 0) : (item.value ?? 0),
+    })),
+  }];
+}, [data, valueColumns, chartType, title, colors]);
   
   // Common theme for nivo
   const nivoTheme = useMemo(() => ({
@@ -374,6 +386,7 @@ const nivoData = useMemo(() => {
     maxValue: 'auto',
     groupMode: 'grouped',
     reverse: false,
+    keys: valueColumns.length > 0 ? valueColumns : ['value'],
     indexBy: 'label',
     layout: 'horizontal',
     valueScale: { type: 'linear' },
@@ -447,7 +460,7 @@ const nivoData = useMemo(() => {
         </div>
       );
     }) : false,
-  }), [width, showLegend, colors, fontSize]);
+  }), [width, showLegend, colors, fontSize, valueColumns]);
   
 // Pie chart specific config
 const pieConfig = useMemo(() => ({

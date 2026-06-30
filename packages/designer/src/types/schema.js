@@ -77,6 +77,24 @@ export const DEFAULT_CHART_TYPE = {
   [CHART_LIBRARIES.NIVO]: CHART_TYPES.NIVO_LINE,
 };
 
+// Column requirements per chart type. valueMax: null = unlimited series.
+export const CHART_COLUMN_SCHEMA = {
+  pie:               { labelCount: 1, valueMin: 1, valueMax: 1 },
+  doughnut:          { labelCount: 1, valueMin: 1, valueMax: 1 },
+  donut:             { labelCount: 1, valueMin: 1, valueMax: 1 },
+  polarArea:         { labelCount: 1, valueMin: 1, valueMax: 1 },
+  scatter:           { labelCount: 0, valueMin: 1, valueMax: 1 },
+  chartjs_bubblemap: { labelCount: 1, valueMin: 1, valueMax: 1 },
+  nivo_pie:          { labelCount: 1, valueMin: 1, valueMax: 1 },
+  nivo_choropleth:   { labelCount: 1, valueMin: 1, valueMax: 1 },
+  bar:               { labelCount: 1, valueMin: 1, valueMax: null },
+  line:              { labelCount: 1, valueMin: 1, valueMax: null },
+  area:              { labelCount: 1, valueMin: 1, valueMax: null },
+  radar:             { labelCount: 1, valueMin: 1, valueMax: null },
+  nivo_line:         { labelCount: 1, valueMin: 1, valueMax: null },
+  nivo_bar:          { labelCount: 1, valueMin: 1, valueMax: null },
+};
+
 // Responsive sizing modes
 export const SIZING_MODES = {
   FIXED: 'fixed',       // Fixed pixel-based sizing
@@ -162,7 +180,7 @@ export const createZoneConfig = (id) => ({
   dataSource: {
     tableName: 'sales_data',
     labelColumn: 'month',
-    valueColumn: 'revenue',
+    valueColumns: ['revenue'],
   },
   gridPosition: {
     x: 0,
@@ -237,7 +255,7 @@ export const createInitialDashboard = () => ({
  * @typedef {Object} DataSourceConfig
  * @property {string} tableName - SQL table name
  * @property {string} labelColumn - Column for labels
- * @property {string} valueColumn - Column for values
+ * @property {string[]} valueColumns - Columns for values (supports multi-series)
  */
 
 /**

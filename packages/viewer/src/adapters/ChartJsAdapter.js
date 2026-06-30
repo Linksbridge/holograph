@@ -171,7 +171,7 @@ const CHART_COMPONENTS = {
   [CHART_TYPES.CHARTJS_POLAR]: PolarArea,
 };
 
-const ChartJsAdapter = ({ data, theme = 'default', width = 400, height = 300, title, chartType = CHART_TYPES.CHARTJS_LINE, legend, tooltip, zoneConfig, resolvedStyles = {} }) => {
+const ChartJsAdapter = ({ data, valueColumns = [], theme = 'default', width = 400, height = 300, title, chartType = CHART_TYPES.CHARTJS_LINE, legend, tooltip, zoneConfig, resolvedStyles = {} }) => {
   const chartRef = useRef(null);
   const colors = THEMES[theme] || THEMES.default;
   const fontFamily = resolvedStyles.fontFamily || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
@@ -199,54 +199,70 @@ const ChartJsAdapter = ({ data, theme = 'default', width = 400, height = 300, ti
   // Get the appropriate chart component
   const ChartComponent = CHART_COMPONENTS[chartType] || Line;
 
+  const palette = [
+    colors.primary, colors.secondary,
+    '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1',
+  ];
+
   // Chart configuration
   const chartData = useMemo(() => {
-    const baseData = {
-      labels: data?.map((d) => d.label) || [],
-      datasets: [
-        {
-          label: title || 'Value',
-          data: data?.map((d) => d.value) || [],
-          borderColor: colors.primary,
-          backgroundColor: `${colors.primary}20`,
-          fill: true,
-          tension: 0.4,
-          pointBackgroundColor: colors.primary,
-          pointBorderColor: '#ffffff',
-          pointBorderWidth: 2,
-          pointRadius: Math.max(2, Math.min(5, width / 60)),
-          pointHoverRadius: Math.max(4, Math.min(8, width / 40)),
-        },
-      ],
-    };
+    const labels = data?.map((d) => d.label) || [];
+    const isPieType = [CHART_TYPES.CHARTJS_PIE, CHART_TYPES.CHARTJS_DOUGHNUT, CHART_TYPES.CHARTJS_POLAR, CHART_TYPES.CHARTJS_RADAR].includes(chartType);
+    const cols = valueColumns.length > 0 ? valueColumns : null;
+    const isMulti = cols && cols.length > 1 && !isPieType;
 
-    // Customize for pie/doughnut/polar/radar - use multiple colors
-    if ([CHART_TYPES.CHARTJS_PIE, CHART_TYPES.CHARTJS_DOUGHNUT, CHART_TYPES.CHARTJS_POLAR, CHART_TYPES.CHARTJS_RADAR].includes(chartType)) {
-      const palette = [
-        colors.primary,
-        colors.secondary,
-        '#f59e0b',
-        '#8b5cf6',
-        '#ec4899',
-        '#14b8a6',
-        '#f97316',
-        '#6366f1',
-      ];
-      baseData.datasets[0].backgroundColor = data?.map((_, i) => palette[i % palette.length] + '80') || [];
-      baseData.datasets[0].borderColor = data?.map((_, i) => palette[i % palette.length]) || [];
-      baseData.datasets[0].borderWidth = 2;
-    }
-    
-    // Customize for bar chart
-    if (chartType === CHART_TYPES.CHARTJS_BAR) {
-      baseData.datasets[0].backgroundColor = colors.primary;
-      baseData.datasets[0].borderColor = colors.primary;
-      baseData.datasets[0].borderWidth = 1;
-      baseData.datasets[0].borderRadius = 4;
+    if (!isMulti) {
+      const col = cols?.[0];
+      const vals = data?.map((d) => (col !== undefined ? (d[col] ?? 0) : (d.value ?? 0))) || [];
+      const dataset = { label: col || title || 'Value', data: vals };
+      if (isPieType) {
+        dataset.backgroundColor = vals.map((_, i) => `${palette[i % palette.length]}80`);
+        dataset.borderColor = vals.map((_, i) => palette[i % palette.length]);
+        dataset.borderWidth = 2;
+      } else if (chartType === CHART_TYPES.CHARTJS_BAR) {
+        dataset.backgroundColor = colors.primary;
+        dataset.borderColor = colors.primary;
+        dataset.borderWidth = 1;
+        dataset.borderRadius = 4;
+      } else {
+        dataset.borderColor = colors.primary;
+        dataset.backgroundColor = `${colors.primary}20`;
+        dataset.fill = true;
+        dataset.tension = 0.4;
+        dataset.pointBackgroundColor = colors.primary;
+        dataset.pointBorderColor = '#ffffff';
+        dataset.pointBorderWidth = 2;
+        dataset.pointRadius = Math.max(2, Math.min(5, width / 60));
+        dataset.pointHoverRadius = Math.max(4, Math.min(8, width / 40));
+      }
+      return { labels, datasets: [dataset] };
     }
 
-    return baseData;
-  }, [data, colors, title, width, chartType]);
+    const datasets = cols.map((col, i) => {
+      const color = palette[i % palette.length];
+      const vals = data?.map((d) => d[col] ?? 0) || [];
+      const dataset = { label: col, data: vals };
+      if (chartType === CHART_TYPES.CHARTJS_BAR) {
+        dataset.backgroundColor = color;
+        dataset.borderColor = color;
+        dataset.borderWidth = 1;
+        dataset.borderRadius = 4;
+      } else {
+        dataset.borderColor = color;
+        dataset.backgroundColor = `${color}20`;
+        dataset.fill = false;
+        dataset.tension = 0.4;
+        dataset.pointBackgroundColor = color;
+        dataset.pointBorderColor = '#ffffff';
+        dataset.pointBorderWidth = 2;
+        dataset.pointRadius = Math.max(2, Math.min(5, width / 60));
+        dataset.pointHoverRadius = Math.max(4, Math.min(8, width / 40));
+      }
+      return dataset;
+    });
+
+    return { labels, datasets };
+  }, [data, valueColumns, colors, title, width, chartType]);
 
   const options = useMemo(() => {
     const baseOptions = {

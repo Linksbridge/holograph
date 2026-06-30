@@ -486,6 +486,46 @@ export const fetchChartData = async (tableName, labelColumn, valueColumn, filter
 };
 
 /**
+ * Fetch chart data for multiple value columns (multi-series support).
+ * Returns rows shaped as { label, [col1]: val, [col2]: val, ... }
+ */
+export const fetchChartDataMulti = async (tableName, labelColumn, valueColumns, filters = null) => {
+  const cols = Array.isArray(valueColumns) ? valueColumns : (valueColumns ? [valueColumns] : []);
+
+  if (usingRealSchema && dataQueryUrl || fileSourceRegistry[tableName] || joinDefinitions[tableName]) {
+    const rows = await fetchQueryData(tableName);
+    let filtered = rows;
+    if (filters && Object.keys(filters).length > 0) {
+      filtered = rows.filter((row) => applyFilterToRow(row, filters));
+    }
+    return filtered.map((row) => {
+      const point = { label: row[labelColumn] };
+      cols.forEach((col) => { point[col] = row[col]; });
+      return point;
+    });
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, 200 + Math.random() * 300));
+
+  if (usingRealSchema) return [];
+
+  const tableData = MOCK_DATA_TABLES[tableName];
+  if (!tableData) return [];
+
+  let filteredData = tableData;
+  if (filters && Object.keys(filters).length > 0) {
+    filteredData = tableData.filter((row) => applyFilterToRow(row, filters));
+  }
+
+  const firstKey = (row) => Object.keys(row)[0];
+  return filteredData.map((row) => {
+    const point = { label: row[labelColumn] ?? row[firstKey(row)] };
+    cols.forEach((col) => { point[col] = row[col]; });
+    return point;
+  });
+};
+
+/**
  * Simulates an Azure Function call to fetch all table data
  * @param {string} tableName - Name of the SQL table
  * @param {string[]} columns - Array of column names to fetch (optional, fetches all if not provided)
@@ -573,6 +613,7 @@ export const getTableColumns = (tableName) => getCachedColumns(tableName);
 
 export default {
   fetchChartData,
+  fetchChartDataMulti,
   fetchTableData,
   getAvailableTables,
   getTableColumns,

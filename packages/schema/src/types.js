@@ -40,7 +40,7 @@ export const createZoneConfig = (id) => ({
   dataSource: {
     tableName: 'sales_data',
     labelColumn: 'month',
-    valueColumn: 'revenue',
+    valueColumns: ['revenue'],
   },
   gridPosition: {
     x: 0,
@@ -113,7 +113,7 @@ export const createInitialDashboard = () => ({
  * @typedef {Object} DataSourceConfig
  * @property {string} tableName - SQL table name
  * @property {string} labelColumn - Column for labels
- * @property {string} valueColumn - Column for values
+ * @property {string[]} valueColumns - Columns for values (supports multi-series)
  */
 
 /**

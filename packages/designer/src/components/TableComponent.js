@@ -7,7 +7,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
-import { fetchChartData, fetchTableData } from '../services/dataService';
+import { fetchChartDataMulti, fetchTableData } from '../services/dataService';
 import { THEMES } from '../types/schema';
 import { useFilters } from '../hooks/useFilters';
 
@@ -91,12 +91,12 @@ const TableComponent = ({ config, width, height }) => {
           if (isMounted) {
             setTableData(data);
           }
-        } else if (dataSource?.tableName && dataSource?.labelColumn && dataSource?.valueColumn) {
-          // Fall back to original fetchChartData for backward compatibility
-          const data = await fetchChartData(
+        } else if (dataSource?.tableName && dataSource?.labelColumn && (dataSource?.valueColumns?.length > 0 || dataSource?.valueColumn)) {
+          const valueCols = dataSource?.valueColumns ?? (dataSource?.valueColumn ? [dataSource.valueColumn] : []);
+          const data = await fetchChartDataMulti(
             dataSource.tableName,
             dataSource.labelColumn,
-            dataSource.valueColumn,
+            valueCols,
             filters
           );
 
@@ -122,7 +122,7 @@ const TableComponent = ({ config, width, height }) => {
     return () => {
       isMounted = false;
     };
-  }, [dataSource?.tableName, dataSource?.labelColumn, dataSource?.valueColumn, dataSource?.columns, JSON.stringify(filters)]);
+  }, [dataSource?.tableName, dataSource?.labelColumn, JSON.stringify(dataSource?.valueColumns), dataSource?.valueColumn, dataSource?.columns, JSON.stringify(filters)]);
 
   // Reset to page 1 when data changes
   useEffect(() => {
@@ -233,6 +233,11 @@ const TableComponent = ({ config, width, height }) => {
   let displayColumns = ["label", "value"];
   if (tableColumns && Array.isArray(tableColumns) && tableColumns.length > 0) {
     displayColumns = tableColumns;
+  } else {
+    const valueCols = dataSource?.valueColumns ?? (dataSource?.valueColumn ? [dataSource.valueColumn] : []);
+    if (dataSource?.labelColumn && valueCols.length > 0) {
+      displayColumns = [dataSource.labelColumn, ...valueCols];
+    }
   }
 
   const rowsPerPage = 10;

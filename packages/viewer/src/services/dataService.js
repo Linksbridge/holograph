@@ -200,6 +200,17 @@ export const fetchChartData = async (tableName, labelColumn, valueColumn, filter
   }));
 };
 
+export const fetchChartDataMulti = async (tableName, labelColumn, valueColumns, filters = null) => {
+  const cols = Array.isArray(valueColumns) ? valueColumns : (valueColumns ? [valueColumns] : []);
+  const rows = await fetchRows(tableName);
+  const filtered = applyFilters(rows, filters);
+  return filtered.map((row) => {
+    const point = { label: row[labelColumn] ?? row[Object.keys(row)[0]] };
+    cols.forEach((col) => { point[col] = row[col]; });
+    return point;
+  });
+};
+
 export const fetchTableData = async (tableName, columns = null, filters = null) => {
   const rows = await fetchRows(tableName);
   const filtered = applyFilters(rows, filters);
@@ -218,6 +229,7 @@ export const getTableColumns = (tableName) => getCachedColumns(tableName);
 
 export default {
   fetchChartData,
+  fetchChartDataMulti,
   fetchTableData,
   getAvailableTables,
   getTableColumns,

@@ -3,10 +3,9 @@ export function getMatchingRules(zone, rules, settings) {
 
   const datasource = settings?.dataSource?.databaseName || '';
   const tableName  = zone?.dataSource?.tableName || '';
-  const cols = [
-    zone?.dataSource?.labelColumn,
-    zone?.dataSource?.valueColumn,
-  ].filter(Boolean);
+  const valueCols = zone?.dataSource?.valueColumns
+    ?? (zone?.dataSource?.valueColumn ? [zone.dataSource.valueColumn] : []);
+  const cols = [zone?.dataSource?.labelColumn, ...valueCols].filter(Boolean);
 
   return rules.filter((rule) => {
     if (rule.datasource !== datasource) return false;

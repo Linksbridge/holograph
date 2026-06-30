@@ -23,7 +23,7 @@ const ChartJsAdapter = React.lazy(() => import('./adapters/ChartJsAdapter'));
 const NivoAdapter = React.lazy(() => import('./adapters/NivoAdapter'));
 
 // Import data service
-import { fetchChartData, fetchTableData, initializeDataService, setDashboardFileSources, setDataQueryUrl, setAuthToken, clearQueryDataCache } from './services/dataService';
+import { fetchChartData, fetchChartDataMulti, fetchTableData, initializeDataService, setDashboardFileSources, setDataQueryUrl, setAuthToken, clearQueryDataCache } from './services/dataService';
 
 // Import schema types
 import { CHART_LIBRARIES, CHART_TYPES, COMPONENT_TYPES, DEFAULT_CHART_TYPE, THEMES } from '@holograph/dashboard-schema';
@@ -50,6 +50,8 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData, resolvedStyles =
 
   const { library, theme, title, dataSource, chartType, legend } = zone;
   const effectiveChartType = chartType || DEFAULT_CHART_TYPE[library] || CHART_TYPES.CHARTJS_LINE;
+  const valueColumns = dataSource?.valueColumns
+    ?? (dataSource?.valueColumn ? [dataSource.valueColumn] : []);
 
   // Get theme colors
   const themeColors = THEMES[theme] || THEMES.default;
@@ -111,10 +113,10 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData, resolvedStyles =
             setTableData(data);
           }
         } else {
-          const data = await fetchChartData(
+          const data = await fetchChartDataMulti(
             dataSource.tableName,
             dataSource.labelColumn,
-            dataSource.valueColumn,
+            valueColumns,
             filters
           );
           if (isMounted) {
@@ -137,7 +139,7 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData, resolvedStyles =
     return () => {
       isMounted = false;
     };
-  }, [zoneData, dataSource?.tableName, dataSource?.labelColumn, dataSource?.valueColumn, zone.componentType, JSON.stringify(filters)]);
+  }, [zoneData, dataSource?.tableName, dataSource?.labelColumn, JSON.stringify(valueColumns), zone.componentType, JSON.stringify(filters)]);
 
   // Determine which adapter to use
   const Adapter = useMemo(() => {
@@ -242,12 +244,14 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData, resolvedStyles =
         }>
           <Adapter
             data={chartData}
+            valueColumns={valueColumns}
             theme={theme}
             width={dimensions.width}
             height={dimensions.height}
             title={title}
             chartType={effectiveChartType}
             legend={legend}
+            zoneConfig={zone}
             resolvedStyles={resolvedStyles}
           />
         </Suspense>

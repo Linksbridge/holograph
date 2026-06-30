@@ -7,7 +7,7 @@
 import React from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { CHART_LIBRARIES, CHART_TYPES, CHART_TYPE_LIBRARY, DEFAULT_CHART_TYPE, COLOR_THEMES, THEMES, COMPONENT_TYPES, LEGEND_POSITIONS } from '../types/schema';
+import { CHART_LIBRARIES, CHART_TYPES, CHART_TYPE_LIBRARY, DEFAULT_CHART_TYPE, COLOR_THEMES, THEMES, COMPONENT_TYPES, LEGEND_POSITIONS, CHART_COLUMN_SCHEMA } from '../types/schema';
 import { getAvailableTables, getTableColumns, isUsingRealSchema, MOCK_DATA_TABLES } from '../services/dataService';
 
 const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
@@ -91,7 +91,7 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
         ...dataSource,
         tableName: e.target.value,
         labelColumn: '',
-        valueColumn: '',
+        valueColumns: [],
       },
     });
   };
@@ -102,16 +102,6 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
       dataSource: {
         ...dataSource,
         labelColumn: e.target.value,
-      },
-    });
-  };
-
-  const handleValueColumnChange = (e) => {
-    onUpdate({
-      ...zoneConfig,
-      dataSource: {
-        ...dataSource,
-        valueColumn: e.target.value,
       },
     });
   };
@@ -448,25 +438,88 @@ const PropertyPanel = ({ zoneConfig, onUpdate, onClose }) => {
           </div>
         )}
 
-        {/* Value Column - Only show for charts */}
-        {componentType === COMPONENT_TYPES.CHART && (
-          <div className="property-field-group">
-            <label className="property-label">Value Column</label>
-            <select
-              className="property-select"
-              value={dataSource?.valueColumn || ''}
-              onChange={handleValueColumnChange}
-              disabled={!dataSource?.tableName}
-            >
-              <option value="">Select column...</option>
-              {tableColumns.map((col) => (
-                <option key={col} value={col}>
-                  {col}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+        {/* Value Columns - dynamic based on chart type's column schema */}
+        {componentType === COMPONENT_TYPES.CHART && dataSource?.tableName && (() => {
+          const colSchema = CHART_COLUMN_SCHEMA[chartType] || { valueMin: 1, valueMax: null };
+          const currentValueColumns = dataSource?.valueColumns
+            ?? (dataSource?.valueColumn ? [dataSource.valueColumn] : []);
+          const usedSet = new Set(currentValueColumns);
+          const availForValue = tableColumns.filter((c) => c !== dataSource?.labelColumn);
+          const availUnused = availForValue.filter((c) => !usedSet.has(c));
+
+          const setValueColumn = (idx, col) => {
+            const updated = [...currentValueColumns];
+            updated[idx] = col;
+            onUpdate({ ...zoneConfig, dataSource: { ...dataSource, valueColumns: updated } });
+          };
+          const addValueColumn = (col) => {
+            if (usedSet.has(col)) return;
+            onUpdate({ ...zoneConfig, dataSource: { ...dataSource, valueColumns: [...currentValueColumns, col] } });
+          };
+          const removeValueColumn = (idx) => {
+            onUpdate({ ...zoneConfig, dataSource: { ...dataSource, valueColumns: currentValueColumns.filter((_, i) => i !== idx) } });
+          };
+
+          if (colSchema.valueMax === 1) {
+            return (
+              <div className="property-field-group">
+                <label className="property-label">Value Column</label>
+                <select
+                  className="property-select"
+                  value={currentValueColumns[0] || ''}
+                  onChange={(e) => setValueColumn(0, e.target.value)}
+                  disabled={!dataSource?.tableName}
+                >
+                  <option value="">Select column...</option>
+                  {availForValue.map((col) => (
+                    <option key={col} value={col}>{col}</option>
+                  ))}
+                </select>
+              </div>
+            );
+          }
+
+          return (
+            <div className="property-field-group">
+              <label className="property-label">Value Columns</label>
+              {currentValueColumns.length > 0 && (
+                <div style={{ marginBottom: '8px', border: '1px solid #e5e7eb', borderRadius: '6px', overflow: 'hidden' }}>
+                  {currentValueColumns.map((col, i) => (
+                    <div key={col} style={{
+                      display: 'flex', alignItems: 'center', gap: '4px',
+                      padding: '5px 8px', background: i % 2 === 0 ? '#f9fafb' : '#fff',
+                      borderBottom: i < currentValueColumns.length - 1 ? '1px solid #f3f4f6' : 'none',
+                      fontSize: '12px',
+                    }}>
+                      <span style={{ flex: 1, color: '#1e293b', fontFamily: 'monospace' }}>{col}</span>
+                      <button
+                        onClick={() => removeValueColumn(i)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 3px', color: '#ef4444', fontSize: '14px', lineHeight: 1 }}
+                        title="Remove series"
+                      >×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {availUnused.length > 0 && (
+                <select
+                  className="property-select"
+                  value=""
+                  onChange={(e) => { if (e.target.value) addValueColumn(e.target.value); }}
+                  disabled={!dataSource?.tableName}
+                >
+                  <option value="">＋ Add value column…</option>
+                  {availUnused.map((col) => (
+                    <option key={col} value={col}>{col}</option>
+                  ))}
+                </select>
+              )}
+              {currentValueColumns.length === 0 && (
+                <p className="property-help-text">Select at least one value column.</p>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Sort Order - for charts only */}
         {componentType === COMPONENT_TYPES.CHART && (

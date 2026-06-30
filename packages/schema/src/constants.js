@@ -137,6 +137,26 @@ export const THEMES = {
   },
 };
 
+// Column requirements per chart type. valueMax: null = unlimited series.
+export const CHART_COLUMN_SCHEMA = {
+  // Single-series only
+  pie:               { labelCount: 1, valueMin: 1, valueMax: 1 },
+  doughnut:          { labelCount: 1, valueMin: 1, valueMax: 1 },
+  donut:             { labelCount: 1, valueMin: 1, valueMax: 1 },
+  polarArea:         { labelCount: 1, valueMin: 1, valueMax: 1 },
+  scatter:           { labelCount: 0, valueMin: 1, valueMax: 1 },
+  chartjs_bubblemap: { labelCount: 1, valueMin: 1, valueMax: 1 },
+  nivo_pie:          { labelCount: 1, valueMin: 1, valueMax: 1 },
+  nivo_choropleth:   { labelCount: 1, valueMin: 1, valueMax: 1 },
+  // Multi-series capable
+  bar:               { labelCount: 1, valueMin: 1, valueMax: null },
+  line:              { labelCount: 1, valueMin: 1, valueMax: null },
+  area:              { labelCount: 1, valueMin: 1, valueMax: null },
+  radar:             { labelCount: 1, valueMin: 1, valueMax: null },
+  nivo_line:         { labelCount: 1, valueMin: 1, valueMax: null },
+  nivo_bar:          { labelCount: 1, valueMin: 1, valueMax: null },
+};
+
 export default {
   COMPONENT_TYPES,
   CHART_LIBRARIES,
@@ -147,4 +167,5 @@ export default {
   COLOR_THEMES,
   THEMES,
   LEGEND_POSITIONS,
+  CHART_COLUMN_SCHEMA,
 };

@@ -10,7 +10,7 @@
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect, useMemo } from 'react';
 import D3Adapter from '../adapters/D3Adapter';
 import ChartJsAdapter from '../adapters/ChartJsAdapter';
-import { fetchChartData } from '../services/dataService';
+import { fetchChartDataMulti } from '../services/dataService';
 import { CHART_LIBRARIES, CHART_TYPES, DEFAULT_CHART_TYPE } from '../types/schema';
 import { useFilters } from '../hooks/useFilters';
 
@@ -23,6 +23,8 @@ const UniversalChart = ({ config, width, height }) => {
   const containerRef = useRef(null);
 
   const { library, theme, title, dataSource, chartType, legend, dataSort } = config;
+  const valueColumns = dataSource?.valueColumns
+    ?? (dataSource?.valueColumn ? [dataSource.valueColumn] : []);
 
   // Get the effective chart type - use config or default based on library
   const effectiveChartType = chartType || DEFAULT_CHART_TYPE[library] || CHART_TYPES.CHARTJS_LINE;
@@ -77,10 +79,10 @@ const UniversalChart = ({ config, width, height }) => {
       setError(null);
 
       try {
-        const data = await fetchChartData(
+        const data = await fetchChartDataMulti(
           dataSource.tableName,
           dataSource.labelColumn,
-          dataSource.valueColumn,
+          valueColumns,
           filters
         );
 
@@ -105,14 +107,15 @@ const UniversalChart = ({ config, width, height }) => {
     return () => {
       isMounted = false;
     };
-  }, [dataSource?.tableName, dataSource?.labelColumn, dataSource?.valueColumn, JSON.stringify(filters)]);
+  }, [dataSource?.tableName, dataSource?.labelColumn, JSON.stringify(valueColumns), JSON.stringify(filters)]);
 
   const sortedChartData = useMemo(() => {
     if (!dataSort || dataSort === 'none') return chartData;
     const copy = [...chartData];
+    const col0 = valueColumns[0];
     switch (dataSort) {
-      case 'value-asc':  return copy.sort((a, b) => a.value - b.value);
-      case 'value-desc': return copy.sort((a, b) => b.value - a.value);
+      case 'value-asc':  return copy.sort((a, b) => (a[col0] ?? 0) - (b[col0] ?? 0));
+      case 'value-desc': return copy.sort((a, b) => (b[col0] ?? 0) - (a[col0] ?? 0));
       case 'label-asc':  return copy.sort((a, b) => String(a.label).localeCompare(String(b.label)));
       case 'label-desc': return copy.sort((a, b) => String(b.label).localeCompare(String(a.label)));
       default:           return copy;
@@ -194,6 +197,7 @@ const UniversalChart = ({ config, width, height }) => {
     <div ref={containerRef} style={containerBaseStyle}>
       <Adapter
         data={sortedChartData}
+        valueColumns={valueColumns}
         theme={theme}
         width={dimensions.width}
         height={dimensions.height}
