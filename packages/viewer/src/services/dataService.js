@@ -57,10 +57,10 @@ export const initializeDataService = async (url = null, id = null) => {
 
 const fetchLiveData = async (tableName) => {
   if (queryDataCache[tableName]) return queryDataCache[tableName];
-  const params = new URLSearchParams({ table: tableName });
-  if (dashboardId) params.set('dashboardId', dashboardId);
   const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
-  const response = await fetch(`${dataQueryUrl}?${params}`, { headers });
+  // URL template uses path params: /api/data/{datasource}/{table} — resolve {table} dynamically
+  const url = dataQueryUrl.replace('{table}', encodeURIComponent(tableName));
+  const response = await fetch(url, { headers });
   if (!response.ok) throw new Error(`Data fetch failed: ${response.status} ${response.statusText}`);
   const result = await response.json();
   const rows = result.data || result.rows || [];

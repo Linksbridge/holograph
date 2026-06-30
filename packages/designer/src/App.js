@@ -18,7 +18,7 @@ import { invokeSave, invokePublish, configureWebhookUrls, invokeListDocuments, i
 import SecurityPanel from './components/SecurityPanel';
 import HelpPage from './components/HelpPage';
 import { globalSettingsService } from './services/globalSettingsService';
-import { initializeDataService, setDataQueryUrl, setDashboardFileSources } from './services/dataService';
+import { initializeDataService, setDataQueryUrl, setDashboardFileSources, getPublishDataQueryUrl } from './services/dataService';
 import './styles/dashboard.css';
 
 const STORAGE_KEY = 'holograph_dashboards';
@@ -223,6 +223,7 @@ const AppContent = () => {
       ...currentDashboard,
       status: 'draft',
       lastModified: new Date().toISOString(),
+      dataQueryUrl: getPublishDataQueryUrl() || currentDashboard.dataQueryUrl || '',
     };
 
     // Invoke webhook handler
@@ -247,7 +248,7 @@ const AppContent = () => {
       ...currentDashboard,
       status: 'published',
       lastModified: new Date().toISOString(),
-      dataQueryUrl: settings?.saveLocations?.dataQueryUrl || currentDashboard.dataQueryUrl || '',
+      dataQueryUrl: getPublishDataQueryUrl() || currentDashboard.dataQueryUrl || '',
     };
 
     // Invoke webhook handler

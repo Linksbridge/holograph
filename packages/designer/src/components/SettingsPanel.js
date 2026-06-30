@@ -426,7 +426,7 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
                 onChange={(e) => updateSettings('saveLocations', 'dataQueryUrl', e.target.value)}
                 placeholder="https://api.example.com/api/data"
               />
-              <p className="property-help-text">POST endpoint for fetching chart and table data (e.g. <code>/api/data</code>); datasource name is appended as a path segment</p>
+              <p className="property-help-text">Base URL for fetching chart and table data (e.g. <code>https://api.example.com/api/data</code>). The datasource name and <code>&#123;table&#125;</code> are appended automatically on save: <code>/api/data/datasourceName/&#123;table&#125;</code></p>
             </div>
 
             <div className="property-field-group">

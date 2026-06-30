@@ -274,10 +274,13 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData, resolvedStyles =
  */
 const normalizeDashboard = (raw) => {
   if (!raw || typeof raw !== 'object') return null;
-  // API returns { id, name, schema: { zones, layout, ... } }; flatten schema to root when present
+  // API returns { id, name, dataQueryUrl, schema: { zones, layout, ... } }; flatten schema to root when present
   const flat = raw.schema && typeof raw.schema === 'object' ? { ...raw, ...raw.schema } : raw;
+  // Schema's dataQueryUrl may be empty string — fall back to root's which has the real URL
+  const dataQueryUrl = flat.dataQueryUrl || raw.dataQueryUrl || '';
   return {
     ...flat,
+    dataQueryUrl,
     zones: Array.isArray(flat.zones) ? flat.zones.filter((z) => z && z.id) : [],
   };
 };

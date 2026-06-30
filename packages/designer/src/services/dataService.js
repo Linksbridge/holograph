@@ -169,6 +169,16 @@ export const setDataQueryUrl = (url) => {
   if (url) dataQueryUrl = url;
 };
 
+// Returns the dataQueryUrl to embed in saved/published dashboard JSON.
+// Builds the full path template the viewer needs: baseUrl/datasourceName/{table}
+// If the URL already contains template vars it's returned as-is.
+export const getPublishDataQueryUrl = () => {
+  if (!dataQueryUrl) return '';
+  if (/\{(datasource|table)\}/.test(dataQueryUrl)) return dataQueryUrl;
+  const base = dataQueryUrl.replace(/\/$/, '');
+  return datasourceName ? `${base}/${datasourceName}/{table}` : `${base}/{table}`;
+};
+
 /**
  * Register uploaded file sources so charts can reference them by name.
  * @param {Array} fileSources - Array of { id, name, columns, rowCount } from settings
