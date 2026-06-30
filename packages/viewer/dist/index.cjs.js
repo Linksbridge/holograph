@@ -869,6 +869,7 @@ const DashboardViewer = ({
   className = '',
   fileSources = [],
   fileDataUrl = '',
+  dataServerUrl = null,
   authToken = null
 }) => {
   const [isInitialized, setIsInitialized] = React.useState(false);
@@ -890,15 +891,16 @@ const DashboardViewer = ({
   }, []);
 
   // Wire live data endpoint and clear stale cache whenever a new dashboard arrives.
-  // fileDataUrl (from host app env) takes priority over the URL embedded in the dashboard JSON.
+  // Priority: dataServerUrl prop > dashboard's embedded dataQueryUrl > null
+  // fileDataUrl is reserved for file sources only.
   // Also updates activeDataQueryUrl so ZoneContent dep arrays re-trigger when URL changes.
   React.useEffect(() => {
     if (!normalizedDashboard) return;
     clearQueryDataCache();
-    const queryUrl = fileDataUrl || normalizedDashboard.dataQueryUrl || null;
+    const queryUrl = dataServerUrl || normalizedDashboard.dataQueryUrl || null;
     setDataQueryUrl(queryUrl, normalizedDashboard.id || null);
     setActiveDataQueryUrl(queryUrl);
-  }, [normalizedDashboard, fileDataUrl]);
+  }, [normalizedDashboard, dataServerUrl]);
 
   // Register file sources whenever they change
   React.useEffect(() => {

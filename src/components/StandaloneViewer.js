@@ -122,6 +122,7 @@ const StandaloneViewer = () => {
 
   // If the designer passed a real dashboard via route state, use it; else demo
   const dashboard = location.state?.dashboard || DEMO_DASHBOARD;
+  const dataServerUrl = location.state?.dataServerUrl || null;
   const isLive = !!location.state?.dashboard;
 
   // ---- styles (inline to keep the component self-contained) ----
@@ -294,6 +295,7 @@ const StandaloneViewer = () => {
 
             <DashboardViewer
               dashboard={dashboard}
+              dataServerUrl={dataServerUrl}
               filters={filters}
               onFilterChange={setFilters}
             />

@@ -236,8 +236,13 @@ const AppContent = () => {
 
   // Open the current dashboard in the standalone viewer
   const handleOpenInViewer = useCallback(() => {
-    navigate('/viewer', { state: { dashboard: currentDashboard?.schema } });
-  }, [navigate, currentDashboard]);
+    navigate('/viewer', {
+      state: {
+        dashboard: currentDashboard?.schema,
+        dataServerUrl: settings?.saveLocations?.dataQueryUrl || '',
+      },
+    });
+  }, [navigate, currentDashboard, settings]);
 
   // Get badge class based on status
   const getStatusBadgeClass = (status) => {
