@@ -128,7 +128,7 @@ const AppContent = () => {
               saveDraftUrl: wh.saveDraftUrl || prevSave.saveDraftUrl || '',
               publishUrl: wh.publishUrl || prevSave.publishUrl || '',
               listDocumentsUrl: wh.listDocumentsUrl || prevSave.listDocumentsUrl || '',
-              dataQueryUrl: wh.dataQueryUrl || prevSave.dataQueryUrl || '',
+              dataQueryUrl: prevSave.dataQueryUrl || wh.dataQueryUrl || '',
               uploadFileUrl: wh.uploadFileUrl || prevSave.uploadFileUrl || '',
               fileDataUrl: wh.fileDataUrl || prevSave.fileDataUrl || '',
               listFilesUrl: wh.listFilesUrl || prevSave.listFilesUrl || '',
@@ -142,7 +142,7 @@ const AppContent = () => {
         null,
         null,
         gs?.database?.defaultDatabaseName || null,
-        gs?.webhooks?.dataQueryUrl || null
+        loadSettings()?.saveLocations?.dataQueryUrl || gs?.webhooks?.dataQueryUrl || null
       );
 
       // Auto-load dashboards if a list URL is available (removes the demo dashboard)
