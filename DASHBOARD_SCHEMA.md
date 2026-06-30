@@ -13,6 +13,7 @@ This document describes the complete JSON structure for a Holograph dashboard. I
   "description": "Optional description shown as subtitle",
   "status": "draft",
   "lastModified": "2026-05-04T16:24:56.456Z",
+  "dataQueryUrl": "https://api.example.com/api/data/myDatasource/{table}",
   "schema": { ... }
 }
 ```
@@ -24,6 +25,7 @@ This document describes the complete JSON structure for a Holograph dashboard. I
 | `description` | string | Optional subtitle shown below the title when `showSubtitle` is true. |
 | `status` | string | `"draft"` or `"published"`. Controls availability in the viewer. |
 | `lastModified` | string | ISO 8601 timestamp. Set automatically on save/publish. |
+| `dataQueryUrl` | string | Path template for the viewer's data API. The `{table}` placeholder is replaced at query time with the zone's `tableName`. Format: `https://api.example.com/api/data/{datasourceName}/{table}`. Set automatically by the designer on save/publish. |
 | `schema` | object | The full dashboard layout and content definition. See below. |
 
 ---
@@ -148,7 +150,7 @@ Charts additionally require:
   "dataSource": {
     "tableName": "sales_data",
     "labelColumn": "month",
-    "valueColumn": "revenue"
+    "valueColumns": ["revenue", "cost"]
   }
 }
 ```
@@ -265,7 +267,7 @@ Controls where a zone's data comes from.
 {
   "tableName": "sales_data",
   "labelColumn": "month",
-  "valueColumn": "revenue",
+  "valueColumns": ["revenue", "cost"],
   "columns": ["col1", "col2"]
 }
 ```
@@ -274,7 +276,7 @@ Controls where a zone's data comes from.
 |-------|------|---------|-------------|
 | `tableName` | string | chart, table | Name of the SQL table or named join data source to query. |
 | `labelColumn` | string | chart | Column whose values become X-axis labels / slice labels. |
-| `valueColumn` | string | chart | Column whose values are plotted as the numeric measure. |
+| `valueColumns` | string[] | chart | Columns plotted as numeric measures. Single-element array for one series; multiple elements for multi-series charts. |
 | `columns` | string[] | table | Explicit list of columns to display. Omit to show all columns. |
 
 `tableName` can reference either a real database table or a **named join data source** defined in `schema.dataSources`.
@@ -362,6 +364,7 @@ A dashboard with one Chart.js bar chart and one table, side by side:
   "description": "Monthly revenue and product table",
   "status": "draft",
   "lastModified": "2026-05-22T00:00:00.000Z",
+  "dataQueryUrl": "https://api.example.com/api/data/myDatasource/{table}",
   "schema": {
     "version": "1.0.0",
     "name": "Sales Overview",
@@ -395,7 +398,7 @@ A dashboard with one Chart.js bar chart and one table, side by side:
         "dataSource": {
           "tableName": "sales_data",
           "labelColumn": "month",
-          "valueColumn": "revenue"
+          "valueColumns": ["revenue"]
         },
         "gridPosition": { "x": 0, "y": 0, "w": 6, "h": 6 }
       },
@@ -531,6 +534,10 @@ When a role is selected in the viewer, each zone is evaluated:
 ```
 id                  "dashboard-<uuid>"
 status              "draft" | "published"
+dataQueryUrl        "https://api.example.com/api/data/{datasourceName}/{table}"
+                    {table} is replaced at query time with the zone's tableName
+                    Set automatically by the designer on save/publish
+
 schema.version      "1.0.0"
 schema.showTitle    true | false
 schema.showSubtitle true | false
@@ -545,6 +552,8 @@ zone.theme          "default" | "ocean" | "sunset" | "forest" | "monochrome"
 zone.dataSort       "none" | "value-asc" | "value-desc" | "label-asc" | "label-desc"
 zone.showHeader     true | false
 zone.legend.position "top" | "bottom" | "left" | "right" | "none"
+
+dataSource.valueColumns  string[]  — one entry for single-series, multiple for multi-series
 
 gridPosition.x      0..11
 gridPosition.y      0..N
