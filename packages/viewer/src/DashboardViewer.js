@@ -40,7 +40,7 @@ import './styles/viewer.css';
  * @param {Function} props.onFilterChange - Callback for filter changes
  * @param {Array} props.zoneData - Optional data passed directly via props (bypasses data service)
  */
-const ZoneContent = ({ zone, filters, onFilterChange, zoneData, resolvedStyles = {} }) => {
+const ZoneContent = ({ zone, filters, onFilterChange, zoneData, resolvedStyles = {}, activeDataQueryUrl }) => {
   const [chartData, setChartData] = useState([]);
   const [tableData, setTableData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -139,7 +139,7 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData, resolvedStyles =
     return () => {
       isMounted = false;
     };
-  }, [zoneData, dataSource?.tableName, dataSource?.labelColumn, JSON.stringify(valueColumns), zone.componentType, JSON.stringify(filters)]);
+  }, [zoneData, dataSource?.tableName, dataSource?.labelColumn, JSON.stringify(valueColumns), zone.componentType, JSON.stringify(filters), activeDataQueryUrl]);
 
   // Determine which adapter to use
   const Adapter = useMemo(() => {
@@ -299,6 +299,8 @@ const DashboardViewer = ({
   const [currentFilters, setCurrentFilters] = useState(filters);
   const [gridWidth, setGridWidth] = useState(1200);
   const [resolvedStyles, setResolvedStyles] = useState({});
+  // React-tracked copy of the module-level dataQueryUrl so ZoneContent re-fetches when it changes
+  const [activeDataQueryUrl, setActiveDataQueryUrl] = useState(null);
   const containerRef = useRef(null);
 
   const normalizedDashboard = useMemo(() => normalizeDashboard(dashboard), [dashboard]);
@@ -314,11 +316,13 @@ const DashboardViewer = ({
 
   // Wire live data endpoint and clear stale cache whenever a new dashboard arrives.
   // Falls back to fileDataUrl when the dashboard schema has no dataQueryUrl of its own.
+  // Also updates activeDataQueryUrl so ZoneContent dep arrays re-trigger when URL changes.
   useEffect(() => {
     if (!normalizedDashboard) return;
     clearQueryDataCache();
     const queryUrl = normalizedDashboard.dataQueryUrl || fileDataUrl || null;
     setDataQueryUrl(queryUrl, normalizedDashboard.id || null);
+    setActiveDataQueryUrl(queryUrl);
   }, [normalizedDashboard, fileDataUrl]);
 
   // Register file sources whenever they change
@@ -466,6 +470,7 @@ const DashboardViewer = ({
                   onFilterChange={handleFilterChange}
                   zoneData={data[zone.id]}
                   resolvedStyles={resolvedStyles}
+                  activeDataQueryUrl={activeDataQueryUrl}
                 />
               </div>
             </div>
