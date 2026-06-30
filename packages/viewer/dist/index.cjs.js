@@ -897,7 +897,14 @@ const DashboardViewer = ({
   React.useEffect(() => {
     if (!normalizedDashboard) return;
     clearQueryDataCache();
-    const queryUrl = dataServerUrl || normalizedDashboard.dataQueryUrl || null;
+    let queryUrl;
+    if (dataServerUrl) {
+      const base = dataServerUrl.replace(/\/$/, '');
+      const ds = normalizedDashboard.datasource;
+      queryUrl = ds ? `${base}/${ds}/{table}` : `${base}/{table}`;
+    } else {
+      queryUrl = normalizedDashboard.dataQueryUrl || null;
+    }
     setDataQueryUrl(queryUrl, normalizedDashboard.id || null);
     setActiveDataQueryUrl(queryUrl);
   }, [normalizedDashboard, dataServerUrl]);
