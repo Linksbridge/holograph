@@ -315,12 +315,12 @@ const DashboardViewer = ({
   }, []);
 
   // Wire live data endpoint and clear stale cache whenever a new dashboard arrives.
-  // Falls back to fileDataUrl when the dashboard schema has no dataQueryUrl of its own.
+  // fileDataUrl (from host app env) takes priority over the URL embedded in the dashboard JSON.
   // Also updates activeDataQueryUrl so ZoneContent dep arrays re-trigger when URL changes.
   useEffect(() => {
     if (!normalizedDashboard) return;
     clearQueryDataCache();
-    const queryUrl = normalizedDashboard.dataQueryUrl || fileDataUrl || null;
+    const queryUrl = fileDataUrl || normalizedDashboard.dataQueryUrl || null;
     setDataQueryUrl(queryUrl, normalizedDashboard.id || null);
     setActiveDataQueryUrl(queryUrl);
   }, [normalizedDashboard, fileDataUrl]);

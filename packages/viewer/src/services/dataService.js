@@ -58,8 +58,10 @@ export const initializeDataService = async (url = null, id = null) => {
 const fetchLiveData = async (tableName) => {
   if (queryDataCache[tableName]) return queryDataCache[tableName];
   const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
-  // URL template uses path params: /api/data/{datasource}/{table} — resolve {table} dynamically
-  const url = dataQueryUrl.replace('{table}', encodeURIComponent(tableName));
+  // Support both template URLs (/api/data/{datasource}/{table}) and plain base URLs (/api/data/datasource)
+  const url = dataQueryUrl.includes('{table}')
+    ? dataQueryUrl.replace('{table}', encodeURIComponent(tableName))
+    : `${dataQueryUrl.replace(/\/$/, '')}/${encodeURIComponent(tableName)}`;
   const response = await fetch(url, { headers });
   if (!response.ok) throw new Error(`Data fetch failed: ${response.status} ${response.statusText}`);
   const result = await response.json();
