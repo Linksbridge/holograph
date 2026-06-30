@@ -274,9 +274,11 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData, resolvedStyles =
  */
 const normalizeDashboard = (raw) => {
   if (!raw || typeof raw !== 'object') return null;
+  // API returns { id, name, schema: { zones, layout, ... } }; flatten schema to root when present
+  const flat = raw.schema && typeof raw.schema === 'object' ? { ...raw, ...raw.schema } : raw;
   return {
-    ...raw,
-    zones: Array.isArray(raw.zones) ? raw.zones.filter((z) => z && z.id) : [],
+    ...flat,
+    zones: Array.isArray(flat.zones) ? flat.zones.filter((z) => z && z.id) : [],
   };
 };
 
