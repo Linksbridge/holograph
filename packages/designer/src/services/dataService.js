@@ -169,6 +169,9 @@ export const setDataQueryUrl = (url) => {
   if (url) dataQueryUrl = url;
 };
 
+export const setDatasourceName = (name) => { datasourceName = name || null; };
+export const getDatasourceName = () => datasourceName;
+
 // Returns the dataQueryUrl to embed in saved/published dashboard JSON.
 // Builds the full path template the viewer needs: baseUrl/datasourceName/{table}
 // If the URL already contains template vars it's returned as-is.

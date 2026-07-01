@@ -53,6 +53,7 @@ const defaults = {
     publishUrl: '',
     listDocumentsUrl: '',
     dataQueryUrl: '',
+    datasource: '',
     globalSettingsUrl: process.env.REACT_APP_DEFAULT_GLOBAL_SETTINGS_URL || '',
     uploadFileUrl: '',
     fileDataUrl: '',
@@ -427,6 +428,18 @@ const SettingsPanel = ({ isOpen, onClose, settings, onSave }) => {
                 placeholder="https://api.example.com/api/data"
               />
               <p className="property-help-text">Base URL for fetching chart and table data (e.g. <code>https://api.example.com/api/data</code>). The datasource name and <code>&#123;table&#125;</code> are appended automatically on save: <code>/api/data/datasourceName/&#123;table&#125;</code></p>
+            </div>
+
+            <div className="property-field-group">
+              <label className="property-label">Datasource Name</label>
+              <input
+                type="text"
+                className="property-input"
+                value={localSettings.saveLocations.datasource}
+                onChange={(e) => updateSettings('saveLocations', 'datasource', e.target.value)}
+                placeholder="e.g. Sandbox-Frontend"
+              />
+              <p className="property-help-text">Named datasource identifier embedded in the dashboard JSON. The data server resolves this name to a connection string via environment variables.</p>
             </div>
 
             <div className="property-field-group">
