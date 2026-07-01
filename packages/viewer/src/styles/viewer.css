@@ -87,6 +87,12 @@
   /* Grid */
   --hv-grid-gap: 10px;
   --hv-min-zone-height: 150px;
+
+  /* Table */
+  --hv-table-font-size: 13px;
+  --hv-table-header-bg: #f9fafb;
+  --hv-cell-padding: 8px 12px;
+  --hv-table-row-hover-bg: #f0f4ff;
 }
 
 /* Component Theme Layer - Department/Product specific */
@@ -437,6 +443,36 @@
 
 .viewer-table tr:hover td {
   background-color: var(--hv-table-row-hover-bg);
+}
+
+.viewer-table-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 6px 8px;
+  border-top: 1px solid var(--hv-border-color);
+  background-color: var(--hv-table-header-bg);
+  gap: 4px;
+}
+
+.viewer-table-page-btn {
+  padding: 3px 8px;
+  font-size: 11px;
+  border: 1px solid var(--hv-border-strong);
+  border-radius: 3px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.viewer-table-page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.viewer-table-page-info {
+  font-size: 11px;
+  color: var(--hv-text-label);
+  margin: 0 6px;
 }
 
 /* Data Attribute Targeting - Zone Component Type */

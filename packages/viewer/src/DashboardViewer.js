@@ -46,6 +46,9 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData, resolvedStyles =
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dimensions, setDimensions] = useState({ width: 300, height: 200 });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortColumn, setSortColumn] = useState(null);
+  const [sortDirection, setSortDirection] = useState('asc');
   const containerRef = useRef(null);
 
   const { library, theme, title, dataSource, chartType, legend } = zone;
@@ -104,13 +107,11 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData, resolvedStyles =
 
       try {
         if (zone.componentType === COMPONENT_TYPES.TABLE) {
-          const data = await fetchTableData(
-            dataSource.tableName,
-            null, // Get all columns
-            filters
-          );
+          const configuredCols = dataSource.columns?.length ? dataSource.columns : null;
+          const data = await fetchTableData(dataSource.tableName, configuredCols, filters);
           if (isMounted) {
             setTableData(data);
+            setCurrentPage(1);
           }
         } else {
           const data = await fetchChartDataMulti(
@@ -207,27 +208,69 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData, resolvedStyles =
 
   // Render table
   if (zone.componentType === COMPONENT_TYPES.TABLE) {
-    const columns = tableData.length > 0 ? Object.keys(tableData[0]) : [];
+    const configuredCols = dataSource?.columns?.length ? dataSource.columns : null;
+    const displayColumns = configuredCols || (tableData.length > 0 ? Object.keys(tableData[0]) : []);
+
+    const handleSort = (col) => {
+      if (sortColumn === col) {
+        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      } else {
+        setSortColumn(col);
+        setSortDirection('asc');
+      }
+      setCurrentPage(1);
+    };
+
+    const sorted = sortColumn
+      ? [...tableData].sort((a, b) => {
+          const av = a[sortColumn], bv = b[sortColumn];
+          if (typeof av === 'number' && typeof bv === 'number') return sortDirection === 'asc' ? av - bv : bv - av;
+          return sortDirection === 'asc'
+            ? String(av ?? '').localeCompare(String(bv ?? ''))
+            : String(bv ?? '').localeCompare(String(av ?? ''));
+        })
+      : tableData;
+
+    const rowsPerPage = 10;
+    const totalPages = Math.ceil(sorted.length / rowsPerPage);
+    const pageRows = sorted.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
     return (
       <div ref={containerRef} style={containerBaseStyle} className="viewer-table-container">
         <table className="viewer-table">
           <thead>
             <tr>
-              {columns.map((col) => (
-                <th key={col}>{col}</th>
+              {displayColumns.map((col) => (
+                <th key={col} onClick={() => handleSort(col)} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                    <span>{col.charAt(0).toUpperCase() + col.slice(1)}</span>
+                    <span style={{ fontSize: '10px', opacity: sortColumn === col ? 1 : 0.3 }}>
+                      {sortColumn === col ? (sortDirection === 'asc' ? '▲' : '▼') : '⬍'}
+                    </span>
+                  </span>
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {tableData.map((row, idx) => (
-              <tr key={idx}>
-                {columns.map((col) => (
-                  <td key={col}>{row[col]}</td>
+            {pageRows.map((row, idx) => (
+              <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f9fafb' }}>
+                {displayColumns.map((col) => (
+                  <td key={col}>{typeof row[col] === 'number' ? row[col].toLocaleString() : row[col]}</td>
                 ))}
               </tr>
             ))}
           </tbody>
         </table>
+        {totalPages > 1 && (
+          <div className="viewer-table-pagination">
+            <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="viewer-table-page-btn">⏮</button>
+            <button onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1} className="viewer-table-page-btn">◀</button>
+            <span className="viewer-table-page-info">Page {currentPage} of {totalPages}</span>
+            <button onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages} className="viewer-table-page-btn">▶</button>
+            <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} className="viewer-table-page-btn">⏭</button>
+          </div>
+        )}
       </div>
     );
   }
