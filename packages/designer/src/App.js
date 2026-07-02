@@ -138,11 +138,12 @@ const AppContent = () => {
       }
 
       // Pass already-fetched values directly so initializeDataService doesn't need to re-fetch
+      const savedSettings = loadSettings();
       initializeDataService(
         null,
-        null,
-        gs?.database?.defaultDatabaseName || null,
-        loadSettings()?.saveLocations?.dataQueryUrl || gs?.webhooks?.dataQueryUrl || null
+        savedSettings?.dataSource?.schemaUrl || null,
+        savedSettings?.dataSource?.databaseName || gs?.database?.defaultDatabaseName || null,
+        savedSettings?.saveLocations?.dataQueryUrl || gs?.webhooks?.dataQueryUrl || null
       );
 
       // Auto-load dashboards if a list URL is available (removes the demo dashboard)
