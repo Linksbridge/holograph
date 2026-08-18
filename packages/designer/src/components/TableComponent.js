@@ -33,6 +33,9 @@ const TableComponent = ({ config, width, height }) => {
   // Get columns from dataSource config
   const tableColumns = dataSource?.columns || [];
 
+  // Zone filters override dashboard-wide ones for the same column
+  const activeFilters = { ...filters, ...dataSource?.filters };
+
   // Get initial dimensions synchronously
   const getInitialDimensions = useCallback(() => {
     if (containerRef.current) {
@@ -88,7 +91,7 @@ const TableComponent = ({ config, width, height }) => {
           const data = await fetchTableData(
             dataSource.tableName,
             dataSource.columns,
-            filters
+            activeFilters
           );
 
           if (isMounted) {
@@ -100,7 +103,7 @@ const TableComponent = ({ config, width, height }) => {
             dataSource.tableName,
             dataSource.labelColumn,
             valueCols,
-            filters
+            activeFilters
           );
 
           if (isMounted) {
@@ -125,7 +128,7 @@ const TableComponent = ({ config, width, height }) => {
     return () => {
       isMounted = false;
     };
-  }, [dataSource?.tableName, dataSource?.labelColumn, JSON.stringify(dataSource?.valueColumns), dataSource?.valueColumn, dataSource?.columns, JSON.stringify(filters), dataServiceVersion]);
+  }, [dataSource?.tableName, dataSource?.labelColumn, JSON.stringify(dataSource?.valueColumns), dataSource?.valueColumn, dataSource?.columns, JSON.stringify(activeFilters), dataServiceVersion]);
 
   // Reset to page 1 when data changes
   useEffect(() => {

@@ -28,6 +28,8 @@ const UniversalChart = ({ config, width, height }) => {
   const { library, theme, title, dataSource, chartType, legend, dataSort } = config;
   const valueColumns = dataSource?.valueColumns
     ?? (dataSource?.valueColumn ? [dataSource.valueColumn] : []);
+  // Zone filters override dashboard-wide ones for the same column
+  const activeFilters = { ...filters, ...dataSource?.filters };
 
   // Get the effective chart type - use config or default based on library
   const effectiveChartType = chartType || DEFAULT_CHART_TYPE[library] || CHART_TYPES.CHARTJS_LINE;
@@ -86,7 +88,7 @@ const UniversalChart = ({ config, width, height }) => {
           dataSource.tableName,
           dataSource.labelColumn,
           valueColumns,
-          filters
+          activeFilters
         );
 
         if (isMounted) {
@@ -110,7 +112,7 @@ const UniversalChart = ({ config, width, height }) => {
     return () => {
       isMounted = false;
     };
-  }, [dataSource?.tableName, dataSource?.labelColumn, JSON.stringify(valueColumns), JSON.stringify(filters), dataServiceVersion]);
+  }, [dataSource?.tableName, dataSource?.labelColumn, JSON.stringify(valueColumns), JSON.stringify(activeFilters), dataServiceVersion]);
 
   const sortedChartData = useMemo(() => {
     if (!dataSort || dataSort === 'none') return chartData;

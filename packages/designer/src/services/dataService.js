@@ -400,11 +400,68 @@ const interpolateDataUrl = (template, context) =>
     key in context ? encodeURIComponent(context[key]) : match
   );
 
+// Filter engine — mirrors packages/viewer/src/services/dataService.js so the
+// editor and the published dashboard agree on what a saved filter means.
+const isNoValueOp = (op) => op === 'isBlank' || op === 'isNotBlank';
+
+const applyCondition = (rowValue, condition) => {
+  const { operator, value } = condition;
+  const str = String(rowValue ?? '').toLowerCase();
+  const cond = String(value ?? '').toLowerCase();
+  const numRow = parseFloat(rowValue);
+  const numCond = parseFloat(value);
+
+  switch (operator) {
+    case 'is':             return str === cond;
+    case 'isNot':          return str !== cond;
+    case 'contains':       return str.includes(cond);
+    case 'doesNotContain': return !str.includes(cond);
+    case 'startsWith':     return str.startsWith(cond);
+    case 'endsWith':       return str.endsWith(cond);
+    case 'isBlank':        return rowValue === null || rowValue === undefined || rowValue === '';
+    case 'isNotBlank':     return rowValue !== null && rowValue !== undefined && rowValue !== '';
+    case 'eq':             return numRow === numCond;
+    case 'neq':            return numRow !== numCond;
+    case 'gt':             return numRow > numCond;
+    case 'gte':            return numRow >= numCond;
+    case 'lt':             return numRow < numCond;
+    case 'lte':            return numRow <= numCond;
+    default:               return true;
+  }
+};
+
+const applyColumnFilter = (rowValue, filterDef) => {
+  if (Array.isArray(filterDef)) {
+    if (filterDef.length === 0) return true;
+    return filterDef.includes(rowValue);
+  }
+
+  if (!filterDef || typeof filterDef !== 'object') return true;
+
+  const { mode, filterType, values, logicalOperator, conditions } = filterDef;
+
+  if (mode === 'basic') {
+    if (!values || values.length === 0) return true;
+    const included = values.includes(rowValue);
+    return filterType === 'exclude' ? !included : included;
+  }
+
+  if (mode === 'advanced') {
+    const active = (conditions || []).filter(
+      (c) => isNoValueOp(c.operator) || (c.value !== '' && c.value !== null && c.value !== undefined)
+    );
+    if (active.length === 0) return true;
+    const results = active.map((c) => applyCondition(rowValue, c));
+    return logicalOperator === 'or' ? results.some(Boolean) : results.every(Boolean);
+  }
+
+  return true;
+};
+
 const applyFilterToRow = (row, filters) => {
-  for (const [columnName, filterValues] of Object.entries(filters)) {
-    if (!filterValues || !Array.isArray(filterValues) || filterValues.length === 0) continue;
-    const rowValue = row[columnName];
-    if (rowValue !== undefined && !filterValues.includes(rowValue)) return false;
+  for (const [columnName, filterDef] of Object.entries(filters)) {
+    if (!filterDef) continue;
+    if (!applyColumnFilter(row[columnName], filterDef)) return false;
   }
   return true;
 };
@@ -489,24 +546,7 @@ export const fetchChartData = async (tableName, labelColumn, valueColumn, filter
   // Apply filters if provided
   let filteredData = tableData;
   if (filters && Object.keys(filters).length > 0) {
-    filteredData = tableData.filter((row) => {
-      // Check each filter column
-      for (const [columnName, filterValues] of Object.entries(filters)) {
-        // Skip empty filters
-        if (!filterValues || !Array.isArray(filterValues) || filterValues.length === 0) {
-          continue;
-        }
-        
-        // Get the row value for this column
-        const rowValue = row[columnName];
-        
-        // If the row's column value is not in the filter values, exclude it
-        if (rowValue !== undefined && !filterValues.includes(rowValue)) {
-          return false;
-        }
-      }
-      return true;
-    });
+    filteredData = tableData.filter((row) => applyFilterToRow(row, filters));
   }
 
   // Transform SQL result to chart-friendly format
@@ -604,24 +644,7 @@ export const fetchTableData = async (tableName, columns = null, filters = null) 
   // Apply filters if provided
   let filteredData = tableData;
   if (filters && Object.keys(filters).length > 0) {
-    filteredData = tableData.filter((row) => {
-      // Check each filter column
-      for (const [columnName, filterValues] of Object.entries(filters)) {
-        // Skip empty filters
-        if (!filterValues || !Array.isArray(filterValues) || filterValues.length === 0) {
-          continue;
-        }
-        
-        // Get the row value for this column
-        const rowValue = row[columnName];
-        
-        // If the row's column value is not in the filter values, exclude it
-        if (rowValue !== undefined && !filterValues.includes(rowValue)) {
-          return false;
-        }
-      }
-      return true;
-    });
+    filteredData = tableData.filter((row) => applyFilterToRow(row, filters));
   }
 
   // If columns specified, return only those columns

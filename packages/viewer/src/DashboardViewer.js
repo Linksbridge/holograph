@@ -55,6 +55,8 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData, resolvedStyles =
   const effectiveChartType = chartType || DEFAULT_CHART_TYPE[library] || CHART_TYPES.CHARTJS_LINE;
   const valueColumns = dataSource?.valueColumns
     ?? (dataSource?.valueColumn ? [dataSource.valueColumn] : []);
+  // Zone filters override dashboard-wide ones for the same column
+  const activeFilters = { ...filters, ...dataSource?.filters };
 
   // Get theme colors
   const themeColors = THEMES[theme] || THEMES.default;
@@ -110,7 +112,7 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData, resolvedStyles =
       try {
         if (zone.componentType === COMPONENT_TYPES.TABLE) {
           const configuredCols = dataSource.columns?.length ? dataSource.columns : null;
-          const data = await fetchTableData(dataSource.tableName, configuredCols, filters);
+          const data = await fetchTableData(dataSource.tableName, configuredCols, activeFilters);
           if (isMounted) {
             setTableData(data);
             setCurrentPage(1);
@@ -120,7 +122,7 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData, resolvedStyles =
             dataSource.tableName,
             dataSource.labelColumn,
             valueColumns,
-            filters
+            activeFilters
           );
           if (isMounted) {
             setChartData(data);
@@ -142,7 +144,7 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData, resolvedStyles =
     return () => {
       isMounted = false;
     };
-  }, [zoneData, dataSource?.tableName, dataSource?.labelColumn, JSON.stringify(valueColumns), zone.componentType, JSON.stringify(filters), activeDataQueryUrl]);
+  }, [zoneData, dataSource?.tableName, dataSource?.labelColumn, JSON.stringify(valueColumns), zone.componentType, JSON.stringify(activeFilters), activeDataQueryUrl]);
 
   // Determine which adapter to use
   const Adapter = useMemo(() => {
