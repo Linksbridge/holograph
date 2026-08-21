@@ -1,5 +1,5 @@
-ï»¿/**
- * StandaloneViewer Ã¢â‚¬â€ Viewer package demo page
+/**
+ * StandaloneViewer -- Viewer package demo page
  *
  * Demonstrates @holograph/dashboard-viewer as it would be used in a real React app.
  * Accessible at /#/viewer. The designer's "Open in Viewer" button passes a live
@@ -11,7 +11,7 @@ import { useLocation } from 'react-router-dom';
 import DashboardViewer from '@holograph/dashboard-viewer';
 
 // ---------------------------------------------------------------------------
-// Demo dashboard Ã¢â‚¬â€ uses sample tables built into the viewer's data service
+// Demo dashboard -- uses sample tables built into the viewer's data service
 // ---------------------------------------------------------------------------
 const DEMO_DASHBOARD = {
   name: 'Sales Analytics',
@@ -133,7 +133,7 @@ function App() {
 
 const PROPS_DOC = [
   ['dashboard', 'object', 'Dashboard schema exported from the designer'],
-  ['data',      'object', 'Optional: { zoneId: [{ label, value }] } Ã¢â‚¬â€ bypasses data service'],
+  ['data',      'object', 'Optional: { zoneId: [{ label, value }] } -- bypasses data service'],
   ['filters',   'object', 'Optional: filter values applied to all chart queries'],
   ['onFilterChange', 'function', 'Callback when filters change internally'],
   ['className', 'string', 'Optional CSS class added to the root element'],
@@ -239,10 +239,10 @@ const StandaloneViewer = () => {
 
   return (
     <div style={s.page}>
-      {/* Ã¢â€â‚¬Ã¢â€â‚¬ Header Ã¢â€â‚¬Ã¢â€â‚¬ */}
+      {/* -- Header -- */}
       <div style={s.header}>
         <div style={s.headerLeft}>
-          <a href="/#/" style={s.backLink}>Ã¢â€ Â Designer</a>
+          <a href="/#/" style={s.backLink}>&larr; Designer</a>
           <span style={s.divider}>|</span>
           <span style={s.title}>{isLive ? dashboard.name : 'Viewer Demo'}</span>
           <span style={s.badge(isLive)}>
@@ -250,12 +250,12 @@ const StandaloneViewer = () => {
           </span>
         </div>
         <button style={s.toggleBtn(showCode)} onClick={() => setShowCode(!showCode)}>
-          {showCode ? 'Ã¢â€ Â Preview' : '</> Usage'}
+          {showCode ? '<- Preview' : '</> Usage'}
         </button>
       </div>
 
       {showCode ? (
-        /* Ã¢â€â‚¬Ã¢â€â‚¬ Usage tab Ã¢â€â‚¬Ã¢â€â‚¬ */
+        /* -- Usage tab -- */
         <div style={s.codeBody}>
           <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1e293b', marginBottom: '6px' }}>
             Using the Viewer
@@ -289,15 +289,15 @@ const StandaloneViewer = () => {
           </div>
         </div>
       ) : (
-        /* Ã¢â€â‚¬Ã¢â€â‚¬ Preview tab Ã¢â€â‚¬Ã¢â€â‚¬ */
+        /* -- Preview tab -- */
         <div style={s.body}>
           <div style={s.hint}>
             {isLive
-              ? `Rendering "${dashboard.name}" (${dashboard.zones?.length || 0} zones) via DashboardViewer Ã¢â‚¬â€ this is exactly how it appears embedded in another app.`
-              : 'Demo dashboard Ã¢â‚¬â€ open any dashboard from the designer using "Open in Viewer" to preview it here.'}
+              ? `Rendering "${dashboard.name}" (${dashboard.zones?.length || 0} zones) via DashboardViewer -- this is exactly how it appears embedded in another app.`
+              : 'Demo dashboard -- open any dashboard from the designer using "Open in Viewer" to preview it here.'}
           </div>
 
-          {/* Component boundary wrapper Ã¢â‚¬â€ shows the viewer as a contained element */}
+          {/* Component boundary wrapper -- shows the viewer as a contained element */}
           <div style={{
             flex: 1,
             position: 'relative',
