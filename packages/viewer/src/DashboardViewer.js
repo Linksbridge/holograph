@@ -258,7 +258,7 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData, resolvedStyles =
           </thead>
           <tbody>
             {pageRows.map((row, idx) => (
-              <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f9fafb' }}>
+              <tr key={idx} className={idx % 2 === 0 ? 'viewer-table-row-even' : 'viewer-table-row-odd'}>
                 {displayColumns.map((col) => (
                   <td key={col}>{typeof row[col] === 'number' ? row[col].toLocaleString() : row[col]}</td>
                 ))}
@@ -346,6 +346,7 @@ const DashboardViewer = ({
   const [isInitialized, setIsInitialized] = useState(false);
   const [currentFilters, setCurrentFilters] = useState(filters);
   const [gridWidth, setGridWidth] = useState(1200);
+  const [gridHeight, setGridHeight] = useState(null);
   const [resolvedStyles, setResolvedStyles] = useState({});
   // React-tracked copy of the module-level dataQueryUrl so ZoneContent re-fetches when it changes
   const [activeDataQueryUrl, setActiveDataQueryUrl] = useState(null);
@@ -419,42 +420,62 @@ const DashboardViewer = ({
     }
   };
 
-  // Responsive grid width
+  // Responsive grid dimensions
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const updateWidth = () => {
+    const updateDimensions = () => {
       if (containerRef.current) {
         setGridWidth(Math.max(400, containerRef.current.offsetWidth - 40));
+        setGridHeight(containerRef.current.offsetHeight);
       }
     };
 
-    updateWidth();
+    updateDimensions();
 
-    const resizeObserver = new ResizeObserver(() => requestAnimationFrame(updateWidth));
+    const resizeObserver = new ResizeObserver(() => requestAnimationFrame(updateDimensions));
     resizeObserver.observe(containerRef.current);
 
     return () => resizeObserver.disconnect();
   }, []);
 
-  // Generate layout for react-grid-layout
+  // Generate layout for react-grid-layout.
+  // When gridPosition is absent or partial, defaults to full-width (w=12) and equal-height (h=1)
+  // so zones fill all available space proportionally. Explicit values always take precedence.
   const layout = useMemo(() => {
     if (!normalizedDashboard?.zones) return [];
-    return normalizedDashboard.zones.map((zone) => ({
-      i: zone.id,
-      x: zone.gridPosition?.x || 0,
-      y: zone.gridPosition?.y || 0,
-      w: zone.gridPosition?.w || 4,
-      h: zone.gridPosition?.h || 4,
-      minW: 2,
-      minH: 2,
-    }));
+    let autoY = 0;
+    return normalizedDashboard.zones.map((zone) => {
+      const gp = zone.gridPosition;
+      const w = gp?.w ?? 12;
+      const h = gp?.h ?? 1;
+      const x = gp?.x ?? 0;
+      const y = gp?.y ?? autoY;
+      autoY = Math.max(autoY, y + h);
+      return { i: zone.id, x, y, w, h, minW: 1, minH: 1 };
+    });
   }, [normalizedDashboard?.zones]);
 
   // Default layout settings
   const cols = normalizedDashboard?.layout?.cols || 12;
-  const rowHeight = normalizedDashboard?.layout?.rowHeight || 30;
+  const schemaRowHeight = normalizedDashboard?.layout?.rowHeight || 30;
   const margin = normalizedDashboard?.layout?.margin || [10, 10];
+
+  // Calculate rowHeight so zones fill all available vertical space.
+  // When the consuming site gives the viewer a fixed height (height/100vh/etc.),
+  // zones expand proportionally to fill it. `h` in gridPosition acts as a weight:
+  // h=2 gets twice the height of h=1. Falls back to schemaRowHeight when container
+  // has no explicit height (auto-sized by content).
+  const rowHeight = useMemo(() => {
+    if (!gridHeight || gridHeight < 200) return schemaRowHeight;
+    const maxGridRow = layout.length > 0 ? Math.max(...layout.map(l => l.y + l.h)) : 1;
+    const viewerPaddingV = 20 * 2; // --hv-viewer-padding default (top + bottom)
+    const gridPaddingV = 10 * 2;   // GridLayout containerPadding[1] * 2
+    const marginGaps = (maxGridRow - 1) * margin[1];
+    const available = gridHeight - viewerPaddingV - gridPaddingV - marginGaps;
+    const calculated = Math.floor(available / maxGridRow);
+    return Math.max(schemaRowHeight, calculated);
+  }, [gridHeight, layout, schemaRowHeight, margin]);
 
   // Helper to get library attribute value
   const getLibraryAttr = (lib) => {
