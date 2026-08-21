@@ -1,19 +1,22 @@
-/**
+﻿/**
  * Holograph Dashboard Viewer Styles
  *
- * Override :root variables to theme both the viewer and the designer.
- * This file is the single source of truth for all design tokens.
+ * All viewer styles live in @layer holograph-viewer so any unlayered consumer
+ * CSS automatically wins — no specificity fights, no load-order dependency.
  *
- * Example (in your app CSS):
- * :root {
- *   --hv-font-family: 'Open Sans', sans-serif;
- *   --hv-primary: #0D6EFD;
- *   --hv-text-primary: #27292F;
- * }
+ * To override anything in your app, write unlayered CSS (or a higher-priority layer):
+ *   :root { --hv-primary: #0D6EFD; }
+ *   .viewer-zone-card { border-radius: 0; }
+ *
+ * Full token list: see the :root block inside @layer holograph-viewer below.
  */
 
+/* Declare layer — consumers can reorder layers by declaring their own @layer first */
+@layer holograph-viewer;
+
+@layer holograph-viewer {
 /* ==========================================================================
-   DESIGN TOKENS — override these to theme everything
+   DESIGN TOKENS -- override these to theme everything
    ========================================================================== */
 :root {
   /* Layout */
@@ -93,6 +96,8 @@
   --hv-table-header-bg: #f9fafb;
   --hv-cell-padding: 8px 12px;
   --hv-table-row-hover-bg: #f0f4ff;
+  --hv-table-row-even-bg: #ffffff;
+  --hv-table-row-odd-bg: #f9fafb;
 }
 
 /* Component Theme Layer - Department/Product specific */
@@ -140,7 +145,7 @@
 }
 
 .holograph-viewer[data-preview-mode="true"]::before {
-  content: '🎨 Theme Preview';
+  content: 'ðŸŽ¨ Theme Preview';
   position: absolute;
   top: -12px;
   left: 16px;
@@ -184,7 +189,7 @@
 }
 
 .holograph-viewer[data-theme-valid="false"]::before {
-  content: '⚠️ Theme Validation Failed';
+  content: 'âš ï¸ Theme Validation Failed';
   position: absolute;
   top: 8px;
   right: 8px;
@@ -202,7 +207,7 @@
 }
 
 .holograph-viewer[data-theme-migrated="true"]::before {
-  content: '⬆️ Theme Migrated';
+  content: 'â¬†ï¸ Theme Migrated';
   position: absolute;
   top: 8px;
   left: 8px;
@@ -214,15 +219,29 @@
   z-index: 1000;
 }
 
-/* Base Viewer Container */
+/* Base Viewer Container
+ *
+ * CONSUMING SITE REQUIREMENT:
+ * The viewer fills whatever height its parent provides. Give the parent (or the
+ * viewer element itself) an explicit height so zones can expand to fill it:
+ *
+ *   .my-dashboard-wrapper { height: calc(100vh - 60px); }   // e.g. minus a nav bar
+ *   // or target the viewer directly:
+ *   .dashboard-viewer { height: 600px; }
+ *
+ * Without an explicit height the viewer falls back to schema rowHeight (auto-sized
+ * by content). Width always fills 100% of the parent.
+ */
 .dashboard-viewer {
   font-family: var(--hv-font-family);
   width: 100%;
-  min-height: var(--hv-min-viewer-height);
+  height: 100%;
+  min-height: 300px;
   background-color: var(--hv-viewer-bg);
   border-radius: var(--hv-viewer-radius);
   padding: var(--hv-viewer-padding);
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 /* Dashboard Header */
@@ -445,6 +464,14 @@
   background-color: var(--hv-table-row-hover-bg);
 }
 
+.viewer-table-row-even td {
+  background-color: var(--hv-table-row-even-bg);
+}
+
+.viewer-table-row-odd td {
+  background-color: var(--hv-table-row-odd-bg);
+}
+
 .viewer-table-pagination {
   display: flex;
   justify-content: center;
@@ -631,4 +658,6 @@
   .viewer-dashboard-grid .react-grid-item {
     transition: none;
   }
+}
+
 }

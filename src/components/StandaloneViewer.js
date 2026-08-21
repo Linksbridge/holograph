@@ -1,5 +1,5 @@
-/**
- * StandaloneViewer — Viewer package demo page
+﻿/**
+ * StandaloneViewer â€” Viewer package demo page
  *
  * Demonstrates @holograph/dashboard-viewer as it would be used in a real React app.
  * Accessible at /#/viewer. The designer's "Open in Viewer" button passes a live
@@ -11,7 +11,7 @@ import { useLocation } from 'react-router-dom';
 import DashboardViewer from '@holograph/dashboard-viewer';
 
 // ---------------------------------------------------------------------------
-// Demo dashboard — uses sample tables built into the viewer's data service
+// Demo dashboard â€” uses sample tables built into the viewer's data service
 // ---------------------------------------------------------------------------
 const DEMO_DASHBOARD = {
   name: 'Sales Analytics',
@@ -79,34 +79,61 @@ const DEMO_DASHBOARD = {
 // ---------------------------------------------------------------------------
 // Usage code snippet shown on the "Usage" tab
 // ---------------------------------------------------------------------------
-const CODE_SNIPPET = `import { DashboardViewer } from '@holograph/dashboard-viewer';
+const CODE_SNIPPET = `import DashboardViewer from '@holograph/dashboard-viewer';
+
+// REQUIRED: Give the viewer's container an explicit height so zones fill it.
+// Without a parent height, zones fall back to schema rowHeight (small).
+// Width always fills 100% automatically.
+//
+// CSS:  .my-dashboard { height: calc(100vh - 60px); }
+// JSX:  <div style={{ height: 'calc(100vh - 60px)' }}><DashboardViewer ... /></div>
 
 function App() {
   const [filters, setFilters] = useState({});
 
   return (
-    <DashboardViewer
-      dashboard={dashboardSchema}   // schema from the designer
-      filters={filters}             // optional: drives chart data filtering
-      onFilterChange={setFilters}   // optional: filter changes callback
-    />
+    <div style={{ height: 'calc(100vh - 60px)' }}>
+      <DashboardViewer
+        dashboard={dashboardSchema}   // schema from the designer
+        filters={filters}             // optional: drives chart data filtering
+        onFilterChange={setFilters}   // optional: filter changes callback
+      />
+    </div>
   );
 }
 
-// Pass your own data directly (bypasses the data service):
-<DashboardViewer
-  dashboard={schema}
-  data={{
-    'zone-id': [
-      { label: 'Jan', value: 100 },
-      { label: 'Feb', value: 200 },
-    ],
-  }}
-/>`;
+// -- CSS Design Tokens (override in your app CSS) ----------------------------
+// :root {
+//   --hv-viewer-bg:      #f3f4f6;   /* dashboard background */
+//   --hv-zone-bg:        #ffffff;   /* zone card background */
+//   --hv-primary:        #3b82f6;   /* accent colour */
+//   --hv-text-primary:   #1f2937;   /* main text */
+//   --hv-font-family:    'Inter', sans-serif;
+//   --hv-viewer-padding: 20px;      /* outer padding (affects height calc) */
+//   --hv-zone-radius:    8px;
+// }
+
+// -- CSS Selectors -----------------------------------------------------------
+// .dashboard-viewer                root container
+// .viewer-zone-card                individual zone card
+// .viewer-zone-header              zone title bar
+// .viewer-zone-chart-container     chart / table content area
+// .viewer-table                    table element
+//
+// Data attributes:
+// .viewer-zone-card[data-component-type="chart"] { }
+// .viewer-zone-card[data-component-type="table"] { }
+// .viewer-zone-card[data-library="chartjs"]      { }
+
+// -- Pass data directly (bypasses data service) ------------------------------
+// <DashboardViewer
+//   dashboard={schema}
+//   data={{ 'zone-id': [{ label: 'Jan', value: 100 }] }}
+// />`;
 
 const PROPS_DOC = [
   ['dashboard', 'object', 'Dashboard schema exported from the designer'],
-  ['data',      'object', 'Optional: { zoneId: [{ label, value }] } — bypasses data service'],
+  ['data',      'object', 'Optional: { zoneId: [{ label, value }] } â€” bypasses data service'],
   ['filters',   'object', 'Optional: filter values applied to all chart queries'],
   ['onFilterChange', 'function', 'Callback when filters change internally'],
   ['className', 'string', 'Optional CSS class added to the root element'],
@@ -128,11 +155,12 @@ const StandaloneViewer = () => {
   // ---- styles (inline to keep the component self-contained) ----
   const s = {
     page: {
-      minHeight: '100vh',
+      height: '100vh',
       background: '#f1f5f9',
       display: 'flex',
       flexDirection: 'column',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      overflow: 'hidden',
     },
     header: {
       background: '#0f172a',
@@ -167,7 +195,7 @@ const StandaloneViewer = () => {
       fontSize: '13px',
       cursor: 'pointer',
     }),
-    body: { flex: 1, padding: '16px' },
+    body: { flex: 1, padding: '16px', display: 'flex', flexDirection: 'column', overflow: 'hidden' },
     hint: {
       background: '#fff',
       border: '1px solid #e2e8f0',
@@ -211,10 +239,10 @@ const StandaloneViewer = () => {
 
   return (
     <div style={s.page}>
-      {/* ── Header ── */}
+      {/* â”€â”€ Header â”€â”€ */}
       <div style={s.header}>
         <div style={s.headerLeft}>
-          <a href="/#/" style={s.backLink}>← Designer</a>
+          <a href="/#/" style={s.backLink}>â† Designer</a>
           <span style={s.divider}>|</span>
           <span style={s.title}>{isLive ? dashboard.name : 'Viewer Demo'}</span>
           <span style={s.badge(isLive)}>
@@ -222,12 +250,12 @@ const StandaloneViewer = () => {
           </span>
         </div>
         <button style={s.toggleBtn(showCode)} onClick={() => setShowCode(!showCode)}>
-          {showCode ? '← Preview' : '</> Usage'}
+          {showCode ? 'â† Preview' : '</> Usage'}
         </button>
       </div>
 
       {showCode ? (
-        /* ── Usage tab ── */
+        /* â”€â”€ Usage tab â”€â”€ */
         <div style={s.codeBody}>
           <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1e293b', marginBottom: '6px' }}>
             Using the Viewer
@@ -261,20 +289,22 @@ const StandaloneViewer = () => {
           </div>
         </div>
       ) : (
-        /* ── Preview tab ── */
+        /* â”€â”€ Preview tab â”€â”€ */
         <div style={s.body}>
           <div style={s.hint}>
             {isLive
-              ? `Rendering "${dashboard.name}" (${dashboard.zones?.length || 0} zones) via DashboardViewer — this is exactly how it appears embedded in another app.`
-              : 'Demo dashboard — open any dashboard from the designer using "Open in Viewer" to preview it here.'}
+              ? `Rendering "${dashboard.name}" (${dashboard.zones?.length || 0} zones) via DashboardViewer â€” this is exactly how it appears embedded in another app.`
+              : 'Demo dashboard â€” open any dashboard from the designer using "Open in Viewer" to preview it here.'}
           </div>
 
-          {/* Component boundary wrapper — shows the viewer as a contained element */}
+          {/* Component boundary wrapper â€” shows the viewer as a contained element */}
           <div style={{
+            flex: 1,
             position: 'relative',
             border: '2px dashed #94a3b8',
             borderRadius: '8px',
             background: '#fff',
+            overflow: 'hidden',
           }}>
             {/* Corner label */}
             <div style={{
@@ -307,3 +337,4 @@ const StandaloneViewer = () => {
 };
 
 export default StandaloneViewer;
+
