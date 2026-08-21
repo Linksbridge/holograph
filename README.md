@@ -26,6 +26,7 @@ A zero-VM dashboard application with pluggable chart adapters (D3.js and Chart.j
 - [Choropleth Map Configuration](#choropleth-map-configuration)
 - [Dashboard Schema](#dashboard-schema)
 - [API Reference](#api-reference)
+- [Publishing the Viewer Package](#publishing-the-viewer-package)
 
 ---
 
@@ -1479,6 +1480,55 @@ function sendFiltersToDashboard() {
     filters: { region: ['North', 'South'] }
   }, '*');
 }
+```
+
+---
+
+## Publishing the Viewer Package
+
+`@linksbridge/dashboard-viewer` is published to [GitHub Packages](https://github.com/orgs/linksbridge/packages). A push of a matching git tag triggers the `publish-viewer.yml` workflow — no manual `npm publish` needed.
+
+### Steps
+
+1. **Bump the version** in [`packages/viewer/package.json`](packages/viewer/package.json):
+   ```json
+   { "version": "1.2.1" }
+   ```
+
+2. **Commit the bump:**
+   ```bash
+   git add packages/viewer/package.json
+   git commit -m "chore: bump viewer to v1.2.1"
+   git push
+   ```
+
+3. **Tag and push — this triggers the publish:**
+   ```bash
+   git tag viewer-v1.2.1
+   git push origin viewer-v1.2.1
+   ```
+
+GitHub Actions (`.github/workflows/publish-viewer.yml`) installs dependencies, runs `npm run build` in `packages/viewer`, and publishes to `https://npm.pkg.github.com` under `@linksbridge/dashboard-viewer`.
+
+### Tag convention
+
+| Pattern | Example | Triggers |
+|---------|---------|---------|
+| `viewer-v*` | `viewer-v1.2.1` | Viewer package publish |
+
+### Consuming the package
+
+Consumers need a `.npmrc` that points `@linksbridge` to GitHub Packages and a personal access token (PAT) with `read:packages` scope:
+
+```ini
+@linksbridge:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=YOUR_PAT
+```
+
+Then install normally:
+
+```bash
+npm install @linksbridge/dashboard-viewer
 ```
 
 ---
