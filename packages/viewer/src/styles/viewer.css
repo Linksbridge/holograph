@@ -437,7 +437,9 @@
 .viewer-table-container {
   width: 100%;
   height: 100%;
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .viewer-table {
@@ -447,63 +449,80 @@
 }
 
 .viewer-table th {
-  background-color: var(--hv-table-header-bg);
-  padding: var(--hv-cell-padding);
+  background-color: var(--hv-table-header-bg, var(--hv-header-bg));
+  padding: var(--hv-cell-padding, 8px 12px);
   text-align: left;
   font-weight: 600;
   color: var(--hv-text-primary);
   border-bottom: 2px solid var(--hv-border-color);
-  position: sticky;
-  top: 0;
   white-space: nowrap;
+  font-size: 12px;
+  letter-spacing: 0.02em;
 }
 
 .viewer-table td {
-  padding: var(--hv-cell-padding);
+  padding: var(--hv-cell-padding, 8px 12px);
   color: var(--hv-text-tertiary);
   border-bottom: 1px solid var(--hv-border-color);
+  font-size: 13px;
 }
 
 .viewer-table tr:hover td {
-  background-color: var(--hv-table-row-hover-bg);
+  background-color: var(--hv-primary-bg);
 }
 
 .viewer-table-row-even td {
-  background-color: var(--hv-table-row-even-bg);
+  background-color: var(--hv-zone-bg);
 }
 
 .viewer-table-row-odd td {
-  background-color: var(--hv-table-row-odd-bg);
+  background-color: var(--hv-viewer-bg);
 }
 
 .viewer-table-pagination {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 6px 8px;
+  padding: 8px 12px;
   border-top: 1px solid var(--hv-border-color);
-  background-color: var(--hv-table-header-bg);
-  gap: 4px;
+  background-color: var(--hv-zone-bg);
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .viewer-table-page-btn {
-  padding: 3px 8px;
-  font-size: 11px;
-  border: 1px solid var(--hv-border-strong);
-  border-radius: 3px;
-  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
+  line-height: 1;
+  border: 1px solid var(--hv-border-color);
+  border-radius: 6px;
+  background: var(--hv-zone-bg);
+  color: var(--hv-text-secondary);
   cursor: pointer;
+  transition: background var(--hv-transition-fast), color var(--hv-transition-fast), border-color var(--hv-transition-fast);
+}
+
+.viewer-table-page-btn:hover:not(:disabled) {
+  background: var(--hv-primary-bg);
+  border-color: var(--hv-primary-border);
+  color: var(--hv-primary);
 }
 
 .viewer-table-page-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.3;
   cursor: not-allowed;
 }
 
 .viewer-table-page-info {
-  font-size: 11px;
-  color: var(--hv-text-label);
-  margin: 0 6px;
+  font-size: 12px;
+  color: var(--hv-text-secondary);
+  min-width: 48px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Data Attribute Targeting - Zone Component Type */

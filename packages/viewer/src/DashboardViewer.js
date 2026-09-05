@@ -235,7 +235,9 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData, resolvedStyles =
         })
       : tableData;
 
-    const rowsPerPage = 10;
+    // Fit rows to available height: subtract thead (~36px) + pagination bar (~40px),
+    // divide by data row height (~36px). Minimum 1 row always shown.
+    const rowsPerPage = Math.max(1, Math.floor((dimensions.height - 76) / 36));
     const totalPages = Math.ceil(sorted.length / rowsPerPage);
     const pageRows = sorted.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
@@ -268,11 +270,11 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData, resolvedStyles =
         </table>
         {totalPages > 1 && (
           <div className="viewer-table-pagination">
-            <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="viewer-table-page-btn">⏮</button>
-            <button onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1} className="viewer-table-page-btn">◀</button>
-            <span className="viewer-table-page-info">Page {currentPage} of {totalPages}</span>
-            <button onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages} className="viewer-table-page-btn">▶</button>
-            <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} className="viewer-table-page-btn">⏭</button>
+            <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="viewer-table-page-btn" title="First page">«</button>
+            <button onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1} className="viewer-table-page-btn" title="Previous page">‹</button>
+            <span className="viewer-table-page-info">{currentPage} / {totalPages}</span>
+            <button onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages} className="viewer-table-page-btn" title="Next page">›</button>
+            <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} className="viewer-table-page-btn" title="Last page">»</button>
           </div>
         )}
       </div>

@@ -843,7 +843,10 @@ const ZoneContent = ({
       if (typeof av === 'number' && typeof bv === 'number') return sortDirection === 'asc' ? av - bv : bv - av;
       return sortDirection === 'asc' ? String(av ?? '').localeCompare(String(bv ?? '')) : String(bv ?? '').localeCompare(String(av ?? ''));
     }) : tableData;
-    const rowsPerPage = 10;
+
+    // Fit rows to available height: subtract thead (~36px) + pagination bar (~40px),
+    // divide by data row height (~36px). Minimum 1 row always shown.
+    const rowsPerPage = Math.max(1, Math.floor((dimensions.height - 76) / 36));
     const totalPages = Math.ceil(sorted.length / rowsPerPage);
     const pageRows = sorted.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
     return /*#__PURE__*/React.createElement("div", {
@@ -881,22 +884,26 @@ const ZoneContent = ({
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setCurrentPage(1),
       disabled: currentPage === 1,
-      className: "viewer-table-page-btn"
-    }, "\u23EE"), /*#__PURE__*/React.createElement("button", {
+      className: "viewer-table-page-btn",
+      title: "First page"
+    }, "\xAB"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setCurrentPage(p => p - 1),
       disabled: currentPage === 1,
-      className: "viewer-table-page-btn"
-    }, "\u25C0"), /*#__PURE__*/React.createElement("span", {
+      className: "viewer-table-page-btn",
+      title: "Previous page"
+    }, "\u2039"), /*#__PURE__*/React.createElement("span", {
       className: "viewer-table-page-info"
-    }, "Page ", currentPage, " of ", totalPages), /*#__PURE__*/React.createElement("button", {
+    }, currentPage, " / ", totalPages), /*#__PURE__*/React.createElement("button", {
       onClick: () => setCurrentPage(p => p + 1),
       disabled: currentPage === totalPages,
-      className: "viewer-table-page-btn"
-    }, "\u25B6"), /*#__PURE__*/React.createElement("button", {
+      className: "viewer-table-page-btn",
+      title: "Next page"
+    }, "\u203A"), /*#__PURE__*/React.createElement("button", {
       onClick: () => setCurrentPage(totalPages),
       disabled: currentPage === totalPages,
-      className: "viewer-table-page-btn"
-    }, "\u23ED")));
+      className: "viewer-table-page-btn",
+      title: "Last page"
+    }, "\xBB")));
   }
 
   // Render chart
