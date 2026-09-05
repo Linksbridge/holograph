@@ -948,7 +948,9 @@ const DashboardViewer = ({
   const [resolvedStyles, setResolvedStyles] = useState({});
   // React-tracked copy of the module-level dataQueryUrl so ZoneContent re-fetches when it changes
   const [activeDataQueryUrl, setActiveDataQueryUrl] = useState(null);
-  const containerRef = useRef(null);
+  const containerRef = useRef(null); // outer container — used for CSS var reading
+  const gridRef = useRef(null); // grid wrapper — measured for layout dimensions
+
   const normalizedDashboard = useMemo(() => normalizeDashboard(dashboard), [dashboard]);
 
   // Initialize data service on mount
@@ -1017,18 +1019,19 @@ const DashboardViewer = ({
     }
   };
 
-  // Responsive grid dimensions
+  // Responsive grid dimensions — measured from the grid wrapper (inside viewer padding,
+  // after any title/header) so rowHeight fills exactly the available chart space.
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!gridRef.current) return;
     const updateDimensions = () => {
-      if (containerRef.current) {
-        setGridWidth(Math.max(400, containerRef.current.offsetWidth - 40));
-        setGridHeight(containerRef.current.offsetHeight);
+      if (gridRef.current) {
+        setGridWidth(Math.max(400, gridRef.current.offsetWidth));
+        setGridHeight(gridRef.current.offsetHeight);
       }
     };
     updateDimensions();
     const resizeObserver = new ResizeObserver(() => requestAnimationFrame(updateDimensions));
-    resizeObserver.observe(containerRef.current);
+    resizeObserver.observe(gridRef.current);
     return () => resizeObserver.disconnect();
   }, []);
 
@@ -1068,12 +1071,13 @@ const DashboardViewer = ({
   // h=2 gets twice the height of h=1. Falls back to schemaRowHeight when container
   // has no explicit height (auto-sized by content).
   const rowHeight = useMemo(() => {
-    if (!gridHeight || gridHeight < 200) return schemaRowHeight;
+    // gridHeight is the grid wrapper's own height (inside viewer padding, after any title),
+    // so only subtract GridLayout's internal containerPadding and item margin gaps.
+    if (!gridHeight || gridHeight < 50) return schemaRowHeight;
     const maxGridRow = layout.length > 0 ? Math.max(...layout.map(l => l.y + l.h)) : 1;
-    const viewerPaddingV = 20 * 2; // --hv-viewer-padding default (top + bottom)
-    const gridPaddingV = 10 * 2; // GridLayout containerPadding[1] * 2
+    const containerPaddingV = 10 * 2; // GridLayout containerPadding[1] * 2
     const marginGaps = (maxGridRow - 1) * margin[1];
-    const available = gridHeight - viewerPaddingV - gridPaddingV - marginGaps;
+    const available = gridHeight - containerPaddingV - marginGaps;
     const calculated = Math.floor(available / maxGridRow);
     return Math.max(schemaRowHeight, calculated);
   }, [gridHeight, layout, schemaRowHeight, margin]);
@@ -1107,7 +1111,10 @@ const DashboardViewer = ({
     ref: containerRef
   }, normalizedDashboard.zones?.length === 0 ? /*#__PURE__*/React.createElement("div", {
     className: "viewer-empty-state"
-  }, /*#__PURE__*/React.createElement("p", null, "No charts to display")) : /*#__PURE__*/React.createElement(GridLayout, {
+  }, /*#__PURE__*/React.createElement("p", null, "No charts to display")) : /*#__PURE__*/React.createElement("div", {
+    className: "viewer-dashboard-grid",
+    ref: gridRef
+  }, /*#__PURE__*/React.createElement(GridLayout, {
     className: "layout",
     layout: layout,
     cols: cols,
@@ -1139,7 +1146,7 @@ const DashboardViewer = ({
     zoneData: data[zone.id],
     resolvedStyles: resolvedStyles,
     activeDataQueryUrl: activeDataQueryUrl
-  }))))));
+  })))))));
 };
 
 /**

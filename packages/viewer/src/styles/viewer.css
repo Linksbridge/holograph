@@ -242,6 +242,8 @@
   padding: var(--hv-viewer-padding);
   box-sizing: border-box;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Dashboard Header */
@@ -266,8 +268,10 @@
   line-height: 1.5;
 }
 
-/* Dashboard Grid */
+/* Dashboard Grid — flex-grows to fill remaining space after any title/header */
 .viewer-dashboard-grid {
+  flex: 1;
+  min-height: 0;
   width: 100%;
 }
 
