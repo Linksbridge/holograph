@@ -442,6 +442,12 @@
   overflow: hidden;
 }
 
+.viewer-table-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
 .viewer-table {
   width: 100%;
   border-collapse: collapse;

@@ -681,8 +681,8 @@ const ZoneContent = ({
             width: containerWidth,
             height: containerHeight
           } = entry.contentRect;
-          const chartWidth = Math.max(150, containerWidth - 16);
-          const chartHeight = Math.max(120, containerHeight - 16);
+          const chartWidth = Math.max(150, containerWidth);
+          const chartHeight = Math.max(120, containerHeight);
           setDimensions({
             width: chartWidth,
             height: chartHeight
@@ -853,6 +853,8 @@ const ZoneContent = ({
       ref: containerRef,
       style: containerBaseStyle,
       className: "viewer-table-container"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "viewer-table-scroll"
     }, /*#__PURE__*/React.createElement("table", {
       className: "viewer-table"
     }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, displayColumns.map(col => /*#__PURE__*/React.createElement("th", {
@@ -879,7 +881,7 @@ const ZoneContent = ({
       className: idx % 2 === 0 ? 'viewer-table-row-even' : 'viewer-table-row-odd'
     }, displayColumns.map(col => /*#__PURE__*/React.createElement("td", {
       key: col
-    }, typeof row[col] === 'number' ? row[col].toLocaleString() : row[col])))))), totalPages > 1 && /*#__PURE__*/React.createElement("div", {
+    }, typeof row[col] === 'number' ? row[col].toLocaleString() : row[col]))))))), totalPages > 1 && /*#__PURE__*/React.createElement("div", {
       className: "viewer-table-pagination"
     }, /*#__PURE__*/React.createElement("button", {
       onClick: () => setCurrentPage(1),

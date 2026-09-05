@@ -69,8 +69,8 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData, resolvedStyles =
       requestAnimationFrame(() => {
         for (const entry of entries) {
           const { width: containerWidth, height: containerHeight } = entry.contentRect;
-          const chartWidth = Math.max(150, containerWidth - 16);
-          const chartHeight = Math.max(120, containerHeight - 16);
+          const chartWidth = Math.max(150, containerWidth);
+          const chartHeight = Math.max(120, containerHeight);
           setDimensions({ width: chartWidth, height: chartHeight });
         }
       });
@@ -243,31 +243,33 @@ const ZoneContent = ({ zone, filters, onFilterChange, zoneData, resolvedStyles =
 
     return (
       <div ref={containerRef} style={containerBaseStyle} className="viewer-table-container">
-        <table className="viewer-table">
-          <thead>
-            <tr>
-              {displayColumns.map((col) => (
-                <th key={col} onClick={() => handleSort(col)} style={{ cursor: 'pointer', userSelect: 'none' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                    <span>{col.charAt(0).toUpperCase() + col.slice(1)}</span>
-                    <span style={{ fontSize: '10px', opacity: sortColumn === col ? 1 : 0.3 }}>
-                      {sortColumn === col ? (sortDirection === 'asc' ? '▲' : '▼') : '⬍'}
-                    </span>
-                  </span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {pageRows.map((row, idx) => (
-              <tr key={idx} className={idx % 2 === 0 ? 'viewer-table-row-even' : 'viewer-table-row-odd'}>
+        <div className="viewer-table-scroll">
+          <table className="viewer-table">
+            <thead>
+              <tr>
                 {displayColumns.map((col) => (
-                  <td key={col}>{typeof row[col] === 'number' ? row[col].toLocaleString() : row[col]}</td>
+                  <th key={col} onClick={() => handleSort(col)} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                      <span>{col.charAt(0).toUpperCase() + col.slice(1)}</span>
+                      <span style={{ fontSize: '10px', opacity: sortColumn === col ? 1 : 0.3 }}>
+                        {sortColumn === col ? (sortDirection === 'asc' ? '▲' : '▼') : '⬍'}
+                      </span>
+                    </span>
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {pageRows.map((row, idx) => (
+                <tr key={idx} className={idx % 2 === 0 ? 'viewer-table-row-even' : 'viewer-table-row-odd'}>
+                  {displayColumns.map((col) => (
+                    <td key={col}>{typeof row[col] === 'number' ? row[col].toLocaleString() : row[col]}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         {totalPages > 1 && (
           <div className="viewer-table-pagination">
             <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="viewer-table-page-btn" title="First page">«</button>
