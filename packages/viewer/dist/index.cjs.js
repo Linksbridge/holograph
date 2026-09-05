@@ -173,11 +173,22 @@ const applyCondition = (rowValue, condition) => {
       return true;
   }
 };
+const getRowValue = (row, columnName) => {
+  if (row[columnName] !== undefined) return row[columnName];
+  const lowerKey = columnName.toLowerCase();
+  const match = Object.keys(row).find(k => k.toLowerCase() === lowerKey);
+  return match !== undefined ? row[match] : undefined;
+};
+const caseInsensitiveIncludes = (values, rowValue) => {
+  if (rowValue === null || rowValue === undefined) return false;
+  const str = String(rowValue).toLowerCase();
+  return values.some(v => String(v ?? '').toLowerCase() === str);
+};
 const applyFilterToRow = (row, columnName, filterDef) => {
-  const rowValue = row[columnName];
+  const rowValue = getRowValue(row, columnName);
   if (Array.isArray(filterDef)) {
     if (filterDef.length === 0) return true;
-    return filterDef.includes(rowValue);
+    return caseInsensitiveIncludes(filterDef, rowValue);
   }
   if (!filterDef || typeof filterDef !== 'object') return true;
   const {
@@ -189,7 +200,7 @@ const applyFilterToRow = (row, columnName, filterDef) => {
   } = filterDef;
   if (mode === 'basic') {
     if (!values || values.length === 0) return true;
-    const included = values.includes(rowValue);
+    const included = caseInsensitiveIncludes(values, rowValue);
     return filterType === 'exclude' ? !included : included;
   }
   if (mode === 'advanced') {
@@ -200,19 +211,33 @@ const applyFilterToRow = (row, columnName, filterDef) => {
   }
   return true;
 };
+const aggregateByLabel = (rows, labelColumn, cols) => {
+  const map = new Map();
+  for (const row of rows) {
+    const label = row[labelColumn] ?? row[Object.keys(row)[0]];
+    const key = String(label ?? '');
+    if (!map.has(key)) {
+      const point = {
+        label
+      };
+      cols.forEach(col => {
+        point[col] = 0;
+      });
+      map.set(key, point);
+    }
+    const point = map.get(key);
+    cols.forEach(col => {
+      const v = Number(row[col]);
+      if (!isNaN(v)) point[col] += v;
+    });
+  }
+  return Array.from(map.values());
+};
 const fetchChartDataMulti = async (tableName, labelColumn, valueColumns, filters = null) => {
   const cols = Array.isArray(valueColumns) ? valueColumns : valueColumns ? [valueColumns] : [];
   const rows = await fetchRows(tableName);
   const filtered = applyFilters(rows, filters);
-  return filtered.map(row => {
-    const point = {
-      label: row[labelColumn] ?? row[Object.keys(row)[0]]
-    };
-    cols.forEach(col => {
-      point[col] = row[col];
-    });
-    return point;
-  });
+  return aggregateByLabel(filtered, labelColumn, cols);
 };
 const fetchTableData = async (tableName, columns = null, filters = null) => {
   const rows = await fetchRows(tableName);
@@ -221,7 +246,7 @@ const fetchTableData = async (tableName, columns = null, filters = null) => {
     return filtered.map(row => {
       const out = {};
       columns.forEach(c => {
-        out[c] = row[c];
+        out[c] = getRowValue(row, c);
       });
       return out;
     });
@@ -637,6 +662,11 @@ const ZoneContent = ({
   } = zone;
   const effectiveChartType = chartType || DEFAULT_CHART_TYPE[library] || CHART_TYPES.CHARTJS_LINE;
   const valueColumns = dataSource?.valueColumns ?? (dataSource?.valueColumn ? [dataSource.valueColumn] : []);
+  // Zone filters override dashboard-wide ones for the same column
+  const activeFilters = {
+    ...filters,
+    ...dataSource?.filters
+  };
 
   // Get theme colors
   THEMES[theme] || THEMES.default;
@@ -693,13 +723,13 @@ const ZoneContent = ({
       try {
         if (zone.componentType === COMPONENT_TYPES.TABLE) {
           const configuredCols = dataSource.columns?.length ? dataSource.columns : null;
-          const data = await fetchTableData(dataSource.tableName, configuredCols, filters);
+          const data = await fetchTableData(dataSource.tableName, configuredCols, activeFilters);
           if (isMounted) {
             setTableData(data);
             setCurrentPage(1);
           }
         } else {
-          const data = await fetchChartDataMulti(dataSource.tableName, dataSource.labelColumn, valueColumns, filters);
+          const data = await fetchChartDataMulti(dataSource.tableName, dataSource.labelColumn, valueColumns, activeFilters);
           if (isMounted) {
             setChartData(data);
           }
@@ -718,7 +748,7 @@ const ZoneContent = ({
     return () => {
       isMounted = false;
     };
-  }, [zoneData, dataSource?.tableName, dataSource?.labelColumn, JSON.stringify(valueColumns), zone.componentType, JSON.stringify(filters), activeDataQueryUrl]);
+  }, [zoneData, dataSource?.tableName, dataSource?.labelColumn, JSON.stringify(valueColumns), zone.componentType, JSON.stringify(activeFilters), activeDataQueryUrl]);
 
   // Determine which adapter to use
   const Adapter = React.useMemo(() => {
@@ -843,9 +873,7 @@ const ZoneContent = ({
       }
     }, sortColumn === col ? sortDirection === 'asc' ? '▲' : '▼' : '⬍')))))), /*#__PURE__*/React.createElement("tbody", null, pageRows.map((row, idx) => /*#__PURE__*/React.createElement("tr", {
       key: idx,
-      style: {
-        backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f9fafb'
-      }
+      className: idx % 2 === 0 ? 'viewer-table-row-even' : 'viewer-table-row-odd'
     }, displayColumns.map(col => /*#__PURE__*/React.createElement("td", {
       key: col
     }, typeof row[col] === 'number' ? row[col].toLocaleString() : row[col])))))), totalPages > 1 && /*#__PURE__*/React.createElement("div", {
@@ -939,6 +967,7 @@ const DashboardViewer = ({
   const [isInitialized, setIsInitialized] = React.useState(false);
   const [currentFilters, setCurrentFilters] = React.useState(filters);
   const [gridWidth, setGridWidth] = React.useState(1200);
+  const [gridHeight, setGridHeight] = React.useState(null);
   const [resolvedStyles, setResolvedStyles] = React.useState({});
   // React-tracked copy of the module-level dataQueryUrl so ZoneContent re-fetches when it changes
   const [activeDataQueryUrl, setActiveDataQueryUrl] = React.useState(null);
@@ -1011,38 +1040,66 @@ const DashboardViewer = ({
     }
   };
 
-  // Responsive grid width
+  // Responsive grid dimensions
   React.useEffect(() => {
     if (!containerRef.current) return;
-    const updateWidth = () => {
+    const updateDimensions = () => {
       if (containerRef.current) {
         setGridWidth(Math.max(400, containerRef.current.offsetWidth - 40));
+        setGridHeight(containerRef.current.offsetHeight);
       }
     };
-    updateWidth();
-    const resizeObserver = new ResizeObserver(() => requestAnimationFrame(updateWidth));
+    updateDimensions();
+    const resizeObserver = new ResizeObserver(() => requestAnimationFrame(updateDimensions));
     resizeObserver.observe(containerRef.current);
     return () => resizeObserver.disconnect();
   }, []);
 
-  // Generate layout for react-grid-layout
+  // Generate layout for react-grid-layout.
+  // When gridPosition is absent or partial, defaults to full-width (w=12) and equal-height (h=1)
+  // so zones fill all available space proportionally. Explicit values always take precedence.
   const layout = React.useMemo(() => {
     if (!normalizedDashboard?.zones) return [];
-    return normalizedDashboard.zones.map(zone => ({
-      i: zone.id,
-      x: zone.gridPosition?.x || 0,
-      y: zone.gridPosition?.y || 0,
-      w: zone.gridPosition?.w || 4,
-      h: zone.gridPosition?.h || 4,
-      minW: 2,
-      minH: 2
-    }));
+    let autoY = 0;
+    return normalizedDashboard.zones.map(zone => {
+      const gp = zone.gridPosition;
+      const w = gp?.w ?? 12;
+      const h = gp?.h ?? 1;
+      const x = gp?.x ?? 0;
+      const y = gp?.y ?? autoY;
+      autoY = Math.max(autoY, y + h);
+      return {
+        i: zone.id,
+        x,
+        y,
+        w,
+        h,
+        minW: 1,
+        minH: 1
+      };
+    });
   }, [normalizedDashboard?.zones]);
 
   // Default layout settings
   const cols = normalizedDashboard?.layout?.cols || 12;
-  const rowHeight = normalizedDashboard?.layout?.rowHeight || 30;
+  const schemaRowHeight = normalizedDashboard?.layout?.rowHeight || 30;
   const margin = normalizedDashboard?.layout?.margin || [10, 10];
+
+  // Calculate rowHeight so zones fill all available vertical space.
+  // When the consuming site gives the viewer a fixed height (height/100vh/etc.),
+  // zones expand proportionally to fill it. `h` in gridPosition acts as a weight:
+  // h=2 gets twice the height of h=1. Falls back to schemaRowHeight when container
+  // has no explicit height (auto-sized by content).
+  const rowHeight = React.useMemo(() => {
+    if (!gridHeight || gridHeight < 200) return schemaRowHeight;
+    const maxGridRow = layout.length > 0 ? Math.max(...layout.map(l => l.y + l.h)) : 1;
+    const viewerPaddingV = 20 * 2; // --hv-viewer-padding default (top + bottom)
+    const gridPaddingV = 10 * 2; // GridLayout containerPadding[1] * 2
+    const marginGaps = (maxGridRow - 1) * margin[1];
+    const available = gridHeight - viewerPaddingV - gridPaddingV - marginGaps;
+    const calculated = Math.floor(available / maxGridRow);
+    return Math.max(schemaRowHeight, calculated);
+  }, [gridHeight, layout, schemaRowHeight, margin]);
 
   // Helper to get library attribute value
   const getLibraryAttr = lib => {

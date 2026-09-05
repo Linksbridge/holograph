@@ -161,12 +161,25 @@ const applyCondition = (rowValue, condition) => {
   }
 };
 
+const getRowValue = (row, columnName) => {
+  if (row[columnName] !== undefined) return row[columnName];
+  const lowerKey = columnName.toLowerCase();
+  const match = Object.keys(row).find((k) => k.toLowerCase() === lowerKey);
+  return match !== undefined ? row[match] : undefined;
+};
+
+const caseInsensitiveIncludes = (values, rowValue) => {
+  if (rowValue === null || rowValue === undefined) return false;
+  const str = String(rowValue).toLowerCase();
+  return values.some((v) => String(v ?? '').toLowerCase() === str);
+};
+
 const applyFilterToRow = (row, columnName, filterDef) => {
-  const rowValue = row[columnName];
+  const rowValue = getRowValue(row, columnName);
 
   if (Array.isArray(filterDef)) {
     if (filterDef.length === 0) return true;
-    return filterDef.includes(rowValue);
+    return caseInsensitiveIncludes(filterDef, rowValue);
   }
 
   if (!filterDef || typeof filterDef !== 'object') return true;
@@ -175,7 +188,7 @@ const applyFilterToRow = (row, columnName, filterDef) => {
 
   if (mode === 'basic') {
     if (!values || values.length === 0) return true;
-    const included = values.includes(rowValue);
+    const included = caseInsensitiveIncludes(values, rowValue);
     return filterType === 'exclude' ? !included : included;
   }
 
@@ -234,7 +247,7 @@ export const fetchTableData = async (tableName, columns = null, filters = null) 
   if (columns && columns.length > 0) {
     return filtered.map((row) => {
       const out = {};
-      columns.forEach((c) => { out[c] = row[c]; });
+      columns.forEach((c) => { out[c] = getRowValue(row, c); });
       return out;
     });
   }
