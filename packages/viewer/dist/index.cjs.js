@@ -1042,21 +1042,24 @@ const DashboardViewer = ({
     }
   };
 
-  // Responsive grid dimensions — measured from the grid wrapper (inside viewer padding,
-  // after any title/header) so rowHeight fills exactly the available chart space.
+  // Responsive grid dimensions.
+  // Width: containerRef (always mounted) minus horizontal viewer padding.
+  // Height: gridRef when available (inside padding, after any title), else containerRef.
+  // Re-runs when isInitialized flips so gridRef.current is set before first measurement.
   React.useEffect(() => {
-    if (!gridRef.current) return;
+    if (!containerRef.current) return;
     const updateDimensions = () => {
-      if (gridRef.current) {
-        setGridWidth(Math.max(400, gridRef.current.offsetWidth));
-        setGridHeight(gridRef.current.offsetHeight);
-      }
+      if (!containerRef.current) return;
+      setGridWidth(Math.max(400, containerRef.current.offsetWidth - 40));
+      const heightSource = gridRef.current ?? containerRef.current;
+      setGridHeight(heightSource.offsetHeight);
     };
     updateDimensions();
     const resizeObserver = new ResizeObserver(() => requestAnimationFrame(updateDimensions));
-    resizeObserver.observe(gridRef.current);
+    resizeObserver.observe(containerRef.current);
+    if (gridRef.current) resizeObserver.observe(gridRef.current);
     return () => resizeObserver.disconnect();
-  }, []);
+  }, [isInitialized]);
 
   // Generate layout for react-grid-layout.
   // When gridPosition is absent or partial, defaults to full-width (w=12) and equal-height (h=1)
