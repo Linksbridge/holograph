@@ -354,8 +354,7 @@ const DashboardViewer = ({
   const [resolvedStyles, setResolvedStyles] = useState({});
   // React-tracked copy of the module-level dataQueryUrl so ZoneContent re-fetches when it changes
   const [activeDataQueryUrl, setActiveDataQueryUrl] = useState(null);
-  const containerRef = useRef(null); // outer container — used for CSS var reading
-  const gridRef = useRef(null);      // grid wrapper — measured for layout dimensions
+  const containerRef = useRef(null); // outer container — measured for width/height
 
   const normalizedDashboard = useMemo(() => normalizeDashboard(dashboard), [dashboard]);
 
@@ -426,24 +425,28 @@ const DashboardViewer = ({
   };
 
   // Responsive grid dimensions.
-  // Width: containerRef (always mounted) minus horizontal viewer padding.
-  // Height: gridRef when available (inside padding, after any title), else containerRef.
-  // Re-runs when isInitialized flips so gridRef.current is set before first measurement.
+  // Width: containerRef offsetWidth minus horizontal padding.
+  // Height: containerRef offsetHeight minus vertical padding — cannot use gridRef.offsetHeight
+  // because GridLayout sets its own inline height from rowHeight, making it circular.
+  // Padding is read from computed styles so any consumer override is respected.
+  // Re-runs when isInitialized flips so containerRef.current is attached before measuring.
   useEffect(() => {
     if (!containerRef.current) return;
 
     const updateDimensions = () => {
       if (!containerRef.current) return;
-      setGridWidth(Math.max(400, containerRef.current.offsetWidth - 40));
-      const heightSource = gridRef.current ?? containerRef.current;
-      setGridHeight(heightSource.offsetHeight);
+      const el = containerRef.current;
+      const style = window.getComputedStyle(el);
+      const paddingH = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+      const paddingV = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+      setGridWidth(Math.max(400, el.offsetWidth - paddingH));
+      setGridHeight(Math.max(0, el.offsetHeight - paddingV));
     };
 
     updateDimensions();
 
     const resizeObserver = new ResizeObserver(() => requestAnimationFrame(updateDimensions));
     resizeObserver.observe(containerRef.current);
-    if (gridRef.current) resizeObserver.observe(gridRef.current);
 
     return () => resizeObserver.disconnect();
   }, [isInitialized]);
@@ -523,7 +526,7 @@ const DashboardViewer = ({
           <p>No charts to display</p>
         </div>
       ) : (
-        <div className="viewer-dashboard-grid" ref={gridRef}>
+        <div className="viewer-dashboard-grid">
           <GridLayout
             className="layout"
             layout={layout}
