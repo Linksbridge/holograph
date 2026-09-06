@@ -487,7 +487,9 @@ const DashboardViewer = ({
     const marginGaps = (maxGridRow - 1) * margin[1];
     const available = gridHeight - containerPaddingV - marginGaps;
     const calculated = Math.floor(available / maxGridRow);
-    return Math.max(schemaRowHeight, calculated);
+    // Do NOT let schemaRowHeight override when gridHeight is known — that would overflow the container.
+    // schemaRowHeight is only meaningful as a fallback when gridHeight is unavailable (auto-height mode).
+    return Math.max(30, calculated);
   }, [gridHeight, layout, schemaRowHeight, margin]);
 
   // Helper to get library attribute value
