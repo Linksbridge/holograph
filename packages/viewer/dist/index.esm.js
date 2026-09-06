@@ -746,8 +746,8 @@ const ZoneContent = ({
   // Container base style
   const containerBaseStyle = {
     width: '100%',
-    height: '100%',
-    minHeight: '100px',
+    flex: '1',
+    minHeight: 0,
     overflow: 'hidden'
   };
 

@@ -328,6 +328,8 @@
   min-height: 0;
   padding: 8px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Loading State */
@@ -437,7 +439,6 @@
 /* Table Styles */
 .viewer-table-container {
   width: 100%;
-  height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -446,6 +447,7 @@
 .viewer-table-scroll {
   flex: 1;
   overflow-y: auto;
+  overflow-x: auto;
   min-height: 0;
 }
 
@@ -472,6 +474,7 @@
   color: var(--hv-text-tertiary);
   border-bottom: 1px solid var(--hv-border-color);
   font-size: 13px;
+  white-space: nowrap;
 }
 
 .viewer-table tr:hover td {
